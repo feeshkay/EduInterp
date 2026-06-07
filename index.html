@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduInterp — Educational Interpreting Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+:root{
+  --ink:#1E2A1A;--ink2:#4A5545;--ink3:#8A9185;
+  --sage:#4A7A5A;--sage-l:#E8F2EC;--sage-m:#6A9B78;--sage-d:#2E5A3A;
+  --gold:#8B6914;--gold-l:#FBF4E6;--gold-m:#C49A2A;
+  --clay:#B54A3A;--clay-l:#FDECEA;
+  --sky:#2A5E8A;--sky-l:#E8F1F8;
+  --bg:#F2F0EA;--surf:#FAFAF7;--s2:#F2F0EA;--s3:#E8E5DC;
+  --br:rgba(0,0,0,.09);--brk:rgba(0,0,0,.16);
+  --sh:0 1px 3px rgba(0,0,0,.05),0 3px 12px rgba(0,0,0,.04);
+  --nw:220px;
+  --rad:10px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+
+/* ── SHELL ── */
+.shell{display:flex;height:100vh;overflow:hidden}
+.sb{width:var(--nw);background:var(--sage-d);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto}
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── SIDEBAR ── */
+.sb-logo{padding:16px 16px 10px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:6px}
+.sb-lm{width:34px;height:34px;background:var(--sage-m);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-size:15px;color:#fff;flex-shrink:0}
+.sb-lt{font-family:'Lora',serif;font-size:14px;font-weight:500;color:#fff;line-height:1.1}
+.sb-ls{font-size:9px;color:rgba(255,255,255,.35);font-family:'DM Mono',monospace;margin-top:1px}
+.sb-sec{padding:8px 14px 3px;font-size:8px;font-family:'DM Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.25)}
+.sbi{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 6px;border-radius:7px;cursor:pointer;color:rgba(255,255,255,.55);font-size:12px;transition:all .14s;border:none;background:none;width:calc(100% - 12px);text-align:left;font-family:'DM Sans',sans-serif}
+.sbi svg{width:15px;height:15px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sbi:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.9)}
+.sbi.active{background:rgba(255,255,255,.14);color:#fff;font-weight:500}
+.sbi .bdg{margin-left:auto;background:var(--gold-m);color:#fff;font-size:8px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:8px;font-weight:600}
+.sb-sp{flex:1}
+.sb-bot{padding:8px;border-top:1px solid rgba(255,255,255,.07)}
+.sb-student{margin:4px 8px 8px;background:rgba(255,255,255,.07);border-radius:8px;padding:8px 10px}
+.sb-sl{font-size:8px;font-family:'DM Mono',monospace;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.sb-student select{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#fff;font-size:11px;padding:4px 7px;width:100%;font-family:'DM Sans',sans-serif;cursor:pointer}
+.sb-student select option{background:var(--sage-d);color:#fff}
+
+/* ── TOPBAR ── */
+.topbar{padding:0 20px;background:var(--surf);border-bottom:1px solid var(--br);display:flex;align-items:center;gap:12px;flex-shrink:0;height:48px}
+.tb-title{font-family:'Lora',serif;font-size:16px;color:var(--ink)}
+.tb-sub{font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:1px}
+.tb-acts{margin-left:auto;display:flex;align-items:center;gap:6px}
+
+/* ── PAGES ── */
+.ps{flex:1;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+.pi{padding:16px 20px 60px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .14s;border:1px solid var(--brk);background:var(--surf);color:var(--ink)}
+.btn:hover{background:var(--s2)}.btn.pri{background:var(--sage);color:#fff;border-color:var(--sage-d)}.btn.pri:hover{background:var(--sage-d)}
+.btn.sm{font-size:11px;padding:4px 9px}.btn.gh{border-color:transparent;background:transparent;color:var(--ink2)}.btn.gh:hover{background:var(--s2)}
+.btn.warn{background:var(--clay-l);color:var(--clay);border-color:var(--clay)}
+.btn.gold{background:var(--gold-l);color:var(--gold);border-color:var(--gold-m)}
+.btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── CARDS ── */
+.card{background:var(--surf);border:1px solid var(--br);border-radius:var(--rad);box-shadow:var(--sh)}
+.cp{padding:14px 16px}
+.card-title{font-family:'Lora',serif;font-size:14px;margin-bottom:2px}
+.card-sub{font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.gfl{display:flex;flex-wrap:wrap;gap:10px}
+
+/* ── STATS ── */
+.stat{background:var(--surf);border:1px solid var(--br);border-radius:9px;padding:12px 14px;box-shadow:var(--sh)}
+.sv{font-size:24px;font-weight:600;font-family:'Lora',serif;line-height:1;color:var(--ink)}
+.sl{font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;letter-spacing:.04em;margin-top:3px;text-transform:uppercase}
+.sd{font-size:10px;color:var(--sage);margin-top:2px;font-weight:500}
+
+/* ── PILLS ── */
+.pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:14px;font-size:10px;font-weight:500;font-family:'DM Mono',monospace}
+.pg{background:var(--sage-l);color:var(--sage-d)}.pa{background:var(--gold-l);color:var(--gold)}.pr{background:var(--clay-l);color:var(--clay)}
+.pb{background:var(--sky-l);color:var(--sky)}.pz{background:var(--s3);color:var(--ink2)}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);padding:7px 11px;border-bottom:1px solid var(--br);text-align:left;font-weight:500}
+.tbl td{padding:8px 11px;border-bottom:1px solid var(--br);font-size:12px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:var(--s2)}
+.tbl-empty{padding:28px;text-align:center;font-size:12px;color:var(--ink3);font-family:'DM Mono',monospace}
+
+/* ── FORMS ── */
+.fr{display:grid;gap:10px;margin-bottom:10px}
+.fr1{grid-template-columns:1fr}.fr2{grid-template-columns:1fr 1fr}.fr3{grid-template-columns:1fr 1fr 1fr}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-size:9px;color:var(--ink2);font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase}
+.fld input,.fld select,.fld textarea{font-size:12px;padding:7px 9px;border:1px solid var(--brk);border-radius:7px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif;-webkit-appearance:none;width:100%;transition:border-color .14s,box-shadow .14s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--sage);box-shadow:0 0 0 2px rgba(74,122,90,.12);background:var(--surf)}
+.fld textarea{resize:vertical;min-height:60px;line-height:1.55}
+.fld select{cursor:pointer}
+
+/* ── TABS ── */
+.tb-bar{display:flex;gap:0;border-bottom:1px solid var(--br);margin-bottom:14px}
+.tab{padding:7px 12px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--ink2);transition:all .14s;font-weight:500;margin-bottom:-1px}
+.tab.active{border-bottom-color:var(--sage);color:var(--sage)}.tab:hover{color:var(--ink)}
+.tp{display:none}.tp.active{display:block}
+
+/* ── SECTION LABEL ── */
+.sec{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
+
+/* ── MODAL ── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:24px 14px;overflow-y:auto}
+.ov.open{display:flex}
+.mod{background:var(--surf);border-radius:12px;width:100%;max-width:540px;box-shadow:0 20px 60px rgba(0,0,0,.22);margin:auto}
+.mh{padding:14px 16px 10px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between}
+.mh h2{font-family:'Lora',serif;font-size:15px}
+.mb{padding:14px 16px}.mf{padding:10px 16px;border-top:1px solid var(--br);display:flex;justify-content:flex-end;gap:6px;align-items:center}
+.mod-close{background:none;border:none;cursor:pointer;color:var(--ink3);padding:2px;border-radius:4px;font-size:16px;line-height:1;display:flex;align-items:center}
+.mod-close:hover{color:var(--ink);background:var(--s2)}
+
+/* ── NOTICE ── */
+.notice{padding:9px 11px;border-radius:8px;font-size:11px;line-height:1.6;display:flex;gap:8px;align-items:flex-start;margin-bottom:10px}
+.n-info{background:var(--sky-l);border:1px solid rgba(42,94,138,.2)}.n-warn{background:var(--gold-l);border:1px solid rgba(139,105,20,.2)}
+.n-ok{background:var(--sage-l);border:1px solid rgba(74,122,90,.2)}
+
+/* ── PROGRESS ── */
+.pbar{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:4px}
+.pbf{height:100%;border-radius:2px;background:var(--sage)}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:16px;right:16px;background:var(--sage-d);color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .28s;z-index:999;font-weight:500;max-width:280px}
+
+/* ── VOCAB CARD ── */
+.vc{background:var(--surf);border:1px solid var(--br);border-radius:9px;padding:11px 13px;margin-bottom:6px;transition:all .14s;box-shadow:var(--sh)}
+.vc:hover{border-color:var(--sage-m)}.vc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px}
+.vc-word{font-family:'Lora',serif;font-size:14px;font-weight:500;color:var(--ink)}
+.vc-meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.vc-def{font-size:11px;color:var(--ink2);line-height:1.55}
+.vc-params{font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:3px}
+.vc-actions{display:flex;gap:4px;opacity:0;transition:opacity .14s}
+.vc:hover .vc-actions{opacity:1}
+
+/* ── LOG ENTRY ── */
+.le{background:var(--surf);border:1px solid var(--br);border-radius:9px;padding:11px 13px;margin-bottom:7px;box-shadow:var(--sh)}
+.le-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.le-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--sage);font-weight:500}
+.le-student{font-size:10px;color:var(--ink2)}
+.le-class{font-family:'Lora',serif;font-size:13px;font-weight:500;margin-bottom:4px}
+.le-vocab-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}
+.vocab-chip{background:var(--sage-l);color:var(--sage-d);font-size:10px;padding:2px 7px;border-radius:12px;font-family:'DM Mono',monospace;font-weight:500}
+.le-notes{font-size:11px;color:var(--ink2);line-height:1.55}
+
+/* ── CALENDAR ── */
+#cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:6px}
+.cdn{font-size:9px;font-family:'DM Mono',monospace;color:var(--ink3);text-align:center;padding:3px;font-weight:500}
+.cc{min-height:58px;background:var(--surf);border:1px solid var(--br);border-radius:6px;padding:4px;cursor:pointer;transition:all .13s}
+.cc:hover{border-color:var(--sage-m)}.cc.td{border-color:var(--sage);background:var(--sage-l)}.cc.om{opacity:.3}
+.ccn{font-weight:500;font-size:11px;color:var(--ink2);margin-bottom:2px}
+.cc.td .ccn{color:var(--sage-d);font-weight:700}
+.ce{border-radius:3px;padding:1px 4px;font-size:8px;font-family:'DM Mono',monospace;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.ce-g{background:var(--sage)}.ce-a{background:var(--gold-m)}.ce-b{background:var(--sky)}.ce-r{background:var(--clay)}
+
+/* ── BUG TRACKER ── */
+.bug-card{background:var(--surf);border:1px solid var(--br);border-radius:9px;padding:10px 13px;margin-bottom:6px;box-shadow:var(--sh);cursor:pointer;transition:all .14s}
+.bug-card:hover{border-color:var(--sage-m);transform:translateY(-1px)}
+.bug-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px}
+.bug-title{font-size:12px;font-weight:500;flex:1}
+.bug-meta{font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;display:flex;flex-wrap:wrap;gap:4px}
+.bug-body{font-size:11px;color:var(--ink2);line-height:1.5}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
+.d-hi{background:var(--clay)}.d-med{background:var(--gold-m)}.d-lo{background:var(--sage)}
+
+/* ── SCHEDULE ── */
+.sched-class{background:var(--surf);border:1px solid var(--br);border-radius:9px;padding:10px 13px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px;box-shadow:var(--sh)}
+.sched-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--sage);font-weight:500;white-space:nowrap;padding-top:1px;min-width:70px}
+.sched-body{flex:1}
+.sched-name{font-size:12px;font-weight:500;color:var(--ink);margin-bottom:2px}
+.sched-detail{font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace}
+
+/* ── PRESENTATION CARD ── */
+.pres-card{background:var(--surf);border:1px solid var(--br);border-radius:9px;padding:11px 13px;margin-bottom:7px;box-shadow:var(--sh)}
+.pres-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.pres-title{font-family:'Lora',serif;font-size:13px;font-weight:500}
+.pres-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold)}
+.pres-prep{font-size:11px;color:var(--ink2);line-height:1.55}
+
+/* ── PRACTICE ── */
+.fs-card{background:var(--surf);border:2px solid var(--sage-m);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px}
+.fs-word{font-family:'Lora',serif;font-size:36px;font-weight:500;color:var(--sage-d);margin-bottom:8px;letter-spacing:.02em}
+.fs-hint{font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace}
+.res-link{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surf);border:1px solid var(--br);border-radius:8px;margin-bottom:5px;font-size:12px;text-decoration:none;color:var(--ink);transition:all .14s;box-shadow:var(--sh)}
+.res-link:hover{border-color:var(--sage-m);background:var(--sage-l)}
+.res-icon{width:28px;height:28px;border-radius:6px;background:var(--sage-l);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+
+/* ── MATERIAL UPLOAD ── */
+.mat-card{background:var(--surf);border:1px solid var(--br);border-radius:9px;padding:11px 13px;margin-bottom:6px;box-shadow:var(--sh)}
+.mat-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px}
+.mat-name{font-size:12px;font-weight:500}
+.mat-meta{font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace}
+.drop-zone{border:2px dashed var(--brk);border-radius:9px;padding:24px;text-align:center;font-size:12px;color:var(--ink3);cursor:pointer;transition:all .14s;margin-bottom:10px}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--sage);background:var(--sage-l);color:var(--sage-d)}
+
+/* ── SEARCH ── */
+.search-row{display:flex;gap:8px;margin-bottom:14px;align-items:center}
+.search-input{flex:1;font-size:12px;padding:7px 11px;border:1px solid var(--brk);border-radius:7px;background:var(--surf);color:var(--ink);font-family:'DM Sans',sans-serif}
+.search-input:focus{outline:none;border-color:var(--sage);box-shadow:0 0 0 2px rgba(74,122,90,.1)}
+
+/* ── MASTERY STARS ── */
+.stars{display:flex;gap:2px}
+.star{width:12px;height:12px;color:var(--gold-m)}
+.star.empty{color:var(--s3)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.14);border-radius:2px}
+
+/* ── PIN SCREEN ── */
+.pin-screen{position:fixed;inset:0;background:var(--sage-d);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px}
+.pin-card{background:var(--surf);border-radius:16px;padding:28px;width:100%;max-width:320px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.pin-logo{width:48px;height:48px;background:var(--sage);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-size:20px;color:#fff;margin:0 auto 14px}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin:16px 0}
+.pin-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--brk);background:transparent;transition:all .14s}
+.pin-dot.filled{background:var(--sage);border-color:var(--sage)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.pin-btn{padding:12px;border:1px solid var(--br);border-radius:9px;background:var(--s2);font-size:16px;font-weight:500;cursor:pointer;font-family:'Lora',serif;color:var(--ink);transition:all .14s}
+.pin-btn:hover{background:var(--sage-l);border-color:var(--sage-m)}
+
+/* ── QUICK VOCAB INLINE ── */
+.qv-row{display:flex;gap:6px;margin-bottom:8px;align-items:flex-start;flex-wrap:wrap}
+
+/* ── UPLOADER FILE LIST ── */
+.file-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s2);border-radius:7px;margin-bottom:4px;font-size:11px}
+.file-ext{font-family:'DM Mono',monospace;font-size:9px;background:var(--sage-l);color:var(--sage-d);padding:1px 5px;border-radius:4px;font-weight:600}
+
+/* ── RESPONSIVE NAV BADGE ── */
+.badge-count{background:var(--clay);color:#fff;font-size:8px;padding:1px 5px;border-radius:8px;font-family:'DM Mono',monospace;font-weight:600;margin-left:auto}
+</style>
+</head>
+<body>
+
+<!-- PIN SCREEN -->
+<div class="pin-screen" id="pin-screen">
+  <div class="pin-card">
+    <div class="pin-logo">𝐄</div>
+    <div style="font-family:'Lora',serif;font-size:20px;margin-bottom:4px">EduInterp</div>
+    <div style="font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace" id="pin-subtitle">Educational Interpreting Log</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+    </div>
+    <div id="pin-err" style="font-size:11px;color:var(--clay);height:16px;margin-bottom:4px"></div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress(1)">1</button><button class="pin-btn" onclick="pinPress(2)">2</button><button class="pin-btn" onclick="pinPress(3)">3</button>
+      <button class="pin-btn" onclick="pinPress(4)">4</button><button class="pin-btn" onclick="pinPress(5)">5</button><button class="pin-btn" onclick="pinPress(6)">6</button>
+      <button class="pin-btn" onclick="pinPress(7)">7</button><button class="pin-btn" onclick="pinPress(8)">8</button><button class="pin-btn" onclick="pinPress(9)">9</button>
+      <button class="pin-btn" onclick="pinClear()" style="font-size:11px;color:var(--ink3)">CLR</button>
+      <button class="pin-btn" onclick="pinPress(0)">0</button>
+      <button class="pin-btn" onclick="pinBack()" style="font-size:11px">⌫</button>
+    </div>
+    <button class="btn gh sm" style="margin-top:12px;font-size:10px;color:var(--ink3)" id="pin-skip-btn" onclick="pinSkip()">Skip (no PIN set)</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="shell" id="app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <div class="sb">
+    <div class="sb-logo">
+      <div class="sb-lm">𝐄</div>
+      <div><div class="sb-lt">EduInterp</div><div class="sb-ls">Edu Interpreting Log</div></div>
+    </div>
+
+    <!-- Student Selector -->
+    <div class="sb-student">
+      <div class="sb-sl">Active Student</div>
+      <select id="global-student" onchange="onStudentChange()"></select>
+    </div>
+
+    <div class="sb-sec">Main</div>
+    <button class="sbi active" data-page="dashboard" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="sbi" data-page="daily-log" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Daily Log
+    </button>
+    <button class="sbi" data-page="vocab" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Vocabulary
+    </button>
+    <button class="sbi" data-page="schedule" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Schedule
+    </button>
+
+    <div class="sb-sec">Prep & Practice</div>
+    <button class="sbi" data-page="prep" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      Prep Materials
+    </button>
+    <button class="sbi" data-page="practice" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Practice
+    </button>
+
+    <div class="sb-sec">Planning</div>
+    <button class="sbi" data-page="calendar" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Calendar
+    </button>
+
+    <div class="sb-sec">Dev</div>
+    <button class="sbi" data-page="bugs" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><path d="M8 2l1.88 1.88M4 6h.01M20 6h.01M2 9h20M2 12h20M4 18h16"/><path d="M20 8.5a9 9 0 0 1-16 0"/><path d="M6.5 8.5h11"/></svg>
+      Tracker
+      <span class="badge-count" id="open-bugs-badge" style="display:none"></span>
+    </button>
+
+    <div class="sb-sp"></div>
+    <div class="sb-bot">
+      <button class="sbi" data-page="settings" onclick="nav(this)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main">
+    <div class="topbar">
+      <div><div class="tb-title" id="page-title">Dashboard</div><div class="tb-sub" id="page-sub">Overview & Today</div></div>
+      <div class="tb-acts" id="tb-acts"></div>
+    </div>
+    <div class="ps" id="page-scroll">
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: DASHBOARD
+      ══════════════════════════════════════════════ -->
+      <div class="page active pi" id="page-dashboard">
+        <div id="dash-notice" class="notice n-ok" style="display:none"><span>👋</span><div id="dash-notice-text"></div></div>
+
+        <div class="g4" style="margin-bottom:14px" id="stat-grid">
+          <div class="stat"><div class="sv" id="stat-vocab">0</div><div class="sl">Total Vocab</div><div class="sd" id="stat-vocab-sub">across all students</div></div>
+          <div class="stat"><div class="sv" id="stat-logs">0</div><div class="sl">Log Entries</div><div class="sd" id="stat-logs-sub">total sessions</div></div>
+          <div class="stat"><div class="sv" id="stat-streak">0</div><div class="sl">Day Streak</div><div class="sd" id="stat-streak-sub">keep logging!</div></div>
+          <div class="stat"><div class="sv" id="stat-student">—</div><div class="sl">Active Student</div><div class="sd" id="stat-student-sub">selected above</div></div>
+        </div>
+
+        <div class="g2" style="margin-bottom:14px">
+          <!-- Today's Quick Log -->
+          <div class="card cp">
+            <div class="sec">Today — Quick Log</div>
+            <div style="font-size:11px;color:var(--ink3);margin-bottom:10px" id="today-date-label"></div>
+            <div class="fr fr1" style="margin-bottom:6px">
+              <div class="fld"><label>Class / Assignment</label>
+                <select id="ql-class"></select>
+              </div>
+            </div>
+            <div class="fr fr1" style="margin-bottom:6px">
+              <div class="fld"><label>Quick New Vocab (comma separated)</label>
+                <input type="text" id="ql-vocab" placeholder="e.g. photosynthesis, mitosis, osmosis"></div>
+            </div>
+            <div class="fr fr1" style="margin-bottom:6px">
+              <div class="fld"><label>Notes / Demands / Controls</label>
+                <textarea id="ql-notes" placeholder="Demands encountered, register shifts, environmental controls, lag time, etc." style="min-height:55px"></textarea></div>
+            </div>
+            <button class="btn pri sm" onclick="quickLog()">
+              <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round"><polyline points="20 6 9 17 4 12"/></svg>
+              Save Today's Log
+            </button>
+          </div>
+
+          <!-- Recent Logs -->
+          <div class="card cp">
+            <div class="sec">Recent Logs</div>
+            <div id="recent-logs-list"></div>
+          </div>
+        </div>
+
+        <div class="g2">
+          <!-- Upcoming -->
+          <div class="card cp">
+            <div class="sec">Upcoming Events</div>
+            <div id="upcoming-events-list"></div>
+          </div>
+          <!-- Recent Vocab -->
+          <div class="card cp">
+            <div class="sec">Recently Added Vocab</div>
+            <div id="recent-vocab-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: DAILY LOG
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-daily-log">
+        <div class="card cp" style="margin-bottom:12px">
+          <div class="sec">New Log Entry</div>
+          <div class="fr fr3" style="margin-bottom:8px">
+            <div class="fld"><label>Date</label><input type="date" id="log-date"></div>
+            <div class="fld"><label>Student</label><select id="log-student"></select></div>
+            <div class="fld"><label>Class / Assignment</label><select id="log-class"></select></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>New Vocab Learned (comma separated)</label>
+              <input type="text" id="log-vocab" placeholder="e.g. dystonia, athetoid, proprioception"></div>
+            <div class="fld"><label>Topic / Unit</label>
+              <input type="text" id="log-topic" placeholder="e.g. Chapter 5 – Cell Biology"></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>Demands / Controls Encountered</label>
+              <textarea id="log-demands" placeholder="Environmental: gym acoustics, lighting issues&#10;Paralinguistic: fast pace, mumbling&#10;Interpersonal: student fatigue&#10;Intralingual: technical jargon" style="min-height:70px"></textarea></div>
+            <div class="fld"><label>Notes / Reflections</label>
+              <textarea id="log-notes" placeholder="What went well? What was challenging? Prep for next time?" style="min-height:70px"></textarea></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>Prep Done</label>
+              <textarea id="log-prep" placeholder="Materials reviewed, videos watched, vocab studied..." style="min-height:50px"></textarea></div>
+            <div class="fld"><label>Follow-Up Needed</label>
+              <textarea id="log-followup" placeholder="Words to research, concepts to clarify, vocab to practice..." style="min-height:50px"></textarea></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>Interpreting Mode Used</label>
+              <select id="log-mode">
+                <option value="">— select —</option>
+                <option>Simultaneous</option><option>Consecutive</option><option>Both</option>
+                <option>Transliteration (PSE/MCE)</option><option>Oral</option><option>Tactile</option>
+              </select>
+            </div>
+            <div class="fld"><label>Overall Rating (1–5)</label>
+              <select id="log-rating">
+                <option value="">— rate the session —</option>
+                <option value="5">⭐⭐⭐⭐⭐ Excellent</option><option value="4">⭐⭐⭐⭐ Good</option>
+                <option value="3">⭐⭐⭐ Average</option><option value="2">⭐⭐ Difficult</option>
+                <option value="1">⭐ Very Difficult</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn pri" onclick="saveLog()">Save Log Entry</button>
+        </div>
+
+        <!-- Log History -->
+        <div class="card cp">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="sec" style="margin:0">Log History</div>
+            <div style="display:flex;gap:6px">
+              <input class="search-input" type="text" placeholder="Search logs..." oninput="renderLogs()" id="log-search" style="width:180px;font-size:11px;padding:5px 9px">
+              <select id="log-filter-student" onchange="renderLogs()" style="font-size:11px;padding:5px 8px;border:1px solid var(--brk);border-radius:6px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif">
+                <option value="">All Students</option>
+              </select>
+            </div>
+          </div>
+          <div id="log-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: VOCABULARY
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-vocab">
+        <div class="card cp" style="margin-bottom:12px">
+          <div class="sec">Add / Edit Vocabulary</div>
+          <input type="hidden" id="vocab-edit-id">
+          <div class="fr fr3" style="margin-bottom:8px">
+            <div class="fld"><label>Word / Sign</label><input type="text" id="v-word" placeholder="e.g. photosynthesis"></div>
+            <div class="fld"><label>Category / Subject</label>
+              <input type="text" id="v-category" list="cat-list" placeholder="e.g. Biology, Math, General">
+              <datalist id="cat-list"></datalist>
+            </div>
+            <div class="fld"><label>Student Context</label>
+              <select id="v-student">
+                <option value="all">All / General</option>
+              </select>
+            </div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>Definition / English Gloss</label>
+              <textarea id="v-def" placeholder="English definition or gloss..." style="min-height:55px"></textarea></div>
+            <div class="fld"><label>ASL Parameters / Notes</label>
+              <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM, mnemonic..." style="min-height:55px"></textarea></div>
+          </div>
+          <div class="fr fr3" style="margin-bottom:8px">
+            <div class="fld"><label>Source / How Learned</label>
+              <input type="text" id="v-source" placeholder="e.g. class assignment, online, textbook"></div>
+            <div class="fld"><label>Mastery Level</label>
+              <select id="v-mastery">
+                <option value="1">1 — New / Just Seen</option>
+                <option value="2">2 — Recognizing</option>
+                <option value="3" selected>3 — Learning</option>
+                <option value="4">4 — Comfortable</option>
+                <option value="5">5 — Mastered</option>
+              </select>
+            </div>
+            <div class="fld"><label>Video / Resource Link</label>
+              <input type="url" id="v-link" placeholder="https://aslpro.com/..."></div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn pri" onclick="saveVocab()">Save Word</button>
+            <button class="btn gh sm" onclick="clearVocabForm()" id="vocab-cancel-btn" style="display:none">Cancel Edit</button>
+          </div>
+        </div>
+
+        <div class="card cp">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div class="sec" style="margin:0">Dictionary (<span id="vocab-count">0</span> words)</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <input class="search-input" type="text" placeholder="Search dictionary..." oninput="renderVocab()" id="vocab-search" style="width:160px;font-size:11px;padding:5px 9px">
+              <select id="vocab-filter-cat" onchange="renderVocab()" style="font-size:11px;padding:5px 8px;border:1px solid var(--brk);border-radius:6px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif">
+                <option value="">All Categories</option>
+              </select>
+              <select id="vocab-filter-mastery" onchange="renderVocab()" style="font-size:11px;padding:5px 8px;border:1px solid var(--brk);border-radius:6px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif">
+                <option value="">All Mastery</option>
+                <option value="1">★ New</option><option value="2">★★ Recognizing</option>
+                <option value="3">★★★ Learning</option><option value="4">★★★★ Comfortable</option><option value="5">★★★★★ Mastered</option>
+              </select>
+            </div>
+          </div>
+          <div id="vocab-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: SCHEDULE
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-schedule">
+        <div class="g2" style="margin-bottom:14px">
+          <!-- Classes -->
+          <div class="card cp">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div class="sec" style="margin:0">Classes / Assignments</div>
+              <button class="btn pri sm" onclick="openModal('modal-add-class')">+ Add Class</button>
+            </div>
+            <div id="class-list"></div>
+          </div>
+          <!-- Presentations -->
+          <div class="card cp">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div class="sec" style="margin:0">Upcoming Presentations / Visits</div>
+              <button class="btn pri sm" onclick="openModal('modal-add-pres')">+ Add</button>
+            </div>
+            <div id="pres-list"></div>
+          </div>
+        </div>
+
+        <!-- Student Management -->
+        <div class="card cp">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="sec" style="margin:0">Students</div>
+            <button class="btn pri sm" onclick="openModal('modal-add-student')">+ Add Student</button>
+          </div>
+          <div id="student-mgmt-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: PREP MATERIALS
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-prep">
+        <div class="card cp" style="margin-bottom:12px">
+          <div class="sec">Add Prep Material</div>
+          <div class="fr fr3" style="margin-bottom:8px">
+            <div class="fld"><label>Title</label><input type="text" id="mat-title" placeholder="e.g. Biology Chapter 8 Slides"></div>
+            <div class="fld"><label>Type</label>
+              <select id="mat-type">
+                <option>Note / Link</option><option>Video Link</option><option>Document Upload</option>
+                <option>Vocabulary List</option><option>Audio Resource</option><option>Other</option>
+              </select>
+            </div>
+            <div class="fld"><label>Related Student</label><select id="mat-student"><option value="all">All / General</option></select></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>Related Class / Assignment</label><select id="mat-class"><option value="">— General —</option></select></div>
+            <div class="fld"><label>Link / URL (if applicable)</label><input type="url" id="mat-link" placeholder="https://..."></div>
+          </div>
+          <div class="fld" style="margin-bottom:8px"><label>Notes</label>
+            <textarea id="mat-notes" placeholder="What is this material? What did you find useful?" style="min-height:55px"></textarea></div>
+          <!-- File Upload -->
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('mat-file-input').click()"
+               ondragover="event.preventDefault();this.classList.add('dragover')"
+               ondragleave="this.classList.remove('dragover')"
+               ondrop="handleDrop(event)">
+            📎 Click or drag a file to attach (PDF, image, docx — stored locally)
+          </div>
+          <input type="file" id="mat-file-input" style="display:none" onchange="handleFileSelect(event)">
+          <div id="mat-file-preview"></div>
+          <button class="btn pri" onclick="saveMaterial()">Save Material</button>
+        </div>
+
+        <div class="card cp">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div class="sec" style="margin:0">Saved Materials</div>
+            <div style="display:flex;gap:6px">
+              <input class="search-input" type="text" placeholder="Search materials..." oninput="renderMaterials()" id="mat-search" style="width:160px;font-size:11px;padding:5px 9px">
+              <select id="mat-filter-type" onchange="renderMaterials()" style="font-size:11px;padding:5px 8px;border:1px solid var(--brk);border-radius:6px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif">
+                <option value="">All Types</option>
+                <option>Note / Link</option><option>Video Link</option><option>Document Upload</option>
+                <option>Vocabulary List</option><option>Audio Resource</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div id="mat-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: PRACTICE
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-practice">
+        <div class="tb-bar">
+          <div class="tab active" onclick="switchTab(this,'prac-fs')">Fingerspelling Drill</div>
+          <div class="tab" onclick="switchTab(this,'prac-rcp')">Receptive ASL→English</div>
+          <div class="tab" onclick="switchTab(this,'prac-links')">Practice Resources</div>
+        </div>
+
+        <!-- Fingerspelling -->
+        <div class="tp active" id="prac-fs">
+          <div class="g2">
+            <div>
+              <div class="fs-card">
+                <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--ink3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">Receptive Fingerspelling — Your Vocab</div>
+                <div class="fs-word" id="fs-display">—</div>
+                <div class="fs-hint" id="fs-hint">Press Start to begin</div>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                <button class="btn pri" onclick="fsStart()">▶ Start</button>
+                <button class="btn" onclick="fsReveal()" id="fs-reveal-btn" disabled>Reveal</button>
+                <button class="btn" onclick="fsNext()" id="fs-next-btn" disabled>Next →</button>
+                <button class="btn gh sm" onclick="fsStop()">Stop</button>
+              </div>
+              <div style="margin-top:12px;text-align:center;font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace" id="fs-score"></div>
+            </div>
+            <div class="card cp">
+              <div class="sec">Drill Settings</div>
+              <div class="fr fr1" style="margin-bottom:8px">
+                <div class="fld"><label>Word Pool</label>
+                  <select id="fs-pool">
+                    <option value="vocab">My Vocabulary Dictionary</option>
+                    <option value="common">Common ASL Edu Words</option>
+                    <option value="names">Common Names</option>
+                    <option value="custom">Custom Word List</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fld" style="margin-bottom:8px"><label>Custom Words (if selected above, comma separated)</label>
+                <input type="text" id="fs-custom" placeholder="word1, word2, word3...">
+              </div>
+              <div class="fr fr2">
+                <div class="fld"><label>Display Mode</label>
+                  <select id="fs-mode">
+                    <option value="hidden">Hidden (receptive — you guess)</option>
+                    <option value="visible">Visible (study mode)</option>
+                  </select>
+                </div>
+                <div class="fld"><label>Category Filter</label>
+                  <select id="fs-cat-filter">
+                    <option value="">All Categories</option>
+                  </select>
+                </div>
+              </div>
+              <div style="margin-top:10px;padding:9px 11px;background:var(--sage-l);border-radius:7px;font-size:11px;color:var(--sage-d);line-height:1.55">
+                <strong>Drill Tip:</strong> Set to "Hidden" to practice receptive fingerspelling — try to identify the word as if it were being fingerspelled to you, then reveal to check yourself.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receptive ASL→English Notes -->
+        <div class="tp" id="prac-rcp">
+          <div class="g2">
+            <div class="card cp">
+              <div class="sec">Receptive Practice Log</div>
+              <div class="fr fr1" style="margin-bottom:8px">
+                <div class="fld"><label>Note / Observation</label>
+                  <textarea id="rcp-note" placeholder="e.g. Struggled with initialized signs today. Handshape-B confusing with flat-O in context..." style="min-height:70px"></textarea></div>
+              </div>
+              <div class="fr fr2" style="margin-bottom:8px">
+                <div class="fld"><label>Sign / Concept</label><input type="text" id="rcp-sign" placeholder="e.g. PHOTOSYNTHESIS"></div>
+                <div class="fld"><label>Date</label><input type="date" id="rcp-date"></div>
+              </div>
+              <button class="btn pri sm" onclick="saveRcpNote()">Save Note</button>
+            </div>
+            <div class="card cp">
+              <div class="sec" style="margin-bottom:8px">Quick Reference — Demand Types</div>
+              <div style="font-size:11px;color:var(--ink2);line-height:1.8">
+                <div style="margin-bottom:4px"><span class="pill pg" style="margin-right:4px">Environmental</span> lighting, acoustics, space, visual access</div>
+                <div style="margin-bottom:4px"><span class="pill pa" style="margin-right:4px">Paralinguistic</span> rate, prosody, affect, volume</div>
+                <div style="margin-bottom:4px"><span class="pill pb" style="margin-right:4px">Interpersonal</span> student behavior, fatigue, rapport</div>
+                <div style="margin-bottom:4px"><span class="pill pr" style="margin-right:4px">Intralingual</span> jargon, registers, ambiguity</div>
+                <div><span class="pill pz" style="margin-right:4px">Intrapersonal</span> interpreter's own knowledge gaps, lag</div>
+              </div>
+            </div>
+          </div>
+          <div class="card cp" style="margin-top:12px">
+            <div class="sec">Receptive Notes History</div>
+            <div id="rcp-list"></div>
+          </div>
+        </div>
+
+        <!-- Practice Resources -->
+        <div class="tp" id="prac-links">
+          <div class="g2" style="margin-bottom:14px">
+            <div>
+              <div class="sec">Add Custom Resource</div>
+              <div class="fr fr1" style="margin-bottom:8px">
+                <div class="fld"><label>Resource Name</label><input type="text" id="res-name" placeholder="e.g. ASL That! YouTube Channel"></div>
+              </div>
+              <div class="fr fr2" style="margin-bottom:8px">
+                <div class="fld"><label>URL</label><input type="url" id="res-url" placeholder="https://..."></div>
+                <div class="fld"><label>Category</label>
+                  <select id="res-cat">
+                    <option>Receptive ASL</option><option>Fingerspelling</option><option>Vocabulary</option>
+                    <option>Educational Interpreting</option><option>Deaf Culture</option><option>Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fld" style="margin-bottom:8px"><label>Notes</label><input type="text" id="res-notes" placeholder="Why is this useful?"></div>
+              <button class="btn pri sm" onclick="saveResource()">Add Resource</button>
+            </div>
+            <div>
+              <div class="sec">Built-In Resources</div>
+              <a href="https://aslpro.com" target="_blank" class="res-link"><div class="res-icon">🤟</div><div><div style="font-weight:500">ASLPro</div><div style="font-size:10px;color:var(--ink3)">Free sign lookup dictionary</div></div></a>
+              <a href="https://www.handspeak.com" target="_blank" class="res-link"><div class="res-icon">👋</div><div><div style="font-weight:500">Handspeak</div><div style="font-size:10px;color:var(--ink3)">Signs, culture, lessons</div></div></a>
+              <a href="https://lifeprint.com" target="_blank" class="res-link"><div class="res-icon">📚</div><div><div style="font-weight:500">Lifeprint / ASLU</div><div style="font-size:10px;color:var(--ink3)">Bill Vicars' comprehensive ASL curriculum</div></div></a>
+              <a href="https://www.signingsavvy.com" target="_blank" class="res-link"><div class="res-icon">✍️</div><div><div style="font-weight:500">Signing Savvy</div><div style="font-size:10px;color:var(--ink3)">Video sign dictionary with classifiers</div></div></a>
+              <a href="https://www.youtube.com/@ASLThat" target="_blank" class="res-link"><div class="res-icon">▶️</div><div><div style="font-weight:500">ASL That!</div><div style="font-size:10px;color:var(--ink3)">YouTube — receptive practice videos</div></div></a>
+            </div>
+          </div>
+          <div class="card cp">
+            <div class="sec">My Resources</div>
+            <div id="resource-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: CALENDAR
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-calendar">
+        <div class="g2">
+          <div class="card cp">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <button class="btn gh sm" onclick="calPrev()">← Prev</button>
+              <div style="font-family:'Lora',serif;font-size:15px" id="cal-month-label"></div>
+              <button class="btn gh sm" onclick="calNext()">Next →</button>
+            </div>
+            <div id="cal-grid">
+              <div class="cdn">Sun</div><div class="cdn">Mon</div><div class="cdn">Tue</div>
+              <div class="cdn">Wed</div><div class="cdn">Thu</div><div class="cdn">Fri</div><div class="cdn">Sat</div>
+            </div>
+          </div>
+          <div class="card cp">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div class="sec" style="margin:0">Events</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn pri sm" onclick="openModal('modal-add-event')">+ Event</button>
+                <button class="btn gold sm" onclick="exportICS()">Export .ics</button>
+              </div>
+            </div>
+            <div id="cal-events-list"></div>
+            <div style="margin-top:12px;padding:9px 11px;background:var(--gold-l);border-radius:7px;font-size:10px;color:var(--gold);line-height:1.5;font-family:'DM Mono',monospace">
+              <strong>Google Calendar:</strong> Click "Export .ics" to download an iCal file, then import it into Google Calendar via Settings → Import.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: BUG / FEATURE TRACKER
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-bugs">
+        <div class="card cp" style="margin-bottom:12px">
+          <div class="sec">Log Issue or Idea</div>
+          <div class="fr fr3" style="margin-bottom:8px">
+            <div class="fld"><label>Title</label><input type="text" id="bug-title" placeholder="Short description..."></div>
+            <div class="fld"><label>Type</label>
+              <select id="bug-type">
+                <option>Bug / Issue</option><option>Feature Request</option><option>Improvement</option>
+                <option>Professional Development Goal</option><option>Personal Note</option>
+              </select>
+            </div>
+            <div class="fld"><label>Priority</label>
+              <select id="bug-priority">
+                <option value="lo">Low</option><option value="med" selected>Medium</option><option value="hi">High</option>
+              </select>
+            </div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>Description / Steps</label>
+              <textarea id="bug-desc" placeholder="Describe the issue or idea in detail..." style="min-height:65px"></textarea></div>
+            <div class="fld">
+              <div class="fld" style="margin-bottom:8px"><label>Related Student / Class</label>
+                <input type="text" id="bug-context" placeholder="e.g. Student 1 / Biology"></div>
+              <div class="fld"><label>Status</label>
+                <select id="bug-status">
+                  <option value="open">Open</option><option value="awaiting">Awaiting / Pending</option><option value="closed">Closed / Done</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button class="btn pri" onclick="saveBug()">Save Entry</button>
+        </div>
+
+        <div class="card cp">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div class="sec" style="margin:0">Tracker (<span id="bug-count">0</span> entries)</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <input class="search-input" type="text" placeholder="Search..." oninput="renderBugs()" id="bug-search" style="width:160px;font-size:11px;padding:5px 9px">
+              <select id="bug-filter-status" onchange="renderBugs()" style="font-size:11px;padding:5px 8px;border:1px solid var(--brk);border-radius:6px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif">
+                <option value="">All Status</option><option value="open">Open</option><option value="awaiting">Awaiting</option><option value="closed">Closed</option>
+              </select>
+              <select id="bug-filter-type" onchange="renderBugs()" style="font-size:11px;padding:5px 8px;border:1px solid var(--brk);border-radius:6px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif">
+                <option value="">All Types</option>
+                <option>Bug / Issue</option><option>Feature Request</option><option>Improvement</option>
+                <option>Professional Development Goal</option><option>Personal Note</option>
+              </select>
+            </div>
+          </div>
+          <div id="bug-list"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: SETTINGS
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-settings">
+        <div class="g2">
+          <div class="card cp">
+            <div class="sec">Interpreter Profile</div>
+            <div class="fr fr1" style="margin-bottom:8px">
+              <div class="fld"><label>Your Name</label><input type="text" id="set-name" placeholder="e.g. K. Smith"></div>
+            </div>
+            <div class="fr fr1" style="margin-bottom:8px">
+              <div class="fld"><label>Certification / Level</label><input type="text" id="set-cert" placeholder="e.g. NIC, CDI, RID, Educational Interpreter, Level 3.5..."></div>
+            </div>
+            <div class="fr fr1" style="margin-bottom:8px">
+              <div class="fld"><label>School / District</label><input type="text" id="set-school" placeholder="e.g. Mesa Unified School District"></div>
+            </div>
+            <div class="fr fr1" style="margin-bottom:8px">
+              <div class="fld"><label>Grade Level(s) Served</label><input type="text" id="set-grade" placeholder="e.g. 9–12, Elementary K–5..."></div>
+            </div>
+            <button class="btn pri" onclick="saveSettings()">Save Profile</button>
+          </div>
+          <div class="card cp">
+            <div class="sec">Privacy / PIN Lock</div>
+            <div class="notice n-ok" style="margin-bottom:10px"><span>🔒</span><div>All data is stored locally in your browser. Nothing leaves your device.</div></div>
+            <div class="fr fr1" style="margin-bottom:8px">
+              <div class="fld"><label>Set PIN (4 digits, leave blank to disable)</label>
+                <input type="password" id="set-pin" placeholder="e.g. 1234" maxlength="4" pattern="[0-9]{4}"></div>
+            </div>
+            <div class="fr fr1" style="margin-bottom:8px">
+              <div class="fld"><label>Confirm PIN</label>
+                <input type="password" id="set-pin2" placeholder="re-enter PIN" maxlength="4" pattern="[0-9]{4}"></div>
+            </div>
+            <button class="btn" onclick="savePin()">Update PIN</button>
+          </div>
+        </div>
+        <div class="card cp" style="margin-top:12px">
+          <div class="sec">Data Management</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="exportData()">📤 Export All Data (JSON)</button>
+            <button class="btn" onclick="importData()">📥 Import Data (JSON)</button>
+            <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
+            <button class="btn warn" onclick="clearAllData()">🗑 Clear All Data</button>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--ink3);line-height:1.6">
+            Export regularly to back up your vocabulary, logs, and materials. Data is stored in <code>localStorage</code> — clearing browser data will erase it unless exported.
+          </div>
+        </div>
+        <div class="card cp" style="margin-top:12px">
+          <div class="sec">App Info</div>
+          <div style="font-size:11px;color:var(--ink3);line-height:1.8;font-family:'DM Mono',monospace">
+            <div>App: EduInterp v1.0</div>
+            <div>Storage: Browser localStorage (private, local only)</div>
+            <div>Purpose: Personal educational interpreting professional log</div>
+            <div>No data transmission — fully offline capable</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /ps -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ════════════════ MODALS ════════════════ -->
+
+<!-- Add Student -->
+<div class="ov" id="modal-add-student">
+  <div class="mod">
+    <div class="mh"><h2>Add / Edit Student</h2><button class="mod-close" onclick="closeModal('modal-add-student')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="ms-id">
+      <div class="fr fr2">
+        <div class="fld"><label>Label (e.g. Student 1)</label><input type="text" id="ms-label" placeholder="Student 1"></div>
+        <div class="fld"><label>Grade</label><input type="text" id="ms-grade" placeholder="e.g. 10th"></div>
+      </div>
+      <div class="fr fr1">
+        <div class="fld"><label>Notes / Context (no identifying info needed)</label>
+          <textarea id="ms-notes" placeholder="General notes about this assignment..."></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn gh sm" onclick="closeModal('modal-add-student')">Cancel</button><button class="btn pri" onclick="saveStudent()">Save</button></div>
+  </div>
+</div>
+
+<!-- Add Class -->
+<div class="ov" id="modal-add-class">
+  <div class="mod">
+    <div class="mh"><h2>Add / Edit Class</h2><button class="mod-close" onclick="closeModal('modal-add-class')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="mc-id">
+      <div class="fr fr2">
+        <div class="fld"><label>Class Name</label><input type="text" id="mc-name" placeholder="e.g. AP Biology"></div>
+        <div class="fld"><label>Period / Time</label><input type="text" id="mc-period" placeholder="e.g. 1st Period, 8:00 AM"></div>
+      </div>
+      <div class="fr fr2">
+        <div class="fld"><label>Teacher</label><input type="text" id="mc-teacher" placeholder="e.g. Mr. Alvarez"></div>
+        <div class="fld"><label>Room</label><input type="text" id="mc-room" placeholder="e.g. Room 214"></div>
+      </div>
+      <div class="fr fr2">
+        <div class="fld"><label>Student</label><select id="mc-student"></select></div>
+        <div class="fld"><label>Days</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px" id="mc-days-wrap">
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px"><input type="checkbox" value="Mon"> Mon</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px"><input type="checkbox" value="Tue"> Tue</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px"><input type="checkbox" value="Wed"> Wed</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px"><input type="checkbox" value="Thu"> Thu</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px"><input type="checkbox" value="Fri"> Fri</label>
+          </div>
+        </div>
+      </div>
+      <div class="fr fr1">
+        <div class="fld"><label>Notes</label><textarea id="mc-notes" placeholder="Subject area, prep needs, typical vocabulary level..."></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn gh sm" onclick="closeModal('modal-add-class')">Cancel</button><button class="btn pri" onclick="saveClass()">Save</button></div>
+  </div>
+</div>
+
+<!-- Add Presentation -->
+<div class="ov" id="modal-add-pres">
+  <div class="mod">
+    <div class="mh"><h2>Add Upcoming Presentation / Visit</h2><button class="mod-close" onclick="closeModal('modal-add-pres')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="mp-id">
+      <div class="fr fr2">
+        <div class="fld"><label>Event Name</label><input type="text" id="mp-name" placeholder="e.g. College Fair, Guest Speaker – NASA"></div>
+        <div class="fld"><label>Date</label><input type="date" id="mp-date"></div>
+      </div>
+      <div class="fr fr2">
+        <div class="fld"><label>Venue / Location</label><input type="text" id="mp-venue" placeholder="e.g. Community College, Main Auditorium"></div>
+        <div class="fld"><label>Student</label><select id="mp-student"></select></div>
+      </div>
+      <div class="fr fr1">
+        <div class="fld"><label>Prep Notes / Vocab to Pre-Study</label>
+          <textarea id="mp-prep" placeholder="Topics to prep, expected vocabulary domains, who is presenting..." style="min-height:70px"></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn gh sm" onclick="closeModal('modal-add-pres')">Cancel</button><button class="btn pri" onclick="savePresentation()">Save</button></div>
+  </div>
+</div>
+
+<!-- Add Calendar Event -->
+<div class="ov" id="modal-add-event">
+  <div class="mod">
+    <div class="mh"><h2>Add Calendar Event</h2><button class="mod-close" onclick="closeModal('modal-add-event')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="ce-id">
+      <div class="fr fr2">
+        <div class="fld"><label>Event Title</label><input type="text" id="ce-title" placeholder="e.g. IEP Meeting, College Visit"></div>
+        <div class="fld"><label>Date</label><input type="date" id="ce-date"></div>
+      </div>
+      <div class="fr fr2">
+        <div class="fld"><label>Time (optional)</label><input type="time" id="ce-time"></div>
+        <div class="fld"><label>Category</label>
+          <select id="ce-cat">
+            <option value="g">Assignment / Class</option><option value="a">Presentation / Event</option>
+            <option value="b">IEP Meeting</option><option value="r">PD / Training</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr fr1">
+        <div class="fld"><label>Notes</label><textarea id="ce-notes" placeholder="Details, prep needed..."></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn gh sm" onclick="closeModal('modal-add-event')">Cancel</button><button class="btn pri" onclick="saveEvent()">Save</button></div>
+  </div>
+</div>
+
+<!-- ════════════════ JAVASCRIPT ════════════════ -->
+<script>
+'use strict';
+
+// ── DATA STORE ──────────────────────────────────────────────────────────────
+const DB_KEY = 'eduinterp_v1';
+let DB = {
+  settings: { name:'', cert:'', school:'', grade:'', pin:'' },
+  students: [
+    { id:'s1', label:'Student 1', grade:'', notes:'' }
+  ],
+  classes: [],
+  logs: [],
+  vocab: [],
+  materials: [],
+  bugs: [],
+  events: [],
+  presentations: [],
+  rcpNotes: [],
+  resources: []
+};
+
+function save() {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e) { toast('Storage full! Export your data.','warn'); }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      DB = { ...DB, ...parsed };
+    }
+  } catch(e) { console.warn('Load error', e); }
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+// ── PIN ──────────────────────────────────────────────────────────────────────
+let pinBuffer = '';
+function pinPress(n) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += n;
+  updatePinDots();
+  if (pinBuffer.length === 4) setTimeout(checkPin, 120);
+}
+function pinBack() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
+function pinClear() { pinBuffer = ''; updatePinDots(); }
+function updatePinDots() {
+  for (let i=0;i<4;i++) {
+    document.getElementById('pd'+i).classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+function checkPin() {
+  const stored = DB.settings.pin;
+  if (!stored || pinBuffer === stored) { unlockApp(); }
+  else {
+    document.getElementById('pin-err').textContent = 'Incorrect PIN — try again';
+    pinBuffer = ''; updatePinDots();
+    setTimeout(() => document.getElementById('pin-err').textContent = '', 1800);
+  }
+}
+function pinSkip() {
+  if (!DB.settings.pin) unlockApp();
+  else { document.getElementById('pin-err').textContent = 'PIN is set — please enter it'; }
+}
+function unlockApp() {
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  initApp();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function initApp() {
+  populateStudentSelectors();
+  populateClassSelectors();
+  setTodayDates();
+  renderDashboard();
+  renderLogs();
+  renderVocab();
+  renderSchedule();
+  renderMaterials();
+  renderBugs();
+  renderCalendar();
+  renderRcpNotes();
+  renderResources();
+  loadSettings();
+  updateBadge();
+}
+
+function setTodayDates() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('log-date').value = today;
+  document.getElementById('rcp-date').value = today;
+  document.getElementById('today-date-label').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+const pageMeta = {
+  'dashboard':  ['Dashboard','Overview & Today'],
+  'daily-log':  ['Daily Log','Session records'],
+  'vocab':      ['Vocabulary','Dictionary & study'],
+  'schedule':   ['Schedule','Students, classes & events'],
+  'prep':       ['Prep Materials','Files, links & notes'],
+  'practice':   ['Practice','Drills & resources'],
+  'calendar':   ['Calendar','Planning & events'],
+  'bugs':       ['Tracker','Issues, goals & ideas'],
+  'settings':   ['Settings','Profile & data'],
+};
+function nav(btn) {
+  document.querySelectorAll('.sbi').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const pg = btn.dataset.page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+pg).classList.add('active');
+  const [title,sub] = pageMeta[pg] || [pg,''];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+  document.getElementById('tb-acts').innerHTML = '';
+}
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+function switchTab(tabEl, tpId) {
+  const bar = tabEl.closest('.tb-bar');
+  bar.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  tabEl.classList.add('active');
+  const container = bar.nextElementSibling;
+  let p = container;
+  while (p) { if (p.classList.contains('tp')) p.classList.remove('active'); p = p.nextElementSibling; }
+  document.getElementById(tpId).classList.add('active');
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.ov').forEach(ov => ov.addEventListener('click', e => { if(e.target===ov) ov.classList.remove('open'); }));
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='warn' ? 'var(--clay)' : type==='gold' ? 'var(--gold)' : 'var(--sage-d)';
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.opacity='0', 2600);
+}
+
+// ── STUDENTS ──────────────────────────────────────────────────────────────────
+function populateStudentSelectors() {
+  const selects = ['global-student','log-student','v-student','mat-student','mc-student','mp-student','log-filter-student'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const val = el.value;
+    el.innerHTML = '';
+    if (id === 'v-student' || id === 'mat-student') {
+      el.innerHTML = '<option value="all">All / General</option>';
+    }
+    DB.students.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = s.label;
+      el.appendChild(o);
+    });
+    if (id === 'log-filter-student') {
+      const allOpt = document.createElement('option');
+      allOpt.value=''; allOpt.textContent='All Students';
+      el.insertBefore(allOpt, el.firstChild);
+    }
+    if (val) el.value = val;
+  });
+}
+
+function onStudentChange() {
+  populateClassSelectors();
+  renderDashboard();
+}
+
+function saveStudent() {
+  const id = document.getElementById('ms-id').value || uid();
+  const s = {
+    id, label: document.getElementById('ms-label').value.trim() || 'Student',
+    grade: document.getElementById('ms-grade').value.trim(),
+    notes: document.getElementById('ms-notes').value.trim()
+  };
+  const idx = DB.students.findIndex(x=>x.id===id);
+  if (idx>=0) DB.students[idx]=s; else DB.students.push(s);
+  save(); populateStudentSelectors(); populateClassSelectors();
+  renderSchedule(); closeModal('modal-add-student');
+  document.getElementById('ms-id').value='';
+  document.getElementById('ms-label').value='';
+  document.getElementById('ms-grade').value='';
+  document.getElementById('ms-notes').value='';
+  toast('Student saved');
+}
+
+function deleteStudent(id) {
+  if (!confirm('Delete this student entry? Logs and vocab referencing them will remain.')) return;
+  DB.students = DB.students.filter(s=>s.id!==id);
+  save(); populateStudentSelectors(); renderSchedule(); toast('Deleted');
+}
+
+// ── CLASSES ────────────────────────────────────────────────────────────────────
+function populateClassSelectors() {
+  const studentId = document.getElementById('global-student').value;
+  const classesForStudent = DB.classes.filter(c => !studentId || c.studentId === studentId);
+  const selects = ['ql-class','log-class','mat-class'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = id==='mat-class' ? '<option value="">— General —</option>' : '<option value="">— select class —</option>';
+    classesForStudent.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name + (c.period ? ` (${c.period})` : '');
+      el.appendChild(o);
+    });
+    if (id==='log-class' && DB.classes.length>0 && !classesForStudent.length) {
+      DB.classes.forEach(c=>{
+        const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; el.appendChild(o);
+      });
+    }
+  });
+  // vocab filter cats
+  const vcf = document.getElementById('vocab-filter-cat');
+  if (vcf) {
+    const cats = [...new Set(DB.vocab.map(v=>v.category).filter(Boolean))].sort();
+    vcf.innerHTML = '<option value="">All Categories</option>';
+    cats.forEach(c => { vcf.innerHTML += `<option>${c}</option>`; });
+    const dl = document.getElementById('cat-list');
+    if (dl) { dl.innerHTML = ''; cats.forEach(c=>{dl.innerHTML+=`<option value="${c}">`;}); }
+  }
+  const fscf = document.getElementById('fs-cat-filter');
+  if (fscf) {
+    const cats = [...new Set(DB.vocab.map(v=>v.category).filter(Boolean))].sort();
+    fscf.innerHTML='<option value="">All Categories</option>';
+    cats.forEach(c=>{fscf.innerHTML+=`<option>${esc(c)}</option>`;});
+  }
+}
+
+function saveClass() {
+  const id = document.getElementById('mc-id').value || uid();
+  const days = [...document.querySelectorAll('#mc-days-wrap input:checked')].map(i=>i.value);
+  const c = {
+    id,
+    name: document.getElementById('mc-name').value.trim(),
+    period: document.getElementById('mc-period').value.trim(),
+    teacher: document.getElementById('mc-teacher').value.trim(),
+    room: document.getElementById('mc-room').value.trim(),
+    studentId: document.getElementById('mc-student').value,
+    days, notes: document.getElementById('mc-notes').value.trim()
+  };
+  if (!c.name) { toast('Class name required','warn'); return; }
+  const idx = DB.classes.findIndex(x=>x.id===id);
+  if (idx>=0) DB.classes[idx]=c; else DB.classes.push(c);
+  save(); populateClassSelectors(); renderSchedule();
+  closeModal('modal-add-class');
+  document.getElementById('mc-id').value='';
+  ['mc-name','mc-period','mc-teacher','mc-room','mc-notes'].forEach(f=>document.getElementById(f).value='');
+  document.querySelectorAll('#mc-days-wrap input').forEach(i=>i.checked=false);
+  toast('Class saved');
+}
+
+function deleteClass(id) {
+  if (!confirm('Delete this class?')) return;
+  DB.classes = DB.classes.filter(c=>c.id!==id);
+  save(); populateClassSelectors(); renderSchedule(); toast('Deleted');
+}
+
+// ── LOGS ───────────────────────────────────────────────────────────────────────
+function quickLog() {
+  const vocab = document.getElementById('ql-vocab').value.trim();
+  const notes = document.getElementById('ql-notes').value.trim();
+  const classId = document.getElementById('ql-class').value;
+  if (!notes && !vocab) { toast('Add some notes or vocab first','warn'); return; }
+  const classObj = DB.classes.find(c=>c.id===classId);
+  const studentId = document.getElementById('global-student').value;
+  const entry = {
+    id: uid(),
+    date: new Date().toISOString().split('T')[0],
+    studentId,
+    classId,
+    className: classObj ? classObj.name : '(Quick Entry)',
+    vocab: vocab ? vocab.split(',').map(v=>v.trim()).filter(Boolean) : [],
+    demands:'', notes, prep:'', followup:'', mode:'', rating:'',
+    topic:'', createdAt: Date.now()
+  };
+  DB.logs.unshift(entry);
+  // auto-add vocab to dictionary
+  entry.vocab.forEach(w => {
+    if (w && !DB.vocab.find(v=>v.word.toLowerCase()===w.toLowerCase())) {
+      DB.vocab.push({ id:uid(), word:w, category: classObj?.name||'', studentId, definition:'', params:'', mastery:2, source:'Daily Log', link:'', createdAt:Date.now() });
+    }
+  });
+  save();
+  document.getElementById('ql-vocab').value='';
+  document.getElementById('ql-notes').value='';
+  renderDashboard(); renderLogs(); renderVocab();
+  toast('Log saved!');
+}
+
+function saveLog() {
+  const vocab = document.getElementById('log-vocab').value.trim();
+  const classId = document.getElementById('log-class').value;
+  const classObj = DB.classes.find(c=>c.id===classId);
+  const studentId = document.getElementById('log-student').value;
+  const entry = {
+    id: uid(),
+    date: document.getElementById('log-date').value,
+    studentId,
+    classId,
+    className: classObj ? classObj.name : document.getElementById('log-class').value||'',
+    vocab: vocab ? vocab.split(',').map(v=>v.trim()).filter(Boolean) : [],
+    topic: document.getElementById('log-topic').value.trim(),
+    demands: document.getElementById('log-demands').value.trim(),
+    notes: document.getElementById('log-notes').value.trim(),
+    prep: document.getElementById('log-prep').value.trim(),
+    followup: document.getElementById('log-followup').value.trim(),
+    mode: document.getElementById('log-mode').value,
+    rating: document.getElementById('log-rating').value,
+    createdAt: Date.now()
+  };
+  if (!entry.date) { toast('Date required','warn'); return; }
+  DB.logs.unshift(entry);
+  entry.vocab.forEach(w => {
+    if (w && !DB.vocab.find(v=>v.word.toLowerCase()===w.toLowerCase())) {
+      DB.vocab.push({ id:uid(), word:w, category:classObj?.name||'', studentId, definition:'', params:'', mastery:2, source:'Daily Log', link:'', createdAt:Date.now() });
+    }
+  });
+  save();
+  ['log-vocab','log-topic','log-demands','log-notes','log-prep','log-followup'].forEach(f=>document.getElementById(f).value='');
+  document.getElementById('log-mode').value='';
+  document.getElementById('log-rating').value='';
+  renderDashboard(); renderLogs(); renderVocab();
+  toast('Log entry saved!');
+}
+
+function renderLogs() {
+  const list = document.getElementById('log-list');
+  const search = (document.getElementById('log-search')?.value||'').toLowerCase();
+  const filterStudent = document.getElementById('log-filter-student')?.value||'';
+  let logs = [...DB.logs].sort((a,b)=>b.date.localeCompare(a.date));
+  if (filterStudent) logs = logs.filter(l=>l.studentId===filterStudent);
+  if (search) logs = logs.filter(l =>
+    (l.className||'').toLowerCase().includes(search) ||
+    (l.notes||'').toLowerCase().includes(search) ||
+    (l.demands||'').toLowerCase().includes(search) ||
+    (l.vocab||[]).join(' ').toLowerCase().includes(search) ||
+    (l.topic||'').toLowerCase().includes(search)
+  );
+  if (!logs.length) { list.innerHTML=`<div class="tbl-empty">No log entries yet.</div>`; return; }
+  list.innerHTML = logs.map(l => {
+    const student = DB.students.find(s=>s.id===l.studentId);
+    const stars = l.rating ? '⭐'.repeat(parseInt(l.rating)) : '';
+    return `<div class="le">
+      <div class="le-top">
+        <div><span class="le-date">${l.date}</span> <span class="le-student">${student?.label||''}</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${stars ? `<span style="font-size:10px">${stars}</span>` : ''}
+          ${l.mode ? `<span class="pill pz">${l.mode}</span>` : ''}
+          <button class="btn gh sm" style="padding:2px 6px;font-size:10px;color:var(--clay)" onclick="deleteLog('${l.id}')">✕</button>
+        </div>
+      </div>
+      <div class="le-class">${esc(l.className||'')}${l.topic?' — '+esc(l.topic):''}</div>
+      ${l.vocab?.length ? `<div class="le-vocab-list">${l.vocab.map(v=>`<span class="vocab-chip">${esc(v)}</span>`).join('')}</div>`:''}
+      ${l.demands ? `<div style="font-size:10px;color:var(--gold);margin-bottom:3px;font-family:'DM Mono',monospace">Demands: ${esc(l.demands.substring(0,120))}${l.demands.length>120?'…':''}</div>`:''}
+      ${l.notes ? `<div class="le-notes">${esc(l.notes.substring(0,200))}${l.notes.length>200?'…':''}</div>`:''}
+      ${l.followup ? `<div style="font-size:10px;color:var(--clay);margin-top:3px;font-family:'DM Mono',monospace">→ Follow-up: ${esc(l.followup.substring(0,100))}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function deleteLog(id) {
+  if (!confirm('Delete this log entry?')) return;
+  DB.logs = DB.logs.filter(l=>l.id!==id);
+  save(); renderLogs(); renderDashboard(); toast('Deleted');
+}
+
+// ── VOCAB ──────────────────────────────────────────────────────────────────────
+function saveVocab() {
+  const editId = document.getElementById('vocab-edit-id').value;
+  const id = editId || uid();
+  const v = {
+    id, word: document.getElementById('v-word').value.trim(),
+    category: document.getElementById('v-category').value.trim(),
+    studentId: document.getElementById('v-student').value,
+    definition: document.getElementById('v-def').value.trim(),
+    params: document.getElementById('v-params').value.trim(),
+    mastery: parseInt(document.getElementById('v-mastery').value)||3,
+    source: document.getElementById('v-source').value.trim(),
+    link: document.getElementById('v-link').value.trim(),
+    createdAt: editId ? (DB.vocab.find(x=>x.id===editId)?.createdAt||Date.now()) : Date.now()
+  };
+  if (!v.word) { toast('Word required','warn'); return; }
+  const idx = DB.vocab.findIndex(x=>x.id===id);
+  if (idx>=0) DB.vocab[idx]=v; else DB.vocab.push(v);
+  save(); clearVocabForm(); renderVocab(); populateClassSelectors(); renderDashboard();
+  toast(editId ? 'Vocabulary updated' : 'Word added to dictionary');
+}
+
+function clearVocabForm() {
+  document.getElementById('vocab-edit-id').value='';
+  ['v-word','v-category','v-source','v-link','v-def','v-params'].forEach(f=>document.getElementById(f).value='');
+  document.getElementById('v-mastery').value='3';
+  document.getElementById('v-student').value='all';
+  document.getElementById('vocab-cancel-btn').style.display='none';
+}
+
+function editVocab(id) {
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v) return;
+  document.getElementById('vocab-edit-id').value = v.id;
+  document.getElementById('v-word').value = v.word;
+  document.getElementById('v-category').value = v.category||'';
+  document.getElementById('v-student').value = v.studentId||'all';
+  document.getElementById('v-def').value = v.definition||'';
+  document.getElementById('v-params').value = v.params||'';
+  document.getElementById('v-mastery').value = v.mastery||3;
+  document.getElementById('v-source').value = v.source||'';
+  document.getElementById('v-link').value = v.link||'';
+  document.getElementById('vocab-cancel-btn').style.display='inline-flex';
+  document.getElementById('page-vocab').scrollTop = 0;
+  document.getElementById('page-scroll').scrollTop = 0;
+}
+
+function deleteVocab(id) {
+  if (!confirm('Delete this vocabulary entry?')) return;
+  DB.vocab = DB.vocab.filter(v=>v.id!==id);
+  save(); renderVocab(); renderDashboard(); toast('Deleted');
+}
+
+function masteryLabel(n) {
+  return ['','New','Recognizing','Learning','Comfortable','Mastered'][n]||'';
+}
+
+function masteryStars(n) {
+  return '★'.repeat(n)+'☆'.repeat(5-n);
+}
+
+function renderVocab() {
+  const list = document.getElementById('vocab-list');
+  const count = document.getElementById('vocab-count');
+  const search = (document.getElementById('vocab-search')?.value||'').toLowerCase();
+  const filterCat = document.getElementById('vocab-filter-cat')?.value||'';
+  const filterMastery = document.getElementById('vocab-filter-mastery')?.value||'';
+  let vocab = [...DB.vocab].sort((a,b)=>a.word.localeCompare(b.word));
+  if (filterCat) vocab = vocab.filter(v=>v.category===filterCat);
+  if (filterMastery) vocab = vocab.filter(v=>v.mastery===parseInt(filterMastery));
+  if (search) vocab = vocab.filter(v =>
+    v.word.toLowerCase().includes(search)||
+    (v.definition||'').toLowerCase().includes(search)||
+    (v.category||'').toLowerCase().includes(search)||
+    (v.params||'').toLowerCase().includes(search)
+  );
+  count.textContent = DB.vocab.length;
+  if (!vocab.length) { list.innerHTML=`<div class="tbl-empty">No vocabulary entries${search||filterCat?' matching filters':' yet'}.</div>`; return; }
+  const masteryColors=['','pr','pr','pa','pb','pg'];
+  list.innerHTML = vocab.map(v => {
+    const student = DB.students.find(s=>s.id===v.studentId);
+    return `<div class="vc">
+      <div class="vc-top">
+        <div><div class="vc-word">${esc(v.word)}</div></div>
+        <div class="vc-meta">
+          ${v.category?`<span class="pill pz">${esc(v.category)}</span>`:''}
+          <span class="pill ${masteryColors[v.mastery]||'pz'}" title="Mastery: ${masteryLabel(v.mastery)}">${masteryStars(v.mastery)}</span>
+          ${student&&student.label!=='all'?`<span class="pill pb">${esc(student.label)}</span>`:''}
+          <div class="vc-actions">
+            ${v.link?`<a href="${esc(v.link)}" target="_blank" class="btn gh sm" style="padding:2px 6px;font-size:10px">🔗</a>`:''}
+            <button class="btn gh sm" style="padding:2px 6px;font-size:10px" onclick="editVocab('${v.id}')">Edit</button>
+            <button class="btn gh sm" style="padding:2px 6px;font-size:10px;color:var(--clay)" onclick="deleteVocab('${v.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+      ${v.definition?`<div class="vc-def">${esc(v.definition)}</div>`:''}
+      ${v.params?`<div class="vc-params">ASL: ${esc(v.params)}</div>`:''}
+      ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── SCHEDULE ──────────────────────────────────────────────────────────────────
+function renderSchedule() {
+  renderStudentMgmt();
+  renderClassList();
+  renderPresList();
+}
+
+function renderStudentMgmt() {
+  const el = document.getElementById('student-mgmt-list');
+  if (!DB.students.length) { el.innerHTML='<div class="tbl-empty">No students added yet.</div>'; return; }
+  el.innerHTML = `<table class="tbl"><thead><tr><th>Label</th><th>Grade</th><th>Notes</th><th></th></tr></thead><tbody>
+  ${DB.students.map(s=>`<tr>
+    <td style="font-weight:500">${esc(s.label)}</td>
+    <td>${esc(s.grade||'')}</td>
+    <td style="color:var(--ink2)">${esc((s.notes||'').substring(0,60))}${(s.notes||'').length>60?'…':''}</td>
+    <td><div style="display:flex;gap:4px">
+      <button class="btn gh sm" onclick="editStudentModal('${s.id}')">Edit</button>
+      <button class="btn warn sm" onclick="deleteStudent('${s.id}')">Delete</button>
+    </div></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function editStudentModal(id) {
+  const s = DB.students.find(x=>x.id===id);
+  if (!s) return;
+  document.getElementById('ms-id').value=s.id;
+  document.getElementById('ms-label').value=s.label;
+  document.getElementById('ms-grade').value=s.grade||'';
+  document.getElementById('ms-notes').value=s.notes||'';
+  openModal('modal-add-student');
+}
+
+function renderClassList() {
+  const el = document.getElementById('class-list');
+  const studentId = document.getElementById('global-student')?.value;
+  let classes = DB.classes;
+  if (!classes.length) { el.innerHTML='<div class="tbl-empty">No classes added yet. Use the + button above.</div>'; return; }
+  el.innerHTML = classes.map(c=>{
+    const student = DB.students.find(s=>s.id===c.studentId);
+    return `<div class="sched-class">
+      <div class="sched-time">${esc(c.period||'')}</div>
+      <div class="sched-body">
+        <div class="sched-name">${esc(c.name)}</div>
+        <div class="sched-detail">${student?esc(student.label):''}${c.teacher?' · '+esc(c.teacher):''}${c.room?' · '+esc(c.room):''}${c.days?.length?' · '+c.days.join('/'):''}</div>
+        ${c.notes?`<div style="font-size:10px;color:var(--ink3);margin-top:2px">${esc(c.notes.substring(0,80))}</div>`:''}
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button class="btn gh sm" onclick="editClassModal('${c.id}')">Edit</button>
+        <button class="btn warn sm" onclick="deleteClass('${c.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editClassModal(id) {
+  const c = DB.classes.find(x=>x.id===id);
+  if (!c) return;
+  populateStudentSelectors();
+  document.getElementById('mc-id').value=c.id;
+  document.getElementById('mc-name').value=c.name;
+  document.getElementById('mc-period').value=c.period||'';
+  document.getElementById('mc-teacher').value=c.teacher||'';
+  document.getElementById('mc-room').value=c.room||'';
+  document.getElementById('mc-student').value=c.studentId||'';
+  document.getElementById('mc-notes').value=c.notes||'';
+  document.querySelectorAll('#mc-days-wrap input').forEach(i=>{ i.checked=(c.days||[]).includes(i.value); });
+  openModal('modal-add-class');
+}
+
+function savePresentation() {
+  const id = document.getElementById('mp-id').value || uid();
+  const p = {
+    id,
+    name: document.getElementById('mp-name').value.trim(),
+    date: document.getElementById('mp-date').value,
+    venue: document.getElementById('mp-venue').value.trim(),
+    studentId: document.getElementById('mp-student').value,
+    prep: document.getElementById('mp-prep').value.trim()
+  };
+  if (!p.name) { toast('Event name required','warn'); return; }
+  const idx = DB.presentations.findIndex(x=>x.id===id);
+  if (idx>=0) DB.presentations[idx]=p; else DB.presentations.push(p);
+  save(); renderPresList(); closeModal('modal-add-pres');
+  document.getElementById('mp-id').value='';
+  ['mp-name','mp-date','mp-venue','mp-prep'].forEach(f=>document.getElementById(f).value='');
+  toast('Presentation saved');
+}
+
+function renderPresList() {
+  const el = document.getElementById('pres-list');
+  const today = new Date().toISOString().split('T')[0];
+  const sorted = [...DB.presentations].sort((a,b)=>a.date.localeCompare(b.date));
+  if (!sorted.length) { el.innerHTML='<div class="tbl-empty">No upcoming presentations.</div>'; return; }
+  el.innerHTML = sorted.map(p=>{
+    const student = DB.students.find(s=>s.id===p.studentId);
+    const isPast = p.date && p.date < today;
+    return `<div class="pres-card" style="${isPast?'opacity:.6':''}">
+      <div class="pres-top">
+        <div class="pres-title">${esc(p.name)}</div>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${isPast?'<span class="pill pz">Past</span>':''}
+          <button class="btn warn sm" style="padding:2px 6px;font-size:10px" onclick="deletePres('${p.id}')">✕</button>
+        </div>
+      </div>
+      ${p.date?`<div class="pres-date">${p.date}${p.venue?' · '+esc(p.venue):''}</div>`:''}
+      ${student?`<div style="font-size:10px;color:var(--ink3);margin-top:2px;font-family:'DM Mono',monospace">${esc(student.label)}</div>`:''}
+      ${p.prep?`<div class="pres-prep" style="margin-top:5px">${esc(p.prep.substring(0,150))}${p.prep.length>150?'…':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function deletePres(id) {
+  DB.presentations=DB.presentations.filter(p=>p.id!==id);
+  save(); renderPresList(); renderDashboard(); toast('Deleted');
+}
+
+// ── MATERIALS ─────────────────────────────────────────────────────────────────
+let pendingFile = null;
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  readFile(file);
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  readFile(file);
+}
+
+function readFile(file) {
+  if (file.size > 5*1024*1024) { toast('File too large (max 5MB)','warn'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    pendingFile = { name: file.name, type: file.type, size: file.size, data: e.target.result };
+    const ext = file.name.split('.').pop().toUpperCase();
+    document.getElementById('mat-file-preview').innerHTML = `
+      <div class="file-item"><span class="file-ext">${ext}</span>${esc(file.name)} <span style="color:var(--ink3);font-size:10px;font-family:'DM Mono',monospace">(${(file.size/1024).toFixed(1)} KB)</span>
+      <button class="btn gh sm" style="margin-left:auto;font-size:10px;color:var(--clay)" onclick="pendingFile=null;document.getElementById('mat-file-preview').innerHTML='';document.getElementById('mat-file-input').value=''">✕</button></div>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveMaterial() {
+  const m = {
+    id: uid(),
+    title: document.getElementById('mat-title').value.trim(),
+    type: document.getElementById('mat-type').value,
+    studentId: document.getElementById('mat-student').value,
+    classId: document.getElementById('mat-class').value,
+    link: document.getElementById('mat-link').value.trim(),
+    notes: document.getElementById('mat-notes').value.trim(),
+    file: pendingFile ? { name: pendingFile.name, type: pendingFile.type, size: pendingFile.size, data: pendingFile.data } : null,
+    createdAt: Date.now()
+  };
+  if (!m.title) { toast('Title required','warn'); return; }
+  DB.materials.unshift(m);
+  pendingFile = null;
+  save();
+  ['mat-title','mat-link','mat-notes'].forEach(f=>document.getElementById(f).value='');
+  document.getElementById('mat-file-preview').innerHTML='';
+  document.getElementById('mat-file-input').value='';
+  renderMaterials(); toast('Material saved');
+}
+
+function renderMaterials() {
+  const el = document.getElementById('mat-list');
+  const search=(document.getElementById('mat-search')?.value||'').toLowerCase();
+  const filterType=document.getElementById('mat-filter-type')?.value||'';
+  let mats=[...DB.materials].sort((a,b)=>b.createdAt-a.createdAt);
+  if(filterType) mats=mats.filter(m=>m.type===filterType);
+  if(search) mats=mats.filter(m=>(m.title||'').toLowerCase().includes(search)||(m.notes||'').toLowerCase().includes(search));
+  if(!mats.length){el.innerHTML='<div class="tbl-empty">No materials saved yet.</div>';return;}
+  const typeIcons={'Note / Link':'📝','Video Link':'▶️','Document Upload':'📎','Vocabulary List':'📚','Audio Resource':'🎵','Other':'📌'};
+  el.innerHTML=mats.map(m=>{
+    const student=DB.students.find(s=>s.id===m.studentId);
+    const cls=DB.classes.find(c=>c.id===m.classId);
+    return `<div class="mat-card">
+      <div class="mat-top">
+        <div><div class="mat-name">${typeIcons[m.type]||'📌'} ${esc(m.title)}</div>
+        <div class="mat-meta">${m.type}${student&&student.label!=='all'?' · '+esc(student.label):''}${cls?' · '+esc(cls.name):''}${m.file?' · '+esc(m.file.name):''}</div></div>
+        <div style="display:flex;gap:4px">
+          ${m.link?`<a href="${esc(m.link)}" target="_blank" class="btn gh sm" style="padding:2px 7px;font-size:10px">🔗 Open</a>`:''}
+          ${m.file?`<button class="btn gh sm" style="padding:2px 7px;font-size:10px" onclick="downloadFile('${m.id}')">⬇ Download</button>`:''}
+          <button class="btn warn sm" style="padding:2px 6px;font-size:10px" onclick="deleteMat('${m.id}')">✕</button>
+        </div>
+      </div>
+      ${m.notes?`<div style="font-size:11px;color:var(--ink2);margin-top:4px;line-height:1.5">${esc(m.notes.substring(0,180))}${m.notes.length>180?'…':''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function downloadFile(id) {
+  const m=DB.materials.find(x=>x.id===id);
+  if(!m?.file) return;
+  const a=document.createElement('a');
+  a.href=m.file.data; a.download=m.file.name; a.click();
+}
+
+function deleteMat(id) {
+  if(!confirm('Delete this material?'))return;
+  DB.materials=DB.materials.filter(m=>m.id!==id);
+  save(); renderMaterials(); toast('Deleted');
+}
+
+// ── BUGS ───────────────────────────────────────────────────────────────────────
+function saveBug() {
+  const b={
+    id:uid(),
+    title:document.getElementById('bug-title').value.trim(),
+    type:document.getElementById('bug-type').value,
+    priority:document.getElementById('bug-priority').value,
+    desc:document.getElementById('bug-desc').value.trim(),
+    context:document.getElementById('bug-context').value.trim(),
+    status:document.getElementById('bug-status').value,
+    createdAt:Date.now()
+  };
+  if(!b.title){toast('Title required','warn');return;}
+  DB.bugs.unshift(b);
+  save();
+  ['bug-title','bug-desc','bug-context'].forEach(f=>document.getElementById(f).value='');
+  document.getElementById('bug-priority').value='med';
+  document.getElementById('bug-status').value='open';
+  renderBugs(); updateBadge(); toast('Entry saved');
+}
+
+function updateBugStatus(id, status) {
+  const b=DB.bugs.find(x=>x.id===id);
+  if(b){b.status=status; save(); renderBugs(); updateBadge();}
+}
+
+function deleteBug(id) {
+  if(!confirm('Delete this entry?'))return;
+  DB.bugs=DB.bugs.filter(b=>b.id!==id);
+  save(); renderBugs(); updateBadge(); toast('Deleted');
+}
+
+function updateBadge() {
+  const open=DB.bugs.filter(b=>b.status==='open').length;
+  const badge=document.getElementById('open-bugs-badge');
+  if(open>0){badge.textContent=open;badge.style.display='inline-block';}
+  else badge.style.display='none';
+  document.getElementById('bug-count').textContent=DB.bugs.length;
+}
+
+function renderBugs() {
+  const list=document.getElementById('bug-list');
+  const search=(document.getElementById('bug-search')?.value||'').toLowerCase();
+  const fStatus=document.getElementById('bug-filter-status')?.value||'';
+  const fType=document.getElementById('bug-filter-type')?.value||'';
+  let bugs=[...DB.bugs].sort((a,b)=>{
+    const po={hi:0,med:1,lo:2};
+    return po[a.priority]-po[b.priority]||b.createdAt-a.createdAt;
+  });
+  if(fStatus) bugs=bugs.filter(b=>b.status===fStatus);
+  if(fType) bugs=bugs.filter(b=>b.type===fType);
+  if(search) bugs=bugs.filter(b=>(b.title||'').toLowerCase().includes(search)||(b.desc||'').toLowerCase().includes(search)||(b.context||'').toLowerCase().includes(search));
+  if(!bugs.length){list.innerHTML='<div class="tbl-empty">No entries yet.</div>';return;}
+  const statusPill={open:'<span class="pill pr">Open</span>',awaiting:'<span class="pill pa">Awaiting</span>',closed:'<span class="pill pg">Closed</span>'};
+  const prioEl={hi:'<span class="dot d-hi" style="display:inline-block;margin-right:3px"></span>',med:'<span class="dot d-med" style="display:inline-block;margin-right:3px"></span>',lo:'<span class="dot d-lo" style="display:inline-block;margin-right:3px"></span>'};
+  list.innerHTML=bugs.map(b=>`<div class="bug-card">
+    <div class="bug-top">
+      <div class="bug-title">${prioEl[b.priority]||''}${esc(b.title)}</div>
+      <div style="display:flex;gap:4px;align-items:center">
+        ${statusPill[b.status]||''}
+        <select style="font-size:10px;padding:2px 5px;border:1px solid var(--brk);border-radius:5px;background:var(--s2);font-family:'DM Sans',sans-serif" onchange="updateBugStatus('${b.id}',this.value)">
+          <option value="open" ${b.status==='open'?'selected':''}>Open</option>
+          <option value="awaiting" ${b.status==='awaiting'?'selected':''}>Awaiting</option>
+          <option value="closed" ${b.status==='closed'?'selected':''}>Closed</option>
+        </select>
+        <button class="btn warn sm" style="padding:2px 6px;font-size:10px" onclick="deleteBug('${b.id}')">✕</button>
+      </div>
+    </div>
+    <div class="bug-meta">
+      <span>${esc(b.type)}</span>
+      ${b.context?`<span>· ${esc(b.context)}</span>`:''}
+      <span>· ${new Date(b.createdAt).toLocaleDateString()}</span>
+    </div>
+    ${b.desc?`<div class="bug-body">${esc(b.desc.substring(0,200))}${b.desc.length>200?'…':''}</div>`:''}
+  </div>`).join('');
+}
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+function renderCalendar() {
+  const label=document.getElementById('cal-month-label');
+  label.textContent=new Date(calYear,calMonth,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const grid=document.getElementById('cal-grid');
+  // Keep headers
+  const headers=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  grid.innerHTML=headers.map(d=>`<div class="cdn">${d}</div>`).join('');
+  const first=new Date(calYear,calMonth,1).getDay();
+  const days=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date();
+  // Pad
+  for(let i=0;i<first;i++) grid.innerHTML+=`<div class="cc om"><div class="ccn"></div></div>`;
+  for(let d=1;d<=days;d++){
+    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=today.getFullYear()===calYear&&today.getMonth()===calMonth&&today.getDate()===d;
+    const dayEvents=DB.events.filter(e=>e.date===dateStr);
+    const logCount=DB.logs.filter(l=>l.date===dateStr).length;
+    let evHtml=dayEvents.map(e=>`<div class="ce ce-${e.cat||'g'}" title="${esc(e.title)}">${esc(e.title.substring(0,10))}</div>`).join('');
+    if(logCount>0) evHtml+=`<div class="ce ce-g" title="${logCount} log(s)">📝 ${logCount}</div>`;
+    grid.innerHTML+=`<div class="cc ${isToday?'td':''}" onclick="openDayEvents('${dateStr}')"><div class="ccn">${d}</div>${evHtml}</div>`;
+  }
+  renderEventsList();
+}
+
+function openDayEvents(dateStr){
+  document.getElementById('ce-date').value=dateStr;
+  openModal('modal-add-event');
+}
+
+function renderEventsList(){
+  const el=document.getElementById('cal-events-list');
+  const today=new Date().toISOString().split('T')[0];
+  const upcoming=[...DB.events,...DB.presentations.map(p=>({id:'pres-'+p.id,title:p.name+(p.venue?' @ '+p.venue:''),date:p.date,cat:'a',notes:p.prep,isPres:true}))].filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!upcoming.length){el.innerHTML='<div style="font-size:11px;color:var(--ink3);padding:8px;font-family:\'DM Mono\',monospace">No upcoming events.</div>';return;}
+  el.innerHTML=upcoming.slice(0,12).map(e=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--br)">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--sage);white-space:nowrap;min-width:68px;padding-top:1px">${e.date}</div>
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:500">${esc(e.title)}</div>
+      ${e.notes?`<div style="font-size:10px;color:var(--ink3)">${esc(e.notes.substring(0,60))}</div>`:''}
+    </div>
+    ${!e.isPres?`<button class="btn warn sm" style="padding:2px 5px;font-size:10px" onclick="deleteEvent('${e.id}')">✕</button>`:''}
+  </div>`).join('');
+}
+
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
+
+function saveEvent(){
+  const id=document.getElementById('ce-id').value||uid();
+  const e={id,title:document.getElementById('ce-title').value.trim(),date:document.getElementById('ce-date').value,time:document.getElementById('ce-time').value,cat:document.getElementById('ce-cat').value,notes:document.getElementById('ce-notes').value.trim(),createdAt:Date.now()};
+  if(!e.title||!e.date){toast('Title and date required','warn');return;}
+  const idx=DB.events.findIndex(x=>x.id===id);
+  if(idx>=0) DB.events[idx]=e; else DB.events.push(e);
+  save(); closeModal('modal-add-event'); renderCalendar();
+  document.getElementById('ce-id').value='';
+  ['ce-title','ce-date','ce-time','ce-notes'].forEach(f=>document.getElementById(f).value='');
+  toast('Event saved');
+}
+
+function deleteEvent(id){
+  DB.events=DB.events.filter(e=>e.id!==id);
+  save(); renderCalendar(); toast('Deleted');
+}
+
+function exportICS(){
+  const allEvents=[...DB.events,...DB.presentations.map(p=>({title:p.name,date:p.date,notes:p.prep}))];
+  if(!allEvents.length){toast('No events to export','warn');return;}
+  const pad=n=>String(n).padStart(2,'0');
+  let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//EduInterp//EN\r\nCALSCALE:GREGORIAN\r\n';
+  allEvents.forEach(e=>{
+    if(!e.date) return;
+    const d=e.date.replace(/-/g,'');
+    const now=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+    ics+=`BEGIN:VEVENT\r\nUID:${e.id||uid()}@eduinterp\r\nDTSTAMP:${now}Z\r\nDTSTART;VALUE=DATE:${d}\r\nSUMMARY:${(e.title||'').replace(/[,;\\]/g,' ')}\r\n`;
+    if(e.notes) ics+=`DESCRIPTION:${e.notes.replace(/\n/g,'\\n').replace(/[,;\\]/g,' ').substring(0,200)}\r\n`;
+    ics+='END:VEVENT\r\n';
+  });
+  ics+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
+  a.download='eduinterp_calendar.ics'; a.click();
+  toast('Calendar exported! Import into Google Calendar via Settings → Import.');
+}
+
+// ── PRACTICE ──────────────────────────────────────────────────────────────────
+let fsPool=[], fsIndex=0, fsScore={correct:0,shown:0}, fsRunning=false;
+const commonWords=['school','class','teacher','student','homework','test','quiz','project','lunch','please','thank','help','bathroom','understand','know','learn','book','computer','write','read','history','science','math','english','art','music','library','gym','office','principal'];
+const commonNames=['James','Mary','John','Patricia','Robert','Jennifer','Michael','Linda','William','Barbara','David','Susan','Richard','Jessica','Joseph','Karen'];
+
+function fsStart(){
+  const pool=document.getElementById('fs-pool').value;
+  const catF=document.getElementById('fs-cat-filter').value;
+  const customRaw=document.getElementById('fs-custom').value;
+  if(pool==='vocab'){
+    let v=DB.vocab;
+    if(catF) v=v.filter(x=>x.category===catF);
+    fsPool=v.map(x=>x.word);
+  } else if(pool==='common') fsPool=[...commonWords];
+  else if(pool==='names') fsPool=[...commonNames];
+  else fsPool=customRaw.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!fsPool.length){toast('No words in pool — add vocab or select a different pool','warn');return;}
+  fsPool=fsPool.sort(()=>Math.random()-.5);
+  fsIndex=0; fsScore={correct:0,shown:0}; fsRunning=true;
+  showFsWord();
+  document.getElementById('fs-reveal-btn').disabled=false;
+  document.getElementById('fs-next-btn').disabled=false;
+}
+
+function showFsWord(){
+  if(fsIndex>=fsPool.length){
+    document.getElementById('fs-display').textContent='Done!';
+    document.getElementById('fs-hint').textContent=`Finished all ${fsPool.length} words`;
+    document.getElementById('fs-score').textContent=`Session complete: ${fsScore.shown} shown`;
+    fsRunning=false; return;
+  }
+  const w=fsPool[fsIndex];
+  const mode=document.getElementById('fs-mode').value;
+  if(mode==='hidden'){
+    document.getElementById('fs-display').textContent='?????';
+    document.getElementById('fs-hint').textContent=`Word ${fsIndex+1} of ${fsPool.length} — click Reveal`;
+  } else {
+    document.getElementById('fs-display').textContent=w;
+    document.getElementById('fs-hint').textContent=`Word ${fsIndex+1} of ${fsPool.length}`;
+  }
+  fsScore.shown++;
+  document.getElementById('fs-score').textContent=`${fsIndex+1} / ${fsPool.length}`;
+}
+
+function fsReveal(){
+  if(!fsRunning||fsIndex>=fsPool.length) return;
+  document.getElementById('fs-display').textContent=fsPool[fsIndex];
+  document.getElementById('fs-hint').textContent='How did you do? → press Next';
+}
+
+function fsNext(){ if(!fsRunning)return; fsIndex++; showFsWord(); }
+function fsStop(){ fsRunning=false; document.getElementById('fs-display').textContent='—'; document.getElementById('fs-hint').textContent='Stopped'; document.getElementById('fs-reveal-btn').disabled=true; document.getElementById('fs-next-btn').disabled=true; }
+
+// Receptive Notes
+function saveRcpNote(){
+  const n={id:uid(),note:document.getElementById('rcp-note').value.trim(),sign:document.getElementById('rcp-sign').value.trim(),date:document.getElementById('rcp-date').value,createdAt:Date.now()};
+  if(!n.note){toast('Note required','warn');return;}
+  DB.rcpNotes.unshift(n); save();
+  document.getElementById('rcp-note').value='';
+  document.getElementById('rcp-sign').value='';
+  renderRcpNotes(); toast('Note saved');
+}
+
+function renderRcpNotes(){
+  const el=document.getElementById('rcp-list');
+  if(!DB.rcpNotes.length){el.innerHTML='<div class="tbl-empty">No receptive notes yet.</div>';return;}
+  el.innerHTML=DB.rcpNotes.map(n=>`<div class="le" style="padding:8px 11px">
+    <div class="le-top"><div><span class="le-date">${n.date||''}</span>${n.sign?' <span class="vocab-chip">'+esc(n.sign)+'</span>':''}</div>
+    <button class="btn warn sm" style="padding:2px 5px;font-size:10px" onclick="deleteRcpNote('${n.id}')">✕</button></div>
+    <div class="le-notes">${esc(n.note)}</div>
+  </div>`).join('');
+}
+
+function deleteRcpNote(id){DB.rcpNotes=DB.rcpNotes.filter(n=>n.id!==id);save();renderRcpNotes();}
+
+// Resources
+function saveResource(){
+  const r={id:uid(),name:document.getElementById('res-name').value.trim(),url:document.getElementById('res-url').value.trim(),cat:document.getElementById('res-cat').value,notes:document.getElementById('res-notes').value.trim(),createdAt:Date.now()};
+  if(!r.name){toast('Name required','warn');return;}
+  DB.resources.push(r); save();
+  ['res-name','res-url','res-notes'].forEach(f=>document.getElementById(f).value='');
+  renderResources(); toast('Resource saved');
+}
+
+function renderResources(){
+  const el=document.getElementById('resource-list');
+  if(!DB.resources.length){el.innerHTML='<div class="tbl-empty">No custom resources added yet.</div>';return;}
+  const catIcons={'Receptive ASL':'🤟','Fingerspelling':'✌️','Vocabulary':'📚','Educational Interpreting':'🎓','Deaf Culture':'🏫','Other':'🔗'};
+  el.innerHTML=DB.resources.map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:7px;margin-bottom:4px">
+    <div style="font-size:16px">${catIcons[r.cat]||'🔗'}</div>
+    <div style="flex:1">
+      <a href="${esc(r.url)}" target="_blank" style="font-size:12px;font-weight:500;color:var(--sage-d);text-decoration:none">${esc(r.name)}</a>
+      <div style="font-size:10px;color:var(--ink3)">${esc(r.cat)}${r.notes?' · '+esc(r.notes.substring(0,60)):''}</div>
+    </div>
+    <button class="btn warn sm" style="padding:2px 5px;font-size:10px" onclick="deleteResource('${r.id}')">✕</button>
+  </div>`).join('');
+}
+
+function deleteResource(id){DB.resources=DB.resources.filter(r=>r.id!==id);save();renderResources();}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  // Stats
+  document.getElementById('stat-vocab').textContent=DB.vocab.length;
+  document.getElementById('stat-logs').textContent=DB.logs.length;
+  const activeStudent=DB.students.find(s=>s.id===document.getElementById('global-student')?.value);
+  document.getElementById('stat-student').textContent=activeStudent?.label||'—';
+  document.getElementById('stat-student-sub').textContent=activeStudent?.grade?'Grade: '+activeStudent.grade:'set in schedule';
+  // Streak
+  const streak=calcStreak();
+  document.getElementById('stat-streak').textContent=streak;
+  document.getElementById('stat-streak-sub').textContent=streak===1?'day in a row':streak===0?'log today to start!':'days in a row';
+  // Vocab sub
+  const cats=[...new Set(DB.vocab.map(v=>v.category).filter(Boolean))];
+  document.getElementById('stat-vocab-sub').textContent=cats.length?cats.length+' categories':'across all students';
+  document.getElementById('stat-logs-sub').textContent=DB.logs.length+' total sessions';
+  // Notice
+  const name=DB.settings.name;
+  const notice=document.getElementById('dash-notice');
+  const noticeText=document.getElementById('dash-notice-text');
+  if(name){notice.style.display='flex';noticeText.textContent=`Welcome back, ${name}! Today is ${new Date().toLocaleDateString('en-US',{weekday:'long'})}.`;}
+  else notice.style.display='none';
+  // Recent logs
+  const rll=document.getElementById('recent-logs-list');
+  const recLogs=DB.logs.slice(0,4);
+  if(!recLogs.length){rll.innerHTML='<div class="tbl-empty">No logs yet.</div>';}
+  else rll.innerHTML=recLogs.map(l=>{
+    const student=DB.students.find(s=>s.id===l.studentId);
+    return `<div style="padding:5px 0;border-bottom:1px solid var(--br)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--sage)">${l.date}</span>
+        <span style="font-size:10px;color:var(--ink3)">${student?.label||''}</span>
+      </div>
+      <div style="font-size:12px;font-weight:500;margin-top:1px">${esc(l.className||'')}</div>
+      ${l.vocab?.length?`<div style="font-size:10px;color:var(--ink2)">Vocab: ${l.vocab.slice(0,4).join(', ')}${l.vocab.length>4?'…':''}</div>`:''}
+    </div>`;
+  }).join('');
+  // Upcoming
+  const upl=document.getElementById('upcoming-events-list');
+  const today=new Date().toISOString().split('T')[0];
+  const upcoming=[...DB.events,...DB.presentations.map(p=>({title:p.name,date:p.date}))].filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+  if(!upcoming.length) upl.innerHTML='<div class="tbl-empty">No upcoming events.</div>';
+  else upl.innerHTML=upcoming.map(e=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--br)">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);white-space:nowrap;min-width:72px;padding-top:1px">${e.date}</div>
+    <div style="font-size:12px;font-weight:500">${esc(e.title||'')}</div>
+  </div>`).join('');
+  // Recent vocab
+  const rvl=document.getElementById('recent-vocab-list');
+  const recV=[...DB.vocab].sort((a,b)=>b.createdAt-a.createdAt).slice(0,8);
+  if(!recV.length) rvl.innerHTML='<div class="tbl-empty">No vocabulary yet.</div>';
+  else rvl.innerHTML=recV.map(v=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--br)">
+    <span style="font-family:'Lora',serif;font-size:13px;font-weight:500">${esc(v.word)}</span>
+    <span class="pill pz" style="font-size:9px">${esc(v.category||'General')}</span>
+  </div>`).join('');
+  // Quick log class selector
+  populateClassSelectors();
+}
+
+function calcStreak(){
+  if(!DB.logs.length) return 0;
+  const dates=[...new Set(DB.logs.map(l=>l.date))].sort().reverse();
+  const today=new Date().toISOString().split('T')[0];
+  const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0];
+  if(dates[0]!==today&&dates[0]!==yesterday) return 0;
+  let streak=1, cur=dates[0];
+  for(let i=1;i<dates.length;i++){
+    const prev=new Date(new Date(cur).getTime()-86400000).toISOString().split('T')[0];
+    if(dates[i]===prev){streak++;cur=dates[i];}else break;
+  }
+  return streak;
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function loadSettings(){
+  const s=DB.settings;
+  document.getElementById('set-name').value=s.name||'';
+  document.getElementById('set-cert').value=s.cert||'';
+  document.getElementById('set-school').value=s.school||'';
+  document.getElementById('set-grade').value=s.grade||'';
+  if(s.pin) document.getElementById('pin-subtitle').textContent='Enter your PIN to continue';
+  else document.getElementById('pin-skip-btn').textContent='No PIN set — Click to enter';
+}
+
+function saveSettings(){
+  DB.settings.name=document.getElementById('set-name').value.trim();
+  DB.settings.cert=document.getElementById('set-cert').value.trim();
+  DB.settings.school=document.getElementById('set-school').value.trim();
+  DB.settings.grade=document.getElementById('set-grade').value.trim();
+  save(); renderDashboard(); toast('Settings saved');
+}
+
+function savePin(){
+  const p1=document.getElementById('set-pin').value.trim();
+  const p2=document.getElementById('set-pin2').value.trim();
+  if(p1&&!/^\d{4}$/.test(p1)){toast('PIN must be exactly 4 digits','warn');return;}
+  if(p1!==p2){toast('PINs do not match','warn');return;}
+  DB.settings.pin=p1;
+  save();
+  if(p1) toast('PIN set — you\'ll enter it next time you open the app'); else toast('PIN removed');
+}
+
+function exportData(){
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(DB,null,2));
+  a.download='eduinterp_backup_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click(); toast('Data exported!');
+}
+
+function importData(){document.getElementById('import-file').click();}
+
+function doImport(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!confirm('This will REPLACE all current data with the imported file. Continue?')) return;
+      DB={...DB,...data}; save(); location.reload();
+    }catch{toast('Invalid JSON file','warn');}
+  };
+  reader.readAsText(file);
+}
+
+function clearAllData(){
+  if(!confirm('Delete ALL data? This cannot be undone.')) return;
+  if(!confirm('Are you sure? All logs, vocabulary, materials will be lost.')) return;
+  localStorage.removeItem(DB_KEY); location.reload();
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────────────────────
+function esc(s){
+  if(!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+load();
+const hasPIN = DB.settings.pin;
+if(hasPIN){
+  document.getElementById('pin-subtitle').textContent='Enter your PIN to continue';
+  document.getElementById('pin-skip-btn').style.display='none';
+} else {
+  document.getElementById('pin-subtitle').textContent='No PIN set — click below to enter';
+}
+// populate student selectors before app potentially renders
+document.getElementById('global-student').innerHTML='';
+DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;document.getElementById('global-student').appendChild(o);});
+// Populate modal student selectors
+['mc-student','mp-student'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.innerHTML='';
+  DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
+});
+</script>
+</body>
+</html>
