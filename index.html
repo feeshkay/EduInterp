@@ -338,22 +338,28 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 <div class="pin-screen" id="pin-screen">
   <div class="pin-card">
     <div class="pin-logo">𝐄</div>
-    <div style="font-family:'Lora',serif;font-size:20px;margin-bottom:4px">EduInterp</div>
-    <div style="font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace" id="pin-subtitle">Educational Interpreting Log</div>
+    <div style="font-family:'Lora',serif;font-size:22px;margin-bottom:4px">EduInterp</div>
+    <div style="font-size:12px;color:var(--ink3);font-family:'DM Mono',monospace" id="pin-subtitle">Enter your PIN</div>
     <div class="pin-dots" id="pin-dots">
       <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
       <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
     </div>
-    <div id="pin-err" style="font-size:11px;color:var(--clay);height:16px;margin-bottom:4px"></div>
+    <div id="pin-err" style="font-size:12px;color:var(--clay);min-height:18px;margin-bottom:6px;font-weight:500"></div>
     <div class="pin-pad">
-      <button class="pin-btn" onclick="pinPress(1)">1</button><button class="pin-btn" onclick="pinPress(2)">2</button><button class="pin-btn" onclick="pinPress(3)">3</button>
-      <button class="pin-btn" onclick="pinPress(4)">4</button><button class="pin-btn" onclick="pinPress(5)">5</button><button class="pin-btn" onclick="pinPress(6)">6</button>
-      <button class="pin-btn" onclick="pinPress(7)">7</button><button class="pin-btn" onclick="pinPress(8)">8</button><button class="pin-btn" onclick="pinPress(9)">9</button>
-      <button class="pin-btn" onclick="pinClear()" style="font-size:11px;color:var(--ink3)">CLR</button>
+      <button class="pin-btn" onclick="pinPress(1)">1</button>
+      <button class="pin-btn" onclick="pinPress(2)">2</button>
+      <button class="pin-btn" onclick="pinPress(3)">3</button>
+      <button class="pin-btn" onclick="pinPress(4)">4</button>
+      <button class="pin-btn" onclick="pinPress(5)">5</button>
+      <button class="pin-btn" onclick="pinPress(6)">6</button>
+      <button class="pin-btn" onclick="pinPress(7)">7</button>
+      <button class="pin-btn" onclick="pinPress(8)">8</button>
+      <button class="pin-btn" onclick="pinPress(9)">9</button>
+      <button class="pin-btn" onclick="pinClear()" style="font-size:12px;color:var(--ink3)">CLR</button>
       <button class="pin-btn" onclick="pinPress(0)">0</button>
-      <button class="pin-btn" onclick="pinBack()" style="font-size:11px">⌫</button>
+      <button class="pin-btn" onclick="pinBack()" style="font-size:16px">⌫</button>
     </div>
-    <button class="btn gh sm" style="margin-top:12px;font-size:10px;color:var(--ink3)" id="pin-skip-btn" onclick="pinSkip()">Skip (no PIN set)</button>
+    <button class="btn gh sm" style="margin-top:14px;font-size:11px;color:var(--ink3)" id="pin-skip-btn" onclick="pinSkip()">No PIN — tap to enter app</button>
   </div>
 </div>
 
@@ -2641,20 +2647,32 @@ if(!DB.resources) DB.resources=[];
 if(!DB.presentations) DB.presentations=[];
 
 const hasPIN = DB.settings.pin;
-if(hasPIN){
-  document.getElementById('pin-subtitle').textContent='Enter your PIN to continue';
-  document.getElementById('pin-skip-btn').style.display='none';
+if(!hasPIN) {
+  // No PIN set — skip the PIN screen entirely and go straight to the app
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  // Populate student selectors first
+  const _ss = ['global-student','mc-student','mp-student','iep-filter-student'];
+  _ss.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = (id==='iep-filter-student') ? '<option value="">All Students</option>' : '';
+    DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
+  });
+  initApp();
 } else {
-  document.getElementById('pin-subtitle').textContent='No PIN set — click below to enter';
+  // PIN is set — show PIN screen
+  document.getElementById('pin-subtitle').textContent = 'Enter your PIN to continue';
+  document.getElementById('pin-skip-btn').style.display = 'none';
+  // Populate selectors in background so they're ready after unlock
+  const _ss = ['global-student','mc-student','mp-student','iep-filter-student'];
+  _ss.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = (id==='iep-filter-student') ? '<option value="">All Students</option>' : '';
+    DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
+  });
 }
-// Populate all student selectors before app renders
-const _allStudentSelects = ['global-student','mc-student','mp-student','iep-filter-student'];
-_allStudentSelects.forEach(id=>{
-  const el=document.getElementById(id);
-  if(!el) return;
-  el.innerHTML = (id==='iep-filter-student') ? '<option value="">All Students</option>' : '';
-  DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
-});
 </script>
 </body>
 </html>
