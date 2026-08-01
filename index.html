@@ -2446,7 +2446,7 @@ function exportIEPSummary(){
   a.click(); toast('IEP summary exported!');
 }
 
-
+function clearAllData(){
   if(!confirm('Delete ALL data? This cannot be undone.')) return;
   if(!confirm('Are you sure? All logs, vocabulary, materials will be lost.')) return;
   localStorage.removeItem(DB_KEY); location.reload();
