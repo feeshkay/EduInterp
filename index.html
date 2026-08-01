@@ -240,17 +240,6 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:2px}
 
-/* ── PIN SCREEN ── */
-.pin-screen{position:fixed;inset:0;background:var(--sage-d);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px}
-.pin-card{background:var(--surf);border-radius:20px;padding:28px 24px;width:100%;max-width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-.pin-logo{width:52px;height:52px;background:var(--sage);border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-size:22px;color:#fff;margin:0 auto 14px}
-.pin-dots{display:flex;gap:12px;justify-content:center;margin:16px 0}
-.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--brk);background:transparent;transition:all .14s}
-.pin-dot.filled{background:var(--sage);border-color:var(--sage)}
-.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
-.pin-btn{padding:16px;border:1px solid var(--br);border-radius:12px;background:var(--s2);font-size:20px;font-weight:500;cursor:pointer;font-family:'Lora',serif;color:var(--ink);min-height:56px}
-.pin-btn:active{background:var(--sage-l);border-color:var(--sage-m)}
-
 /* ── UPLOADER FILE LIST ── */
 .file-item{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--s2);border-radius:8px;margin-bottom:4px;font-size:12px}
 .file-ext{font-family:'DM Mono',monospace;font-size:9px;background:var(--sage-l);color:var(--sage-d);padding:2px 6px;border-radius:4px;font-weight:600}
@@ -335,36 +324,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 <body>
 
 <!-- PIN SCREEN -->
-<div class="pin-screen" id="pin-screen">
-  <div class="pin-card">
-    <div class="pin-logo">𝐄</div>
-    <div style="font-family:'Lora',serif;font-size:22px;margin-bottom:4px">EduInterp</div>
-    <div style="font-size:12px;color:var(--ink3);font-family:'DM Mono',monospace" id="pin-subtitle">Enter your PIN</div>
-    <div class="pin-dots" id="pin-dots">
-      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
-      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
-    </div>
-    <div id="pin-err" style="font-size:12px;color:var(--clay);min-height:18px;margin-bottom:6px;font-weight:500"></div>
-    <div class="pin-pad">
-      <button class="pin-btn" onclick="pinPress(1)">1</button>
-      <button class="pin-btn" onclick="pinPress(2)">2</button>
-      <button class="pin-btn" onclick="pinPress(3)">3</button>
-      <button class="pin-btn" onclick="pinPress(4)">4</button>
-      <button class="pin-btn" onclick="pinPress(5)">5</button>
-      <button class="pin-btn" onclick="pinPress(6)">6</button>
-      <button class="pin-btn" onclick="pinPress(7)">7</button>
-      <button class="pin-btn" onclick="pinPress(8)">8</button>
-      <button class="pin-btn" onclick="pinPress(9)">9</button>
-      <button class="pin-btn" onclick="pinClear()" style="font-size:12px;color:var(--ink3)">CLR</button>
-      <button class="pin-btn" onclick="pinPress(0)">0</button>
-      <button class="pin-btn" onclick="pinBack()" style="font-size:16px">⌫</button>
-    </div>
-    <button class="btn gh sm" style="margin-top:14px;font-size:11px;color:var(--ink3)" id="pin-skip-btn" onclick="pinSkip()">No PIN — tap to enter app</button>
-  </div>
-</div>
+
+<!-- APP LOADS DIRECTLY - no PIN screen -->
+
 
 <!-- MAIN APP -->
-<div class="shell" id="app" style="display:none">
+<div class="shell" id="app">
 
   <!-- SIDEBAR OVERLAY (mobile tap-to-close) -->
   <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
@@ -1112,17 +1077,11 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <button class="btn pri" onclick="saveSettings()">Save Profile</button>
           </div>
           <div class="card cp">
-            <div class="sec">Privacy / PIN Lock</div>
-            <div class="notice n-ok" style="margin-bottom:10px"><span>🔒</span><div>All data is stored locally in your browser. Nothing leaves your device.</div></div>
-            <div class="fr fr1" style="margin-bottom:8px">
-              <div class="fld"><label>Set PIN (4 digits, leave blank to disable)</label>
-                <input type="password" id="set-pin" placeholder="e.g. 1234" maxlength="4" pattern="[0-9]{4}"></div>
+            <div class="sec">Privacy</div>
+            <div class="notice n-ok">
+              <span>🔒</span>
+              <div>All data is stored locally in your browser only. Nothing ever leaves your device.</div>
             </div>
-            <div class="fr fr1" style="margin-bottom:8px">
-              <div class="fld"><label>Confirm PIN</label>
-                <input type="password" id="set-pin2" placeholder="re-enter PIN" maxlength="4" pattern="[0-9]{4}"></div>
-            </div>
-            <button class="btn" onclick="savePin()">Update PIN</button>
           </div>
         </div>
         <div class="card cp" style="margin-top:12px">
@@ -1301,40 +1260,6 @@ function load() {
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-
-// ── PIN ──────────────────────────────────────────────────────────────────────
-let pinBuffer = '';
-function pinPress(n) {
-  if (pinBuffer.length >= 4) return;
-  pinBuffer += n;
-  updatePinDots();
-  if (pinBuffer.length === 4) setTimeout(checkPin, 120);
-}
-function pinBack() { pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); }
-function pinClear() { pinBuffer = ''; updatePinDots(); }
-function updatePinDots() {
-  for (let i=0;i<4;i++) {
-    document.getElementById('pd'+i).classList.toggle('filled', i < pinBuffer.length);
-  }
-}
-function checkPin() {
-  const stored = DB.settings.pin;
-  if (!stored || pinBuffer === stored) { unlockApp(); }
-  else {
-    document.getElementById('pin-err').textContent = 'Incorrect PIN — try again';
-    pinBuffer = ''; updatePinDots();
-    setTimeout(() => document.getElementById('pin-err').textContent = '', 1800);
-  }
-}
-function pinSkip() {
-  if (!DB.settings.pin) unlockApp();
-  else { document.getElementById('pin-err').textContent = 'PIN is set — please enter it'; }
-}
-function unlockApp() {
-  document.getElementById('pin-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  initApp();
-}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function initApp() {
@@ -2353,8 +2278,6 @@ function loadSettings(){
   document.getElementById('set-cert').value=s.cert||'';
   document.getElementById('set-school').value=s.school||'';
   document.getElementById('set-grade').value=s.grade||'';
-  if(s.pin) document.getElementById('pin-subtitle').textContent='Enter your PIN to continue';
-  else document.getElementById('pin-skip-btn').textContent='No PIN set — Click to enter';
 }
 
 function saveSettings(){
@@ -2363,16 +2286,6 @@ function saveSettings(){
   DB.settings.school=document.getElementById('set-school').value.trim();
   DB.settings.grade=document.getElementById('set-grade').value.trim();
   save(); renderDashboard(); toast('Settings saved');
-}
-
-function savePin(){
-  const p1=document.getElementById('set-pin').value.trim();
-  const p2=document.getElementById('set-pin2').value.trim();
-  if(p1&&!/^\d{4}$/.test(p1)){toast('PIN must be exactly 4 digits','warn');return;}
-  if(p1!==p2){toast('PINs do not match','warn');return;}
-  DB.settings.pin=p1;
-  save();
-  if(p1) toast('PIN set — you\'ll enter it next time you open the app'); else toast('PIN removed');
 }
 
 function exportData(){
@@ -2639,40 +2552,22 @@ function esc(s){
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 load();
-// Ensure new arrays exist (backwards compat with old saves)
+// Ensure arrays exist (backwards compat)
 if(!DB.iepLog) DB.iepLog=[];
 if(!DB.pdLog) DB.pdLog=[];
 if(!DB.rcpNotes) DB.rcpNotes=[];
 if(!DB.resources) DB.resources=[];
 if(!DB.presentations) DB.presentations=[];
 
-const hasPIN = DB.settings.pin;
-if(!hasPIN) {
-  // No PIN set — skip the PIN screen entirely and go straight to the app
-  document.getElementById('pin-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  // Populate student selectors first
-  const _ss = ['global-student','mc-student','mp-student','iep-filter-student'];
-  _ss.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.innerHTML = (id==='iep-filter-student') ? '<option value="">All Students</option>' : '';
-    DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
-  });
-  initApp();
-} else {
-  // PIN is set — show PIN screen
-  document.getElementById('pin-subtitle').textContent = 'Enter your PIN to continue';
-  document.getElementById('pin-skip-btn').style.display = 'none';
-  // Populate selectors in background so they're ready after unlock
-  const _ss = ['global-student','mc-student','mp-student','iep-filter-student'];
-  _ss.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.innerHTML = (id==='iep-filter-student') ? '<option value="">All Students</option>' : '';
-    DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
-  });
-}
+// Populate student selectors before init
+['global-student','mc-student','mp-student','iep-filter-student'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.innerHTML=(id==='iep-filter-student')?'<option value="">All Students</option>':'';
+  DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
+});
+
+initApp();
 </script>
 </body>
 </html>
