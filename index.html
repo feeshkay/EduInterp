@@ -262,8 +262,53 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .file-item{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--s2);border-radius:8px;margin-bottom:4px;font-size:12px}
 .file-ext{font-family:'DM Mono',monospace;font-size:9px;background:var(--sage-l);color:var(--sage-d);padding:2px 6px;border-radius:4px;font-weight:600}
 
+/* ── SEARCHABLE DROPDOWN ── */
+.search-drop{position:absolute;top:100%;left:0;right:0;background:var(--surf);border:1px solid var(--brk);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;max-height:200px;overflow-y:auto;margin-top:2px}
+.search-drop-item{padding:9px 12px;font-size:13px;cursor:pointer;color:var(--ink);transition:background .1s}
+.search-drop-item:hover,.search-drop-item.sel{background:var(--sage-l);color:var(--sage-d)}
+.search-drop-item.new-item{color:var(--sage);font-style:italic}
+
+/* ── VOCAB STATUS BADGES ── */
+.vbadge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:9px;font-family:'DM Mono',monospace;font-weight:600}
+.vb-ok{background:var(--sage-l);color:var(--sage-d)}
+.vb-needs-def{background:var(--sky-l);color:var(--sky)}
+.vb-needs-sign{background:var(--gold-l);color:var(--gold)}
+.vb-needs-both{background:var(--clay-l);color:var(--clay)}
+
+/* ── BLOCK TYPE COLORS ── */
+.blk-prep{border-left:3px solid var(--sage)!important}
+.blk-drive{border-left:3px solid var(--sky)!important}
+.blk-lunch{border-left:3px solid var(--gold-m)!important}
+.blk-tod{border-left:3px solid var(--clay)!important}
+.blk-break{border-left:3px solid var(--sage-m)!important}
+.blk-off{border-left:3px solid var(--ink3)!important}
+.blk-other{border-left:3px solid var(--ink3)!important}
+
+/* ── WEEK GRID ── */
+.week-day-col{flex:1;min-width:0}
+.week-day-hdr{font-size:10px;font-family:'DM Mono',monospace;font-weight:600;text-align:center;padding:4px;color:var(--ink2);border-radius:5px;margin-bottom:4px}
+.week-day-hdr.today{background:var(--sage);color:#fff}
+.week-day-hdr.noschool{background:var(--clay);color:#fff}
+.week-block{border-radius:6px;padding:4px 6px;margin-bottom:3px;font-size:10px;line-height:1.3;border:1px solid var(--br)}
+.week-block.wclass{background:var(--sage-l);border-color:rgba(74,122,90,.2)}
+.week-block.wclass.skipped{background:var(--s3);opacity:.5;text-decoration:line-through}
+.week-block.wprep{background:#E8F1F8;border-color:rgba(42,94,138,.2)}
+.week-block.wdrive{background:#E8F1F8;border-color:rgba(42,94,138,.2)}
+.week-block.wlunch{background:#FBF4E6;border-color:rgba(139,105,20,.2)}
+.week-block.wtod{background:#FDECEA;border-color:rgba(181,74,58,.2)}
+.week-block.wbreak{background:var(--sage-l)}
+.week-block.woff{background:var(--s3)}
+.week-block-time{font-family:'DM Mono',monospace;font-size:8px;color:var(--ink3)}
+.week-block-name{font-weight:500;font-size:10px}
+.noschool-banner{background:var(--clay-l);border:1px solid rgba(181,74,58,.3);border-radius:5px;padding:3px 5px;font-size:9px;text-align:center;color:var(--clay);font-family:'DM Mono',monospace}
+
+/* ── SEL2 (styled select) ── */
+.sel2{font-size:16px;padding:9px 28px 9px 11px;border:1px solid var(--brk);border-radius:8px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif;-webkit-appearance:none;width:100%;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A9185' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;min-height:42px}
+.sel2:focus{outline:none;border-color:var(--sage);box-shadow:0 0 0 3px rgba(74,122,90,.12)}
+
 /* ── BADGE ── */
 .badge-count{background:var(--clay);color:#fff;font-size:8px;padding:1px 5px;border-radius:8px;font-family:'DM Mono',monospace;font-weight:600;margin-left:auto}
+
 
 /* ── FILTER HEADER ── */
 .filter-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
@@ -378,6 +423,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
     <button class="sbi" data-page="vocab" onclick="nav(this)">
       <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       Vocabulary
+      <span class="badge-count" id="vocab-research-badge" style="display:none"></span>
     </button>
     <button class="sbi" data-page="schedule" onclick="nav(this)">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -568,32 +614,78 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
            PAGE: VOCABULARY
       ══════════════════════════════════════════════ -->
       <div class="page pi" id="page-vocab">
+
+        <!-- Quick Add Vocab -->
+        <div class="card cp" style="margin-bottom:10px;border-left:3px solid var(--sage)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="sec" style="margin:0">⚡ Quick Add Vocabulary</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div class="fld" style="flex:2;min-width:140px"><label>Word / Sign</label>
+              <input type="text" id="qv-word" placeholder="Type word here..." onkeydown="if(event.key==='Enter')quickAddVocab()"></div>
+            <div class="fld" style="flex:2;min-width:140px"><label>Appeared In (Class)</label>
+              <select id="qv-class" class="sel2"></select></div>
+            <div class="fld" style="flex:1;min-width:100px"><label>Student</label>
+              <select id="qv-student" class="sel2"><option value="all">General</option></select></div>
+            <button class="btn pri" onclick="quickAddVocab()" style="align-self:flex-end;flex-shrink:0">+ Add</button>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);margin-top:6px;font-family:'DM Mono',monospace">Word is saved immediately as "Needs Research" — go back and fill in definition, sign info, etc. anytime.</div>
+        </div>
+
+        <!-- Full Add/Edit Form -->
         <div class="card cp" style="margin-bottom:12px">
           <div class="sec">Add / Edit Vocabulary</div>
           <input type="hidden" id="vocab-edit-id">
-          <div class="fr fr3" style="margin-bottom:8px">
+          <div class="fr fr2" style="margin-bottom:8px">
             <div class="fld"><label>Word / Sign</label><input type="text" id="v-word" placeholder="e.g. photosynthesis"></div>
+            <div class="fld"><label>Sign Type / Domain</label>
+              <div style="position:relative">
+                <input type="text" id="v-signtype" placeholder="Search or type (e.g. Science, Country Name...)"
+                  oninput="filterSignTypes(this.value)" onfocus="showSignTypeDrop()" onblur="setTimeout(hideSignTypeDrop,200)"
+                  autocomplete="off">
+                <div id="signtype-drop" class="search-drop" style="display:none"></div>
+              </div>
+            </div>
+          </div>
+          <div class="fr fr3" style="margin-bottom:8px">
             <div class="fld"><label>Category / Subject</label>
-              <input type="text" id="v-category" list="cat-list" placeholder="e.g. Biology, Math, General">
-              <datalist id="cat-list"></datalist>
+              <div style="position:relative">
+                <input type="text" id="v-category" placeholder="Search or type subject..."
+                  oninput="filterCatDrop(this.value)" onfocus="showCatDrop()" onblur="setTimeout(hideCatDrop,200)"
+                  autocomplete="off">
+                <div id="cat-drop" class="search-drop" style="display:none"></div>
+              </div>
             </div>
+            <div class="fld"><label>Class Where It Appeared</label>
+              <select id="v-class" class="sel2"><option value="">— General / Other —</option></select></div>
             <div class="fld"><label>Student Context</label>
-              <select id="v-student">
-                <option value="all">All / General</option>
-              </select>
+              <select id="v-student" class="sel2"><option value="all">All / General</option></select></div>
+          </div>
+
+          <!-- Definition with lookup -->
+          <div class="fld" style="margin-bottom:6px"><label>Definition / English Gloss</label>
+            <div style="display:flex;gap:6px;align-items:flex-start">
+              <textarea id="v-def" placeholder="English definition or gloss..." style="min-height:60px;flex:1"></textarea>
+              <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+                <button class="btn sm gold" onclick="lookupDefinition()" title="Look up in dictionary">📖 Dictionary</button>
+                <button class="btn sm" onclick="lookupThesaurus()" style="font-size:10px" title="Thesaurus">📝 Thesaurus</button>
+              </div>
             </div>
+            <div id="v-lookup-result" style="display:none;margin-top:6px;padding:9px 11px;background:var(--sky-l);border:1px solid rgba(42,94,138,.15);border-radius:7px;font-size:11px;line-height:1.6;max-height:180px;overflow-y:auto"></div>
+          </div>
+
+          <div class="fld" style="margin-bottom:8px"><label>ASL Parameters / Notes</label>
+            <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM, mnemonic..." style="min-height:55px"></textarea></div>
+
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>Sign Resource / Source</label>
+              <input type="text" id="v-source" placeholder="e.g. ASLPro, Signing Savvy, textbook, teacher, colleague"></div>
+            <div class="fld"><label>Video / Resource Link</label>
+              <input type="url" id="v-link" placeholder="https://aslpro.com/..."></div>
           </div>
           <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>Definition / English Gloss</label>
-              <textarea id="v-def" placeholder="English definition or gloss..." style="min-height:55px"></textarea></div>
-            <div class="fld"><label>ASL Parameters / Notes</label>
-              <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM, mnemonic..." style="min-height:55px"></textarea></div>
-          </div>
-          <div class="fr fr3" style="margin-bottom:8px">
-            <div class="fld"><label>Source / How Learned</label>
-              <input type="text" id="v-source" placeholder="e.g. class assignment, online, textbook"></div>
             <div class="fld"><label>Mastery Level</label>
-              <select id="v-mastery">
+              <select id="v-mastery" class="sel2">
                 <option value="1">1 — New / Just Seen</option>
                 <option value="2">2 — Recognizing</option>
                 <option value="3" selected>3 — Learning</option>
@@ -601,29 +693,51 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
                 <option value="5">5 — Mastered</option>
               </select>
             </div>
-            <div class="fld"><label>Video / Resource Link</label>
-              <input type="url" id="v-link" placeholder="https://aslpro.com/..."></div>
+            <div class="fld"><label>Status</label>
+              <select id="v-status" class="sel2">
+                <option value="ok">✅ Complete</option>
+                <option value="needs-def">📖 Needs Definition</option>
+                <option value="needs-sign">🤟 Needs Sign Research</option>
+                <option value="needs-both" selected>🔍 Needs Research</option>
+              </select>
+            </div>
           </div>
-          <div style="display:flex;gap:6px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn pri" onclick="saveVocab()">Save Word</button>
+            <button class="btn gold sm" onclick="lookupDefinition()">📖 Look Up Definition</button>
             <button class="btn gh sm" onclick="clearVocabForm()" id="vocab-cancel-btn" style="display:none">Cancel Edit</button>
           </div>
         </div>
 
+        <!-- Dictionary -->
         <div class="card cp">
           <div class="filter-hdr">
             <div class="sec" style="margin:0">Dictionary (<span id="vocab-count">0</span> words)</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <input class="search-input" type="text" placeholder="Search dictionary..." oninput="renderVocab()" id="vocab-search">
-              <select id="vocab-filter-cat" onchange="renderVocab()" class="filter-sel">
-                <option value="">All Categories</option>
-              </select>
-              <select id="vocab-filter-mastery" onchange="renderVocab()" class="filter-sel">
-                <option value="">All Mastery</option>
-                <option value="1">★ New</option><option value="2">★★ Recognizing</option>
-                <option value="3">★★★ Learning</option><option value="4">★★★★ Comfortable</option><option value="5">★★★★★ Mastered</option>
-              </select>
-            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            <input class="search-input" type="text" placeholder="Search words, definitions, notes..." oninput="renderVocab()" id="vocab-search" style="flex:1;min-width:140px">
+            <select id="vocab-filter-cat" onchange="renderVocab()" class="filter-sel">
+              <option value="">All Subjects</option>
+            </select>
+            <select id="vocab-filter-class" onchange="renderVocab()" class="filter-sel">
+              <option value="">All Classes</option>
+            </select>
+            <select id="vocab-filter-signtype" onchange="renderVocab()" class="filter-sel">
+              <option value="">All Types</option>
+            </select>
+            <select id="vocab-filter-mastery" onchange="renderVocab()" class="filter-sel">
+              <option value="">All Mastery</option>
+              <option value="1">★ New</option><option value="2">★★ Recognizing</option>
+              <option value="3">★★★ Learning</option><option value="4">★★★★ Comfortable</option>
+              <option value="5">★★★★★ Mastered</option>
+            </select>
+            <select id="vocab-filter-status" onchange="renderVocab()" class="filter-sel">
+              <option value="">All Statuses</option>
+              <option value="needs-both">🔍 Needs Research</option>
+              <option value="needs-def">📖 Needs Definition</option>
+              <option value="needs-sign">🤟 Needs Sign</option>
+              <option value="ok">✅ Complete</option>
+            </select>
           </div>
           <div id="vocab-list"></div>
         </div>
@@ -633,39 +747,162 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
            PAGE: SCHEDULE
       ══════════════════════════════════════════════ -->
       <div class="page pi" id="page-schedule">
-        <!-- Today's View -->
-        <div class="card cp" style="margin-bottom:12px" id="today-sched-card">
-          <div class="sec" id="today-sched-label">Today's Schedule</div>
-          <div id="today-sched-list"></div>
+
+        <!-- Tab bar -->
+        <div class="tb-bar">
+          <div class="tab active" onclick="switchTab(this,'sched-today')">Today</div>
+          <div class="tab" onclick="switchTab(this,'sched-week')">Week View</div>
+          <div class="tab" onclick="switchTab(this,'sched-classes')">Classes</div>
+          <div class="tab" onclick="switchTab(this,'sched-blocks')">Blocks</div>
+          <div class="tab" onclick="switchTab(this,'sched-noschool')">No School / Altered</div>
+          <div class="tab" onclick="switchTab(this,'sched-students')">Students</div>
         </div>
 
-        <div class="g2" style="margin-bottom:14px">
-          <!-- Classes -->
-          <div class="card cp">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div class="sec" style="margin:0">Classes / Assignments</div>
-              <button class="btn pri sm" onclick="openModal('modal-add-class')">+ Add Class</button>
-            </div>
-            <div id="class-list"></div>
-          </div>
-          <!-- Presentations -->
-          <div class="card cp">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div class="sec" style="margin:0">Upcoming Presentations / Visits</div>
-              <button class="btn pri sm" onclick="openModal('modal-add-pres')">+ Add</button>
-            </div>
-            <div id="pres-list"></div>
+        <!-- TODAY TAB -->
+        <div class="tp active" id="sched-today">
+          <div class="card cp" id="today-sched-card">
+            <div class="sec" id="today-sched-label">Today's Schedule</div>
+            <div id="today-sched-list"></div>
           </div>
         </div>
 
-        <!-- Student Management -->
-        <div class="card cp">
+        <!-- WEEK VIEW TAB -->
+        <div class="tp" id="sched-week">
+          <div class="card cp" style="margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <button class="btn gh sm" onclick="weekNav(-1)">← Prev</button>
+              <div style="font-family:'Lora',serif;font-size:14px" id="week-label"></div>
+              <button class="btn gh sm" onclick="weekNav(1)">Next →</button>
+            </div>
+            <div id="week-grid"></div>
+          </div>
+        </div>
+
+        <!-- CLASSES TAB -->
+        <div class="tp" id="sched-classes">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="sec" style="margin:0">Classes / Assignments</div>
+            <button class="btn pri sm" onclick="openModal('modal-add-class')">+ Add Class</button>
+          </div>
+          <div id="class-list"></div>
+          <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="sec" style="margin:0">Upcoming Presentations / Visits</div>
+            <button class="btn pri sm" onclick="openModal('modal-add-pres')">+ Add</button>
+          </div>
+          <div id="pres-list"></div>
+        </div>
+
+        <!-- BLOCKS TAB -->
+        <div class="tp" id="sched-blocks">
+          <div class="notice n-ok" style="margin-bottom:12px">
+            <span>⏱</span>
+            <div>Log recurring time blocks that appear on your weekly schedule — prep, admin, drive time, lunch, TOD meetings, and any other non-class time.</div>
+          </div>
+          <div class="card cp" style="margin-bottom:12px">
+            <div class="sec">Add Time Block</div>
+            <input type="hidden" id="blk-id">
+            <div class="fr fr2" style="margin-bottom:8px">
+              <div class="fld"><label>Block Name</label>
+                <input type="text" id="blk-name" placeholder="e.g. Lunch, Drive to school, Prep/Admin"></div>
+              <div class="fld"><label>Block Type</label>
+                <select id="blk-type">
+                  <option value="prep">📋 Prep / Admin</option>
+                  <option value="drive">🚗 Drive Time</option>
+                  <option value="lunch">🍽 Lunch (Student)</option>
+                  <option value="tod">🧑‍🏫 TOD Meeting (Off)</option>
+                  <option value="break">☕ Break</option>
+                  <option value="off">🚫 Off / Not Working</option>
+                  <option value="other">📌 Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="fld" style="margin-bottom:8px"><label>Days &amp; Times</label>
+              <div style="border:1px solid var(--br);border-radius:9px;overflow:hidden" id="blk-days-wrap">
+                <div class="day-slot" data-day="Mon"><label class="day-chk-label"><input type="checkbox" class="day-chk" value="Mon" onchange="toggleDayTime(this)"><span class="day-name">Mon</span></label><div class="day-time-wrap" style="display:none"><input type="time" class="day-time"><span class="day-sep">–</span><input type="time" class="day-time-end"><input type="text" class="day-period" placeholder="Note (optional)" style="flex:1"></div></div>
+                <div class="day-slot" data-day="Tue"><label class="day-chk-label"><input type="checkbox" class="day-chk" value="Tue" onchange="toggleDayTime(this)"><span class="day-name">Tue</span></label><div class="day-time-wrap" style="display:none"><input type="time" class="day-time"><span class="day-sep">–</span><input type="time" class="day-time-end"><input type="text" class="day-period" placeholder="Note (optional)" style="flex:1"></div></div>
+                <div class="day-slot" data-day="Wed"><label class="day-chk-label"><input type="checkbox" class="day-chk" value="Wed" onchange="toggleDayTime(this)"><span class="day-name">Wed</span></label><div class="day-time-wrap" style="display:none"><input type="time" class="day-time"><span class="day-sep">–</span><input type="time" class="day-time-end"><input type="text" class="day-period" placeholder="Note (optional)" style="flex:1"></div></div>
+                <div class="day-slot" data-day="Thu"><label class="day-chk-label"><input type="checkbox" class="day-chk" value="Thu" onchange="toggleDayTime(this)"><span class="day-name">Thu</span></label><div class="day-time-wrap" style="display:none"><input type="time" class="day-time"><span class="day-sep">–</span><input type="time" class="day-time-end"><input type="text" class="day-period" placeholder="Note (optional)" style="flex:1"></div></div>
+                <div class="day-slot" data-day="Fri"><label class="day-chk-label"><input type="checkbox" class="day-chk" value="Fri" onchange="toggleDayTime(this)"><span class="day-name">Fri</span></label><div class="day-time-wrap" style="display:none"><input type="time" class="day-time"><span class="day-sep">–</span><input type="time" class="day-time-end"><input type="text" class="day-period" placeholder="Note (optional)" style="flex:1"></div></div>
+              </div>
+            </div>
+            <div class="fld" style="margin-bottom:8px"><label>Notes</label>
+              <textarea id="blk-notes" placeholder="Any notes about this block..." style="min-height:50px"></textarea></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn pri" onclick="saveBlock()">Save Block</button>
+              <button class="btn gh sm" id="blk-cancel-btn" onclick="clearBlockForm()" style="display:none">Cancel</button>
+            </div>
+          </div>
+          <div class="card cp">
+            <div class="sec">Saved Blocks</div>
+            <div id="block-list"></div>
+          </div>
+        </div>
+
+        <!-- NO SCHOOL / ALTERED TAB -->
+        <div class="tp" id="sched-noschool">
+          <div class="g2" style="margin-bottom:12px">
+            <div class="card cp">
+              <div class="sec">Add No-School / Altered Day</div>
+              <div class="fr fr2" style="margin-bottom:8px">
+                <div class="fld"><label>Date</label><input type="date" id="ns-date"></div>
+                <div class="fld"><label>Type</label>
+                  <select id="ns-type">
+                    <option value="noschool">🚫 No School</option>
+                    <option value="holiday">🎉 Holiday</option>
+                    <option value="break">📅 School Break</option>
+                    <option value="altered">⚡ Altered Schedule</option>
+                    <option value="early">🏃 Early Release</option>
+                    <option value="late">⏰ Late Start</option>
+                    <option value="sub">👤 Sub (No Interp Needed)</option>
+                    <option value="absent">🤒 Student Absent</option>
+                    <option value="fieldtrip">🚌 Field Trip</option>
+                    <option value="testing">📝 Testing Day (Altered)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fld" style="margin-bottom:8px"><label>Description / Notes</label>
+                <input type="text" id="ns-desc" placeholder="e.g. Thanksgiving break, Early release at 12:30, Assembly schedule"></div>
+              <div class="fr fr2" style="margin-bottom:8px">
+                <div class="fld"><label>End Date (for multi-day, optional)</label><input type="date" id="ns-end"></div>
+                <div class="fld"><label>Student (leave blank for all)</label><select id="ns-student"><option value="">All Students</option></select></div>
+              </div>
+              <button class="btn pri" onclick="saveNoSchool()">Save</button>
+            </div>
+            <div class="card cp">
+              <div class="sec">Quick Add Range</div>
+              <p style="font-size:12px;color:var(--ink2);margin-bottom:10px;line-height:1.5">Use start + end date to log a full break (e.g. winter break Dec 23–Jan 3) as a single entry.</p>
+              <div class="notice n-warn">
+                <span>📌</span>
+                <div style="font-size:11px">No-school days are shown on the week view with a banner and are excluded from daily schedule display.</div>
+              </div>
+            </div>
+          </div>
+          <div class="card cp">
+            <div class="filter-hdr">
+              <div class="sec" style="margin:0">No-School / Altered Days</div>
+              <select id="ns-filter" onchange="renderNoSchool()" class="filter-sel" style="font-size:14px;min-width:120px">
+                <option value="">All Types</option>
+                <option value="noschool">No School</option>
+                <option value="holiday">Holiday</option>
+                <option value="altered">Altered</option>
+                <option value="early">Early Release</option>
+                <option value="late">Late Start</option>
+                <option value="absent">Student Absent</option>
+              </select>
+            </div>
+            <div id="noschool-list"></div>
+          </div>
+        </div>
+
+        <!-- STUDENTS TAB -->
+        <div class="tp" id="sched-students">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div class="sec" style="margin:0">Students</div>
             <button class="btn pri sm" onclick="openModal('modal-add-student')">+ Add Student</button>
           </div>
           <div id="student-mgmt-list"></div>
         </div>
+
       </div>
 
       <!-- ══════════════════════════════════════════════
@@ -1349,9 +1586,10 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
     <div class="mh"><h2>Add / Edit Class</h2><button class="mod-close" onclick="closeModal('modal-add-class')">✕</button></div>
     <div class="mb">
       <input type="hidden" id="mc-id">
-      <div class="fr fr2" style="margin-bottom:10px">
+      <div class="fr fr3" style="margin-bottom:10px">
         <div class="fld"><label>Class Name</label><input type="text" id="mc-name" placeholder="e.g. AP Biology"></div>
-        <div class="fld"><label>Student</label><select id="mc-student"></select></div>
+        <div class="fld"><label>Period # (for ordering)</label><input type="number" id="mc-period-num" min="0" max="20" placeholder="e.g. 2" style="font-size:16px"></div>
+        <div class="fld"><label>Student</label><select id="mc-student" class="sel2"></select></div>
       </div>
       <div class="fr fr2" style="margin-bottom:10px">
         <div class="fld"><label>Teacher</label><input type="text" id="mc-teacher" placeholder="e.g. Mr. Alvarez"></div>
@@ -1514,7 +1752,9 @@ let DB = {
   iepLog: [],
   pdLog: [],
   eipaAssessments: [],
-  eipaGoals: []
+  eipaGoals: [],
+  scheduleBlocks: [],
+  noSchoolDays: []
 };
 
 function save() {
@@ -1550,6 +1790,9 @@ function initApp() {
   renderIEP();
   renderPD();
   renderEIPAPage();
+  renderBlockList();
+  renderNoSchool();
+  renderWeekView();
   loadSettings();
   updateBadge();
 }
@@ -1643,7 +1886,7 @@ function toast(msg, type='ok') {
 
 // ── STUDENTS ──────────────────────────────────────────────────────────────────
 function populateStudentSelectors() {
-  const selects = ['global-student','log-student','v-student','mat-student','mc-student','mp-student','log-filter-student','iep-student','iep-filter-student'];
+  const selects = ['global-student','log-student','v-student','mat-student','mc-student','mp-student','log-filter-student','iep-student','iep-filter-student','ns-student'];
   selects.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1696,34 +1939,75 @@ function deleteStudent(id) {
 }
 
 // ── CLASSES ────────────────────────────────────────────────────────────────────
+function sortedClasses(studentId) {
+  let classes = studentId ? DB.classes.filter(c=>!studentId||c.studentId===studentId) : DB.classes;
+  if(!classes.length && studentId) classes = DB.classes;
+  return [...classes].sort((a,b)=>{
+    const ap = a.periodNum ?? 99;
+    const bp = b.periodNum ?? 99;
+    return ap - bp || a.name.localeCompare(b.name);
+  });
+}
+
+function classLabel(c) {
+  return (c.periodNum ? `P${c.periodNum} — ` : '') + c.name;
+}
+
 function populateClassSelectors() {
-  const studentId = document.getElementById('global-student').value;
-  const classesForStudent = DB.classes.filter(c => !studentId || c.studentId === studentId);
-  const selects = ['ql-class','log-class','mat-class'];
-  selects.forEach(id => {
+  const studentId = document.getElementById('global-student')?.value;
+  const sorted = sortedClasses(studentId);
+
+  ['ql-class','log-class','mat-class','v-class','qv-class'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.innerHTML = id==='mat-class' ? '<option value="">— General —</option>' : '<option value="">— select class —</option>';
-    classesForStudent.forEach(c => {
+    const val = el.value;
+    el.innerHTML = (id==='mat-class'||id==='v-class'||id==='qv-class')
+      ? '<option value="">— General / Other —</option>'
+      : '<option value="">— select class —</option>';
+    sorted.forEach(c => {
       const o = document.createElement('option');
-      o.value = c.id; o.textContent = c.name + (c.period ? ` (${c.period})` : '');
+      o.value = c.id; o.textContent = classLabel(c);
       el.appendChild(o);
     });
-    if (id==='log-class' && DB.classes.length>0 && !classesForStudent.length) {
-      DB.classes.forEach(c=>{
-        const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; el.appendChild(o);
-      });
-    }
+    if (val) el.value = val;
   });
-  // vocab filter cats
+
+  const vcf2 = document.getElementById('vocab-filter-class');
+  if (vcf2) {
+    const cur = vcf2.value;
+    vcf2.innerHTML = '<option value="">All Classes</option>';
+    sorted.forEach(c => { vcf2.innerHTML += `<option value="${c.id}">${esc(classLabel(c))}</option>`; });
+    if (cur) vcf2.value = cur;
+  }
+
   const vcf = document.getElementById('vocab-filter-cat');
   if (vcf) {
     const cats = [...new Set(DB.vocab.map(v=>v.category).filter(Boolean))].sort();
-    vcf.innerHTML = '<option value="">All Categories</option>';
-    cats.forEach(c => { vcf.innerHTML += `<option>${c}</option>`; });
-    const dl = document.getElementById('cat-list');
-    if (dl) { dl.innerHTML = ''; cats.forEach(c=>{dl.innerHTML+=`<option value="${c}">`;}); }
+    const cur = vcf.value;
+    vcf.innerHTML = '<option value="">All Subjects</option>';
+    cats.forEach(c => { vcf.innerHTML += `<option>${esc(c)}</option>`; });
+    if (cur) vcf.value = cur;
+    refreshCatDrop('');
   }
+
+  const vstf = document.getElementById('vocab-filter-signtype');
+  if (vstf) {
+    const types = [...new Set(DB.vocab.map(v=>v.signType).filter(Boolean))].sort();
+    const cur = vstf.value;
+    vstf.innerHTML = '<option value="">All Types</option>';
+    types.forEach(t => { vstf.innerHTML += `<option>${esc(t)}</option>`; });
+    if (cur) vstf.value = cur;
+  }
+
+  ['v-student','qv-student'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const val = el.value;
+    el.innerHTML = '<option value="all">All / General</option>';
+    DB.students.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.label;el.appendChild(o);});
+    if (val) el.value = val;
+  });
+
   const fscf = document.getElementById('fs-cat-filter');
   if (fscf) {
     const cats = [...new Set(DB.vocab.map(v=>v.category).filter(Boolean))].sort();
@@ -1734,7 +2018,6 @@ function populateClassSelectors() {
 
 function saveClass() {
   const id = document.getElementById('mc-id').value || uid();
-  // Collect per-day schedule from the day slots
   const schedule = [];
   document.querySelectorAll('#mc-days-wrap .day-slot').forEach(slot => {
     const chk = slot.querySelector('.day-chk');
@@ -1744,14 +2027,15 @@ function saveClass() {
     const period = slot.querySelector('.day-period').value.trim();
     schedule.push({ day: chk.value, start, end, period });
   });
+  const periodNum = parseInt(document.getElementById('mc-period-num').value)||null;
   const c = {
     id,
     name: document.getElementById('mc-name').value.trim(),
+    periodNum,
     teacher: document.getElementById('mc-teacher').value.trim(),
     room: document.getElementById('mc-room').value.trim(),
     studentId: document.getElementById('mc-student').value,
     schedule,
-    // keep legacy days array for backwards compat
     days: schedule.map(s=>s.day),
     notes: document.getElementById('mc-notes').value.trim()
   };
@@ -1766,7 +2050,7 @@ function saveClass() {
 
 function clearClassModal() {
   document.getElementById('mc-id').value='';
-  ['mc-name','mc-teacher','mc-room','mc-notes'].forEach(f=>document.getElementById(f).value='');
+  ['mc-name','mc-teacher','mc-room','mc-notes','mc-period-num'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
   document.querySelectorAll('#mc-days-wrap .day-chk').forEach(c=>{ c.checked=false; });
   document.querySelectorAll('#mc-days-wrap .day-time-wrap').forEach(w=>{ w.style.display='none'; });
   document.querySelectorAll('#mc-days-wrap .day-time, #mc-days-wrap .day-time-end').forEach(i=>{ i.value=''; });
@@ -1790,24 +2074,23 @@ function quickLog() {
   const entry = {
     id: uid(),
     date: new Date().toISOString().split('T')[0],
-    studentId,
-    classId,
-    className: classObj ? classObj.name : '(Quick Entry)',
+    studentId, classId,
+    className: classObj ? classLabel(classObj) : '(Quick Entry)',
     vocab: vocab ? vocab.split(',').map(v=>v.trim()).filter(Boolean) : [],
     demands:'', notes, prep:'', followup:'', mode:'', rating:'',
     topic:'', createdAt: Date.now()
   };
   DB.logs.unshift(entry);
-  // auto-add vocab to dictionary
   entry.vocab.forEach(w => {
     if (w && !DB.vocab.find(v=>v.word.toLowerCase()===w.toLowerCase())) {
-      DB.vocab.push({ id:uid(), word:w, category: classObj?.name||'', studentId, definition:'', params:'', mastery:2, source:'Daily Log', link:'', createdAt:Date.now() });
+      DB.vocab.push({ id:uid(), word:w, category:classObj?.name||'', signType:'', classId, studentId,
+        definition:'', params:'', mastery:1, source:'Daily Log', link:'', status:'needs-both', createdAt:Date.now() });
     }
   });
   save();
   document.getElementById('ql-vocab').value='';
   document.getElementById('ql-notes').value='';
-  renderDashboard(); renderLogs(); renderVocab();
+  renderDashboard(); renderLogs(); renderVocab(); populateClassSelectors();
   toast('Log saved!');
 }
 
@@ -1819,9 +2102,8 @@ function saveLog() {
   const entry = {
     id: uid(),
     date: document.getElementById('log-date').value,
-    studentId,
-    classId,
-    className: classObj ? classObj.name : document.getElementById('log-class').value||'',
+    studentId, classId,
+    className: classObj ? classLabel(classObj) : '',
     vocab: vocab ? vocab.split(',').map(v=>v.trim()).filter(Boolean) : [],
     topic: document.getElementById('log-topic').value.trim(),
     demands: document.getElementById('log-demands').value.trim(),
@@ -1836,14 +2118,15 @@ function saveLog() {
   DB.logs.unshift(entry);
   entry.vocab.forEach(w => {
     if (w && !DB.vocab.find(v=>v.word.toLowerCase()===w.toLowerCase())) {
-      DB.vocab.push({ id:uid(), word:w, category:classObj?.name||'', studentId, definition:'', params:'', mastery:2, source:'Daily Log', link:'', createdAt:Date.now() });
+      DB.vocab.push({ id:uid(), word:w, category:classObj?.name||'', signType:'', classId, studentId,
+        definition:'', params:'', mastery:1, source:'Daily Log', link:'', status:'needs-both', createdAt:Date.now() });
     }
   });
   save();
   ['log-vocab','log-topic','log-demands','log-notes','log-prep','log-followup'].forEach(f=>document.getElementById(f).value='');
   document.getElementById('log-mode').value='';
   document.getElementById('log-rating').value='';
-  renderDashboard(); renderLogs(); renderVocab();
+  renderDashboard(); renderLogs(); renderVocab(); populateClassSelectors();
   toast('Log entry saved!');
 }
 
@@ -1893,28 +2176,62 @@ function saveVocab() {
   const editId = document.getElementById('vocab-edit-id').value;
   const id = editId || uid();
   const v = {
-    id, word: document.getElementById('v-word').value.trim(),
+    id,
+    word: document.getElementById('v-word').value.trim(),
     category: document.getElementById('v-category').value.trim(),
+    signType: document.getElementById('v-signtype').value.trim(),
+    classId: document.getElementById('v-class').value,
     studentId: document.getElementById('v-student').value,
     definition: document.getElementById('v-def').value.trim(),
     params: document.getElementById('v-params').value.trim(),
     mastery: parseInt(document.getElementById('v-mastery').value)||3,
     source: document.getElementById('v-source').value.trim(),
     link: document.getElementById('v-link').value.trim(),
+    status: document.getElementById('v-status').value||'needs-both',
     createdAt: editId ? (DB.vocab.find(x=>x.id===editId)?.createdAt||Date.now()) : Date.now()
   };
   if (!v.word) { toast('Word required','warn'); return; }
+  // Auto-set status if definition and params are filled
+  if(v.definition && v.params) v.status='ok';
+  else if(v.definition && !v.params) v.status='needs-sign';
+  else if(!v.definition && v.params) v.status='needs-def';
   const idx = DB.vocab.findIndex(x=>x.id===id);
   if (idx>=0) DB.vocab[idx]=v; else DB.vocab.push(v);
   save(); clearVocabForm(); renderVocab(); populateClassSelectors(); renderDashboard();
   toast(editId ? 'Vocabulary updated' : 'Word added to dictionary');
 }
 
+function quickAddVocab() {
+  const word = document.getElementById('qv-word').value.trim();
+  if(!word) { toast('Enter a word first','warn'); return; }
+  const classId = document.getElementById('qv-class').value;
+  const studentId = document.getElementById('qv-student').value;
+  const classObj = DB.classes.find(c=>c.id===classId);
+  // Don't add duplicates
+  if(DB.vocab.find(v=>v.word.toLowerCase()===word.toLowerCase())) {
+    toast('Already in dictionary — find it below to edit','warn'); return;
+  }
+  const v = {
+    id: uid(), word, category: classObj?.name||'', signType:'', classId, studentId,
+    definition:'', params:'', mastery:1, source:'', link:'',
+    status:'needs-both', createdAt:Date.now()
+  };
+  DB.vocab.unshift(v);
+  save(); renderVocab(); populateClassSelectors();
+  document.getElementById('qv-word').value='';
+  toast(`"${word}" added — needs definition & sign research`);
+}
+
 function clearVocabForm() {
   document.getElementById('vocab-edit-id').value='';
-  ['v-word','v-category','v-source','v-link','v-def','v-params'].forEach(f=>document.getElementById(f).value='');
+  ['v-word','v-category','v-signtype','v-source','v-link','v-def','v-params'].forEach(f=>{
+    const el=document.getElementById(f); if(el) el.value='';
+  });
   document.getElementById('v-mastery').value='3';
-  document.getElementById('v-student').value='all';
+  document.getElementById('v-status').value='needs-both';
+  const vs=document.getElementById('v-student'); if(vs) vs.value='all';
+  const vc=document.getElementById('v-class'); if(vc) vc.value='';
+  const lr=document.getElementById('v-lookup-result'); if(lr){lr.style.display='none';lr.innerHTML='';}
   document.getElementById('vocab-cancel-btn').style.display='none';
 }
 
@@ -1924,15 +2241,17 @@ function editVocab(id) {
   document.getElementById('vocab-edit-id').value = v.id;
   document.getElementById('v-word').value = v.word;
   document.getElementById('v-category').value = v.category||'';
+  document.getElementById('v-signtype').value = v.signType||'';
+  document.getElementById('v-class').value = v.classId||'';
   document.getElementById('v-student').value = v.studentId||'all';
   document.getElementById('v-def').value = v.definition||'';
   document.getElementById('v-params').value = v.params||'';
   document.getElementById('v-mastery').value = v.mastery||3;
   document.getElementById('v-source').value = v.source||'';
   document.getElementById('v-link').value = v.link||'';
+  document.getElementById('v-status').value = v.status||'needs-both';
   document.getElementById('vocab-cancel-btn').style.display='inline-flex';
-  document.getElementById('page-vocab').scrollTop = 0;
-  document.getElementById('page-scroll').scrollTop = 0;
+  document.getElementById('page-scroll').scrollTop=0;
 }
 
 function deleteVocab(id) {
@@ -1941,51 +2260,153 @@ function deleteVocab(id) {
   save(); renderVocab(); renderDashboard(); toast('Deleted');
 }
 
-function masteryLabel(n) {
-  return ['','New','Recognizing','Learning','Comfortable','Mastered'][n]||'';
+function masteryLabel(n) { return ['','New','Recognizing','Learning','Comfortable','Mastered'][n]||''; }
+function masteryStars(n) { return '★'.repeat(n)+'☆'.repeat(5-n); }
+
+// ── DEFINITION LOOKUP ────────────────────────────────────────────────────────
+function lookupDefinition() {
+  const word = document.getElementById('v-word').value.trim() || document.getElementById('v-word').placeholder;
+  if (!word || word.startsWith('e.g')) { toast('Enter a word first','warn'); return; }
+  const url = `https://www.merriam-webster.com/dictionary/${encodeURIComponent(word)}`;
+  window.open(url, '_blank');
+  // Also show a quick Free Dictionary API result in-page
+  const res = document.getElementById('v-lookup-result');
+  res.style.display='block';
+  res.innerHTML='<span style="color:var(--ink3)">Looking up...</span>';
+  fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`)
+    .then(r=>r.json()).then(data=>{
+      if(!Array.isArray(data)||!data[0]) { res.innerHTML='<em>No result — try Merriam-Webster (opened in new tab)</em>'; return; }
+      const entry = data[0];
+      let html='';
+      (entry.meanings||[]).slice(0,3).forEach(m=>{
+        html+=`<div style="margin-bottom:5px"><span class="pill pz" style="font-size:9px">${esc(m.partOfSpeech||'')}</span> `;
+        (m.definitions||[]).slice(0,2).forEach((d,i)=>{
+          html+=`<div style="margin-left:8px;margin-top:2px;font-size:11px"><strong>${i+1}.</strong> ${esc(d.definition||'')}</div>`;
+          if(d.example) html+=`<div style="margin-left:16px;font-style:italic;color:var(--ink3);font-size:10px">"${esc(d.example)}"</div>`;
+        });
+      });
+      if(entry.phonetics?.[0]?.text) html=`<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--sage);margin-bottom:5px">${esc(entry.phonetics[0].text)}</div>`+html;
+      html+=`<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+        <a href="${url}" target="_blank" class="btn sm" style="font-size:10px">📖 Full Merriam-Webster</a>
+        <a href="https://www.thesaurus.com/browse/${encodeURIComponent(word)}" target="_blank" class="btn sm" style="font-size:10px">📝 Thesaurus.com</a>
+        <a href="https://www.etymonline.com/word/${encodeURIComponent(word)}" target="_blank" class="btn sm" style="font-size:10px">📜 Etymology</a>
+      </div>`;
+      res.innerHTML=html;
+      // Auto-fill definition if empty
+      const defEl=document.getElementById('v-def');
+      if(!defEl.value && data[0]?.meanings?.[0]?.definitions?.[0]?.definition) {
+        defEl.value=data[0].meanings[0].definitions[0].definition;
+        toast('Definition auto-filled — edit as needed');
+      }
+    }).catch(()=>{
+      res.innerHTML=`<em>API unavailable. <a href="${url}" target="_blank" style="color:var(--sky)">Open Merriam-Webster ↗</a> | <a href="https://www.thesaurus.com/browse/${encodeURIComponent(word)}" target="_blank" style="color:var(--sky)">Thesaurus ↗</a></em>`;
+    });
 }
 
-function masteryStars(n) {
-  return '★'.repeat(n)+'☆'.repeat(5-n);
+function lookupThesaurus() {
+  const word = document.getElementById('v-word').value.trim();
+  if (!word) { toast('Enter a word first','warn'); return; }
+  window.open(`https://www.thesaurus.com/browse/${encodeURIComponent(word)}`, '_blank');
 }
+
+// ── SEARCHABLE DROP LISTS ────────────────────────────────────────────────────
+const SIGN_TYPES = ['Country/Nation Name', 'Person Name Sign', 'Brand/Company Name', 'Science — Biology', 'Science — Chemistry', 'Science — Physics', 'Science — Earth', 'Math', 'Statistics', 'Technology / Computer Science', 'History / Social Studies', 'English / Literature', 'Art / Music', 'Health / PE', 'Special Education', 'Medical / Anatomy', 'Legal / Government', 'Religious / Cultural', 'Classifier', 'Initialized Sign', 'Loan Sign', 'Compound Sign', 'Directional Verb', 'Spatial / Locative', 'Number Sign', 'Color Sign', 'Time / Temporal', 'ASL Idiom', 'Initialized Abbreviation', 'General Academic', 'Other'];
+
+function refreshCatDrop(filter) {
+  const cats = [...new Set(DB.vocab.map(v=>v.category).filter(Boolean))].sort();
+  const common = ['Biology','Chemistry','Physics','Math','Statistics','History','English','Art','Health','Technology','General Academic','Special Education'];
+  const all = [...new Set([...common,...cats])].sort();
+  const filtered = filter ? all.filter(c=>c.toLowerCase().includes(filter.toLowerCase())) : all;
+  return filtered;
+}
+
+function filterCatDrop(val) {
+  const drop=document.getElementById('cat-drop');
+  const filtered=refreshCatDrop(val);
+  drop.style.display='block';
+  const items=filtered.slice(0,10).map(c=>`<div class="search-drop-item" onmousedown="selectCat('${esc(c)}')">${esc(c)}</div>`).join('');
+  const addNew=val&&!filtered.find(f=>f.toLowerCase()===val.toLowerCase())
+    ?`<div class="search-drop-item new-item" onmousedown="selectCat('${esc(val)}')">+ Add "${esc(val)}"</div>`:'';
+  drop.innerHTML=items+addNew||'<div class="search-drop-item" style="color:var(--ink3)">No matches</div>';
+}
+function selectCat(val){document.getElementById('v-category').value=val;hideCatDrop();}
+function showCatDrop(){filterCatDrop(document.getElementById('v-category').value);}
+function hideCatDrop(){const d=document.getElementById('cat-drop');if(d)d.style.display='none';}
+
+function filterSignTypes(val) {
+  const drop=document.getElementById('signtype-drop');
+  const filtered=val?SIGN_TYPES.filter(t=>t.toLowerCase().includes(val.toLowerCase())):SIGN_TYPES;
+  drop.style.display='block';
+  const items=filtered.slice(0,10).map(t=>`<div class="search-drop-item" onmousedown="selectSignType('${esc(t)}')">${esc(t)}</div>`).join('');
+  const addNew=val&&!SIGN_TYPES.find(f=>f.toLowerCase()===val.toLowerCase())
+    ?`<div class="search-drop-item new-item" onmousedown="selectSignType('${esc(val)}')">+ Add "${esc(val)}"</div>`:'';
+  drop.innerHTML=items+addNew||'<div style="padding:8px;color:var(--ink3);font-size:12px">No matches</div>';
+}
+function selectSignType(val){document.getElementById('v-signtype').value=val;hideSignTypeDrop();}
+function showSignTypeDrop(){filterSignTypes(document.getElementById('v-signtype').value);}
+function hideSignTypeDrop(){const d=document.getElementById('signtype-drop');if(d)d.style.display='none';}
 
 function renderVocab() {
   const list = document.getElementById('vocab-list');
   const count = document.getElementById('vocab-count');
+  if(!list||!count) return;
   const search = (document.getElementById('vocab-search')?.value||'').toLowerCase();
   const filterCat = document.getElementById('vocab-filter-cat')?.value||'';
+  const filterClass = document.getElementById('vocab-filter-class')?.value||'';
+  const filterSignType = document.getElementById('vocab-filter-signtype')?.value||'';
   const filterMastery = document.getElementById('vocab-filter-mastery')?.value||'';
+  const filterStatus = document.getElementById('vocab-filter-status')?.value||'';
   let vocab = [...DB.vocab].sort((a,b)=>a.word.localeCompare(b.word));
   if (filterCat) vocab = vocab.filter(v=>v.category===filterCat);
+  if (filterClass) vocab = vocab.filter(v=>v.classId===filterClass);
+  if (filterSignType) vocab = vocab.filter(v=>v.signType===filterSignType);
   if (filterMastery) vocab = vocab.filter(v=>v.mastery===parseInt(filterMastery));
+  if (filterStatus) vocab = vocab.filter(v=>(v.status||'needs-both')===filterStatus);
   if (search) vocab = vocab.filter(v =>
     v.word.toLowerCase().includes(search)||
     (v.definition||'').toLowerCase().includes(search)||
     (v.category||'').toLowerCase().includes(search)||
-    (v.params||'').toLowerCase().includes(search)
+    (v.signType||'').toLowerCase().includes(search)||
+    (v.params||'').toLowerCase().includes(search)||
+    (v.source||'').toLowerCase().includes(search)
   );
   count.textContent = DB.vocab.length;
-  if (!vocab.length) { list.innerHTML=`<div class="tbl-empty">No vocabulary entries${search||filterCat?' matching filters':' yet'}.</div>`; return; }
+  if (!vocab.length) { list.innerHTML=`<div class="tbl-empty">No vocabulary entries${search||filterCat||filterClass?' matching filters':' yet'}.</div>`; return; }
   const masteryColors=['','pr','pr','pa','pb','pg'];
+  const statusBadge={
+    'ok':'<span class="vbadge vb-ok">✅ Complete</span>',
+    'needs-def':'<span class="vbadge vb-needs-def">📖 Needs Def</span>',
+    'needs-sign':'<span class="vbadge vb-needs-sign">🤟 Needs Sign</span>',
+    'needs-both':'<span class="vbadge vb-needs-both">🔍 Needs Research</span>',
+  };
   list.innerHTML = vocab.map(v => {
     const student = DB.students.find(s=>s.id===v.studentId);
+    const cls = DB.classes.find(c=>c.id===v.classId);
+    const st = v.status||'needs-both';
     return `<div class="vc">
       <div class="vc-top">
-        <div><div class="vc-word">${esc(v.word)}</div></div>
+        <div>
+          <div class="vc-word">${esc(v.word)}</div>
+          ${statusBadge[st]||''}
+        </div>
         <div class="vc-meta">
+          ${v.signType?`<span class="pill pb">${esc(v.signType)}</span>`:''}
           ${v.category?`<span class="pill pz">${esc(v.category)}</span>`:''}
+          ${cls?`<span class="pill pg">${esc(classLabel(cls))}</span>`:''}
           <span class="pill ${masteryColors[v.mastery]||'pz'}" title="Mastery: ${masteryLabel(v.mastery)}">${masteryStars(v.mastery)}</span>
           ${student&&student.label!=='all'?`<span class="pill pb">${esc(student.label)}</span>`:''}
           <div class="vc-actions">
-            ${v.link?`<a href="${esc(v.link)}" target="_blank" class="btn gh sm" style="padding:2px 6px;font-size:10px">🔗</a>`:''}
-            <button class="btn gh sm" style="padding:2px 6px;font-size:10px" onclick="editVocab('${v.id}')">Edit</button>
-            <button class="btn gh sm" style="padding:2px 6px;font-size:10px;color:var(--clay)" onclick="deleteVocab('${v.id}')">✕</button>
+            ${v.link?`<a href="${esc(v.link)}" target="_blank" class="btn gh sm" style="padding:3px 7px;font-size:10px">🔗</a>`:''}
+            <button class="btn sm gold" style="padding:3px 7px;font-size:10px" onclick="editVocab('${v.id}');lookupDefinition()">📖</button>
+            <button class="btn gh sm" style="padding:3px 7px;font-size:10px" onclick="editVocab('${v.id}')">Edit</button>
+            <button class="btn gh sm" style="padding:3px 7px;font-size:10px;color:var(--clay)" onclick="deleteVocab('${v.id}')">✕</button>
           </div>
         </div>
       </div>
-      ${v.definition?`<div class="vc-def">${esc(v.definition)}</div>`:''}
-      ${v.params?`<div class="vc-params">ASL: ${esc(v.params)}</div>`:''}
+      ${v.definition?`<div class="vc-def">${esc(v.definition)}</div>`:'<div class="vc-def" style="color:var(--ink3);font-style:italic">No definition yet</div>'}
+      ${v.params?`<div class="vc-params">🤟 ${esc(v.params)}</div>`:'<div class="vc-params" style="color:var(--clay)">No sign info yet</div>'}
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
+      ${cls?`<div class="vc-params">Class: ${esc(classLabel(cls))}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -1993,9 +2414,12 @@ function renderVocab() {
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
 function renderSchedule() {
   renderTodaySchedule();
+  renderWeekView();
   renderStudentMgmt();
   renderClassList();
   renderPresList();
+  renderBlockList();
+  renderNoSchool();
 }
 
 function renderTodaySchedule() {
@@ -2003,49 +2427,76 @@ function renderTodaySchedule() {
   const todayName = dayNames[new Date().getDay()];
   const label = document.getElementById('today-sched-label');
   const list = document.getElementById('today-sched-list');
-  label.textContent = `${todayName === 'Sat' || todayName === 'Sun' ? 'Weekend' : 'Today'} — ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}`;
+  if(!label||!list) return;
+  const dateStr = new Date().toISOString().split('T')[0];
+  label.textContent = `${todayName==='Sat'||todayName==='Sun'?'Weekend':'Today'} \u2014 ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}`;
 
-  // Find all classes that meet today, sorted by start time
-  const todayClasses = DB.classes
-    .map(c => {
-      const sched = (c.schedule||[]).find(s=>s.day===todayName);
-      // Legacy fallback
-      const legacyMatch = !c.schedule?.length && (c.days||[]).includes(todayName);
-      if (!sched && !legacyMatch) return null;
-      return { c, sched: sched||null };
-    })
-    .filter(Boolean)
-    .sort((a,b) => {
-      const at = a.sched?.start||'99:99';
-      const bt = b.sched?.start||'99:99';
-      return at.localeCompare(bt);
-    });
-
-  if (!todayClasses.length) {
-    list.innerHTML = `<div style="font-size:12px;color:var(--ink3);font-family:'DM Mono',monospace;padding:4px 0">${todayName==='Sat'||todayName==='Sun' ? 'No classes scheduled on weekends.' : 'No classes scheduled for today.'}</div>`;
+  // Check no-school
+  const nsEntry = getNoSchoolEntry(dateStr);
+  if(nsEntry) {
+    list.innerHTML = `<div style="padding:10px;background:var(--clay-l);border-radius:8px;font-size:12px;color:var(--clay);font-weight:500">${NS_ICONS[nsEntry.type]||'\uD83D\uDEAB'} ${esc(nsEntry.desc||nsEntry.type)} \u2014 No school today</div>`;
+    return;
+  }
+  if(todayName==='Sat'||todayName==='Sun') {
+    list.innerHTML = '<div style="font-size:12px;color:var(--ink3);font-family:\'DM Mono\',monospace;padding:4px 0">No classes on weekends.</div>';
     return;
   }
 
-  list.innerHTML = todayClasses.map(({c, sched})=>{
+  // Collect all items for today
+  const items = [];
+
+  // Classes
+  const sorted = sortedClasses('');
+  sorted.forEach(c => {
+    const sched = (c.schedule||[]).find(s=>s.day===todayName);
+    const legacyMatch = !c.schedule?.length && (c.days||[]).includes(todayName);
+    if(!sched && !legacyMatch) return;
     const student = DB.students.find(s=>s.id===c.studentId);
-    const timeStr = sched?.start ? fmtTime(sched.start)+(sched.end?'–'+fmtTime(sched.end):'') : '';
-    const periodStr = sched?.period || c.period || '';
-    return `<div class="sched-class" style="margin-bottom:6px">
-      <div class="sched-time" style="min-width:80px">
-        ${timeStr ? `<div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--sage);font-weight:600">${timeStr}</div>` : ''}
-        ${periodStr ? `<div style="font-size:10px;color:var(--ink3)">${esc(periodStr)}</div>` : ''}
-        ${!timeStr && !periodStr ? '<span style="color:var(--ink3);font-size:10px">No time set</span>' : ''}
-      </div>
-      <div class="sched-body">
-        <div class="sched-name">${esc(c.name)}</div>
-        <div class="sched-detail">
-          ${student ? esc(student.label) : ''}
-          ${c.teacher ? ' · '+esc(c.teacher) : ''}
-          ${c.room ? ' · '+esc(c.room) : ''}
+    const timeStr = sched?.start ? fmtTime(sched.start)+(sched.end?'\u2013'+fmtTime(sched.end):'') : '';
+    items.push({
+      sort: sched?.start||'99:99', periodNum: c.periodNum||99,
+      html: `<div class="sched-class" style="margin-bottom:6px;border-left:3px solid var(--sage)">
+        <div class="sched-time" style="min-width:90px">
+          ${c.periodNum?`<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--sage-d);font-weight:700;text-transform:uppercase">Period ${c.periodNum}</div>`:''}
+          ${timeStr?`<div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--sage);font-weight:600">${timeStr}</div>`:'<span style="color:var(--ink3);font-size:10px">No time</span>'}
         </div>
-      </div>
-    </div>`;
-  }).join('');
+        <div class="sched-body">
+          <div class="sched-name">${esc(c.name)}</div>
+          <div class="sched-detail">${student?esc(student.label):''}${c.teacher?' \u00b7 '+esc(c.teacher):''}${c.room?' \u00b7 '+esc(c.room):''}</div>
+        </div>
+      </div>`
+    });
+  });
+
+  // Blocks
+  (DB.scheduleBlocks||[]).forEach(b => {
+    const sched = (b.schedule||[]).find(s=>s.day===todayName);
+    if(!sched) return;
+    const timeStr = sched.start ? fmtTime(sched.start)+(sched.end?'\u2013'+fmtTime(sched.end):'') : '';
+    const isOff = b.type==='tod'||b.type==='off';
+    items.push({
+      sort: sched.start||'98:99', periodNum: 98,
+      html: `<div class="sched-class blk-${b.type}" style="margin-bottom:6px;${isOff?'opacity:.7':''}">
+        <div class="sched-time" style="min-width:90px">
+          ${timeStr?`<div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--sky);font-weight:600">${timeStr}</div>`:''}
+        </div>
+        <div class="sched-body">
+          <div class="sched-name">${BLK_ICONS[b.type]||'\uD83D\uDCCC'} ${esc(b.name)}</div>
+          ${isOff?'<div class="sched-detail" style="color:var(--clay)">Off \u2014 not interpreting</div>':''}
+          ${b.notes?`<div class="sched-detail">${esc(b.notes)}</div>`:''}
+        </div>
+      </div>`
+    });
+  });
+
+  if(!items.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--ink3);font-family:\'DM Mono\',monospace;padding:4px 0">Nothing scheduled for today. Add classes or blocks in the tabs above.</div>';
+    return;
+  }
+
+  // Sort: by start time primarily, then period number
+  items.sort((a,b)=>a.sort.localeCompare(b.sort)||a.periodNum-b.periodNum);
+  list.innerHTML = items.map(i=>i.html).join('');
 }
 
 function renderStudentMgmt() {
@@ -2149,17 +2600,15 @@ function editClassModal(id) {
   clearClassModal();
   document.getElementById('mc-id').value=c.id;
   document.getElementById('mc-name').value=c.name;
+  document.getElementById('mc-period-num').value=c.periodNum||'';
   document.getElementById('mc-teacher').value=c.teacher||'';
   document.getElementById('mc-room').value=c.room||'';
   document.getElementById('mc-student').value=c.studentId||'';
   document.getElementById('mc-notes').value=c.notes||'';
-  // Populate per-day schedule
   const sched = c.schedule || [];
-  // Also handle legacy classes that only have days[] and period
   document.querySelectorAll('#mc-days-wrap .day-slot').forEach(slot => {
     const day = slot.dataset.day;
     const entry = sched.find(s=>s.day===day);
-    // Legacy fallback: if no schedule array but days[] includes this day
     const legacyMatch = !sched.length && (c.days||[]).includes(day);
     if (entry || legacyMatch) {
       const chk = slot.querySelector('.day-chk');
@@ -2182,6 +2631,220 @@ function toggleDayTime(chk) {
   const wrap = chk.closest('.day-slot').querySelector('.day-time-wrap');
   wrap.style.display = chk.checked ? 'flex' : 'none';
 }
+
+// ── SCHEDULE BLOCKS ───────────────────────────────────────────────────────────
+function saveBlock() {
+  const id = document.getElementById('blk-id').value || uid();
+  const schedule = [];
+  document.querySelectorAll('#blk-days-wrap .day-slot').forEach(slot => {
+    const chk = slot.querySelector('.day-chk');
+    if (!chk.checked) return;
+    schedule.push({ day: chk.value, start: slot.querySelector('.day-time').value, end: slot.querySelector('.day-time-end').value, note: slot.querySelector('.day-period').value.trim() });
+  });
+  const b = {
+    id,
+    name: document.getElementById('blk-name').value.trim(),
+    type: document.getElementById('blk-type').value,
+    schedule,
+    notes: document.getElementById('blk-notes').value.trim(),
+    createdAt: Date.now()
+  };
+  if (!b.name) { toast('Name required','warn'); return; }
+  const idx = DB.scheduleBlocks.findIndex(x=>x.id===id);
+  if (idx>=0) DB.scheduleBlocks[idx]=b; else DB.scheduleBlocks.push(b);
+  save(); clearBlockForm(); renderBlockList(); renderSchedule();
+  toast('Block saved');
+}
+
+function clearBlockForm() {
+  document.getElementById('blk-id').value='';
+  ['blk-name','blk-notes'].forEach(f=>document.getElementById(f).value='');
+  document.getElementById('blk-type').value='prep';
+  document.querySelectorAll('#blk-days-wrap .day-chk').forEach(c=>c.checked=false);
+  document.querySelectorAll('#blk-days-wrap .day-time-wrap').forEach(w=>w.style.display='none');
+  document.querySelectorAll('#blk-days-wrap .day-time, #blk-days-wrap .day-time-end').forEach(i=>i.value='');
+  document.querySelectorAll('#blk-days-wrap .day-period').forEach(i=>i.value='');
+  document.getElementById('blk-cancel-btn').style.display='none';
+}
+
+function editBlock(id) {
+  const b = DB.scheduleBlocks.find(x=>x.id===id); if(!b) return;
+  document.getElementById('blk-id').value=b.id;
+  document.getElementById('blk-name').value=b.name;
+  document.getElementById('blk-type').value=b.type;
+  document.getElementById('blk-notes').value=b.notes||'';
+  clearBlockForm();
+  document.getElementById('blk-id').value=b.id;
+  document.getElementById('blk-name').value=b.name;
+  document.getElementById('blk-type').value=b.type;
+  document.getElementById('blk-notes').value=b.notes||'';
+  document.querySelectorAll('#blk-days-wrap .day-slot').forEach(slot=>{
+    const day=slot.dataset.day;
+    const entry=(b.schedule||[]).find(s=>s.day===day);
+    if(entry){ slot.querySelector('.day-chk').checked=true; slot.querySelector('.day-time-wrap').style.display='flex'; slot.querySelector('.day-time').value=entry.start||''; slot.querySelector('.day-time-end').value=entry.end||''; slot.querySelector('.day-period').value=entry.note||''; }
+  });
+  document.getElementById('blk-cancel-btn').style.display='inline-flex';
+}
+
+function deleteBlock(id) {
+  if(!confirm('Delete this block?'))return;
+  DB.scheduleBlocks=DB.scheduleBlocks.filter(b=>b.id!==id);
+  save(); renderBlockList(); renderSchedule(); toast('Deleted');
+}
+
+const BLK_ICONS={prep:'📋',drive:'🚗',lunch:'🍽',tod:'🧑‍🏫',break:'☕',off:'🚫',other:'📌'};
+const BLK_CSS={prep:'wprep',drive:'wdrive',lunch:'wlunch',tod:'wtod',break:'wbreak',off:'woff',other:'woff'};
+
+function renderBlockList() {
+  const el=document.getElementById('block-list');
+  if(!el) return;
+  if(!DB.scheduleBlocks.length){ el.innerHTML='<div class="tbl-empty">No blocks added yet.</div>'; return; }
+  el.innerHTML=DB.scheduleBlocks.map(b=>`<div class="sched-class blk-${b.type}" style="margin-bottom:6px">
+    <div class="sched-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div class="sched-name">${BLK_ICONS[b.type]||'📌'} ${esc(b.name)}</div>
+        <div style="display:flex;gap:4px">
+          <button class="btn gh sm" onclick="editBlock('${b.id}')">Edit</button>
+          <button class="btn warn sm" onclick="deleteBlock('${b.id}')">✕</button>
+        </div>
+      </div>
+      <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">
+        ${(b.schedule||[]).map(s=>`<span class="sched-day-tag">${esc(s.day)}</span>${s.start?`<span class="sched-day-time">${fmtTime(s.start)}${s.end?'–'+fmtTime(s.end):''}</span>`:''}`).join(' ')}
+      </div>
+      ${b.notes?`<div style="font-size:10px;color:var(--ink3);margin-top:2px">${esc(b.notes)}</div>`:''}
+    </div>
+  </div>`).join('');
+}
+
+// ── NO-SCHOOL / ALTERED ───────────────────────────────────────────────────────
+function saveNoSchool() {
+  const e = {
+    id: uid(),
+    date: document.getElementById('ns-date').value,
+    end: document.getElementById('ns-end').value||'',
+    type: document.getElementById('ns-type').value,
+    desc: document.getElementById('ns-desc').value.trim(),
+    studentId: document.getElementById('ns-student').value||'',
+    createdAt: Date.now()
+  };
+  if(!e.date){ toast('Date required','warn'); return; }
+  DB.noSchoolDays.push(e);
+  DB.noSchoolDays.sort((a,b)=>a.date.localeCompare(b.date));
+  save(); renderNoSchool(); renderSchedule();
+  ['ns-date','ns-end','ns-desc'].forEach(f=>document.getElementById(f).value='');
+  toast('Saved');
+}
+
+function deleteNoSchool(id) {
+  DB.noSchoolDays=DB.noSchoolDays.filter(x=>x.id!==id);
+  save(); renderNoSchool(); renderSchedule(); toast('Deleted');
+}
+
+function isNoSchool(dateStr) {
+  return DB.noSchoolDays.some(e=>{
+    if(e.end) return dateStr>=e.date&&dateStr<=e.end;
+    return e.date===dateStr;
+  });
+}
+
+function getNoSchoolEntry(dateStr) {
+  return DB.noSchoolDays.find(e=>{
+    if(e.end) return dateStr>=e.date&&dateStr<=e.end;
+    return e.date===dateStr;
+  });
+}
+
+const NS_ICONS={noschool:'🚫',holiday:'🎉',break:'📅',altered:'⚡',early:'🏃',late:'⏰',sub:'👤',absent:'🤒',fieldtrip:'🚌',testing:'📝'};
+
+function renderNoSchool() {
+  const el=document.getElementById('noschool-list'); if(!el) return;
+  const fType=document.getElementById('ns-filter')?.value||'';
+  let days=[...DB.noSchoolDays].sort((a,b)=>a.date.localeCompare(b.date));
+  if(fType) days=days.filter(d=>d.type===fType);
+  if(!days.length){ el.innerHTML='<div class="tbl-empty">No no-school or altered days logged.</div>'; return; }
+  const today=new Date().toISOString().split('T')[0];
+  el.innerHTML=days.map(d=>{
+    const isPast=(d.end||d.date)<today;
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--br);${isPast?'opacity:.55':''}">
+      <div style="font-size:18px;flex-shrink:0">${NS_ICONS[d.type]||'📅'}</div>
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:12px">${esc(d.desc||d.type)}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:${isPast?'var(--ink3)':'var(--gold)'}">
+          ${d.date}${d.end&&d.end!==d.date?' → '+d.end:''}
+        </div>
+      </div>
+      <button class="btn warn sm" style="padding:2px 6px;font-size:10px;flex-shrink:0" onclick="deleteNoSchool('${d.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ── WEEK VIEW ─────────────────────────────────────────────────────────────────
+let weekOffset = 0;
+
+function weekNav(dir) { weekOffset += dir; renderWeekView(); }
+
+function getWeekStart(offset) {
+  const d = new Date();
+  const day = d.getDay();
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - (day===0?6:day-1) + offset*7);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+function renderWeekView() {
+  const el=document.getElementById('week-grid'); if(!el) return;
+  const label=document.getElementById('week-label'); if(!label) return;
+  const weekStart=getWeekStart(weekOffset);
+  const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+4);
+  label.textContent=`${weekStart.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+
+  const dayNames=['Mon','Tue','Wed','Thu','Fri'];
+  const today=new Date().toISOString().split('T')[0];
+  const cols=[];
+
+  dayNames.forEach((dayName,i)=>{
+    const date=new Date(weekStart); date.setDate(weekStart.getDate()+i);
+    const dateStr=date.toISOString().split('T')[0];
+    const isToday=dateStr===today;
+    const noSchoolEntry=getNoSchoolEntry(dateStr);
+
+    const items=[];
+
+    if(noSchoolEntry) {
+      items.push({type:'noschool',label:`${NS_ICONS[noSchoolEntry.type]||'🚫'} ${noSchoolEntry.desc||noSchoolEntry.type}`,start:'00:00',end:'',css:'noschool-banner'});
+    } else {
+      // Classes
+      DB.classes.forEach(c=>{
+        const sched=(c.schedule||[]).find(s=>s.day===dayName);
+        const legacyMatch=!c.schedule?.length&&(c.days||[]).includes(dayName);
+        if(!sched&&!legacyMatch) return;
+        items.push({type:'class',label:(c.periodNum?`P${c.periodNum} `:'')+(c.name),time:sched?.start,end:sched?.end,start:sched?.start||'',css:'wclass'});
+      });
+      // Blocks
+      (DB.scheduleBlocks||[]).forEach(b=>{
+        const sched=(b.schedule||[]).find(s=>s.day===dayName);
+        if(!sched) return;
+        items.push({type:'block',label:`${BLK_ICONS[b.type]||'📌'} ${b.name}`,start:sched.start||'',end:sched.end||'',css:BLK_CSS[b.type]||'woff'});
+      });
+      items.sort((a,b)=>a.start.localeCompare(b.start));
+    }
+
+    const hdr=`<div class="week-day-hdr${isToday?' today':''}${noSchoolEntry?' noschool':''}">${dayName}<div style="font-size:8px;font-weight:400">${date.toLocaleDateString('en-US',{month:'numeric',day:'numeric'})}</div></div>`;
+    const blocks=items.map(item=>{
+      if(item.css==='noschool-banner') return `<div class="noschool-banner">${esc(item.label)}</div>`;
+      const timeStr=item.start?fmtTime(item.start)+(item.end?'–'+fmtTime(item.end):''):'';
+      return `<div class="week-block ${item.css}">
+        <div class="week-block-time">${timeStr}</div>
+        <div class="week-block-name">${esc(item.label)}</div>
+      </div>`;
+    }).join('');
+    cols.push(`<div class="week-day-col">${hdr}${blocks||'<div style="font-size:9px;color:var(--ink3);text-align:center;padding:4px;font-family:\'DM Mono\',monospace">—</div>'}</div>`);
+  });
+
+  el.innerHTML=`<div style="display:flex;gap:4px">${cols.join('')}</div>`;
+}
+
 
 function savePresentation() {
   const id = document.getElementById('mp-id').value || uid();
@@ -2592,6 +3255,10 @@ function deleteResource(id){DB.resources=DB.resources.filter(r=>r.id!==id);save(
 function renderDashboard(){
   // Stats
   document.getElementById('stat-vocab').textContent=DB.vocab.length;
+  // Needs research badge on vocab nav
+  const needsResearch=DB.vocab.filter(v=>v.status&&v.status!=='ok').length;
+  const vrb=document.getElementById('vocab-research-badge');
+  if(vrb){if(needsResearch>0){vrb.textContent=needsResearch;vrb.style.display='inline-block';}else vrb.style.display='none';}
   document.getElementById('stat-logs').textContent=DB.logs.length;
   const activeStudent=DB.students.find(s=>s.id===document.getElementById('global-student')?.value);
   document.getElementById('stat-student').textContent=activeStudent?.label||'—';
@@ -3271,6 +3938,8 @@ if(!DB.resources) DB.resources=[];
 if(!DB.presentations) DB.presentations=[];
 if(!DB.eipaAssessments) DB.eipaAssessments=[];
 if(!DB.eipaGoals) DB.eipaGoals=[];
+if(!DB.scheduleBlocks) DB.scheduleBlocks=[];
+if(!DB.noSchoolDays) DB.noSchoolDays=[];
 
 // Populate student selectors before init
 ['global-student','mc-student','mp-student','iep-filter-student'].forEach(id=>{
