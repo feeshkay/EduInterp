@@ -1122,43 +1122,117 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <div class="fld"><label>Roman IV — Overall Factors</label><input type="number" id="eipa-r4" min="1" max="5" step="0.1" placeholder="e.g. 3.1"></div>
             <div class="fld"></div>
           </div>
-          <div class="sec" style="margin-bottom:6px">Roman I Sub-Scores (optional but recommended)</div>
+          <div class="sec" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection('subs-r1')">
+            Roman I Sub-Scores — Voice-to-Sign <span id="subs-r1-icon" style="font-size:12px">▼</span>
+          </div>
+          <div id="subs-r1">
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px">Prosodic Information</div>
           <div class="fr fr2" style="margin-bottom:4px">
-            <div class="fld"><label>A — Stress/Emphasis</label><input type="number" id="r1a" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>B — Affect/Emotions</label><input type="number" id="r1b" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>A — Stress/Emphasis for key words</label><input type="number" id="r1a" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>B — Affect and Emotions</label><input type="number" id="r1b" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
           <div class="fr fr2" style="margin-bottom:4px">
-            <div class="fld"><label>C — Register</label><input type="number" id="r1c" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>D — Sentence Boundaries</label><input type="number" id="r1d" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>C — Register</label><input type="number" id="r1c" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>D — Sentence Boundaries</label><input type="number" id="r1d" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px;margin-top:4px">Non-Manual Information</div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>E — Sentence Types / Clausal Boundaries (NMM)</label><input type="number" id="r1e" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>F — NMM Adverbial / Adjectival Markers</label><input type="number" id="r1f" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px;margin-top:4px">Use of Signing Space</div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>G — Verb Directionality / Pronominal System</label><input type="number" id="r1g" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>H — Comparison/Contrast, Sequence, Cause/Effect</label><input type="number" id="r1h" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
           <div class="fr fr2" style="margin-bottom:4px">
-            <div class="fld"><label>E — Sentence Types/NMM</label><input type="number" id="r1e" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>F — NMM Adverbial Markers</label><input type="number" id="r1f" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>I — Location/Relationship via ASL Classifier System</label><input type="number" id="r1i" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"></div>
           </div>
-          <div class="fr fr2" style="margin-bottom:4px">
-            <div class="fld"><label>G — Verb Directionality</label><input type="number" id="r1g" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>H — Comparison/Contrast/Sequence</label><input type="number" id="r1h" min="1" max="5" step="0.5"></div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px;margin-top:4px">Interpreter Performance</div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>J — Follows Grammar of ASL or PSE</label><input type="number" id="r1j" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>K — Use of English Morphological Markers</label><input type="number" id="r1k" min="1" max="5" step="0.5" placeholder="N/A if PSE"></div>
           </div>
           <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>I — ASL Classifier System</label><input type="number" id="r1i" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>J — Follows ASL/PSE Grammar</label><input type="number" id="r1j" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>L — Clearly Mouths Speaker's English</label><input type="number" id="r1l" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"></div>
           </div>
-          <div class="sec" style="margin-bottom:6px">Roman II Sub-Scores (optional)</div>
+
+          </div>
+          <div class="sec" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection('subs-r2')">Roman II Sub-Scores — Sign-to-Voice <span id="subs-r2-icon" style="font-size:12px">▼</span></div>
+          <div id="subs-r2">
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px">Can Read and Convey Signer's</div>
           <div class="fr fr2" style="margin-bottom:4px">
-            <div class="fld"><label>A — Read Signs</label><input type="number" id="r2a" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>B — Fingerspelling/Numbers</label><input type="number" id="r2b" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>A — Signs</label><input type="number" id="r2a" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>B — Fingerspelling and Numbers</label><input type="number" id="r2b" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
           <div class="fr fr2" style="margin-bottom:4px">
-            <div class="fld"><label>C — Register (signer)</label><input type="number" id="r2c" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>D — NMM/ASL Morphology</label><input type="number" id="r2d" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>C — Register</label><input type="number" id="r2c" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>D — Non-Manual Behaviors / ASL Morphology</label><input type="number" id="r2d" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px;margin-top:4px">Vocal / Intonational Features</div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>E — Speech Production: Rate, Rhythm, Fluency, Volume</label><input type="number" id="r2e" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>F — Sentence and Clausal Boundaries Indicated</label><input type="number" id="r2f" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
           <div class="fr fr2" style="margin-bottom:4px">
-            <div class="fld"><label>E — Speech Production</label><input type="number" id="r2e" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>F — Sentence Boundaries</label><input type="number" id="r2f" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>G — Sentence Types</label><input type="number" id="r2g" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>H — Emphasize Important Words, Phrases, Affect, Emotions</label><input type="number" id="r2h" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px;margin-top:4px">Word Choice & Performance</div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>I — Correct English Word Selection</label><input type="number" id="r2i" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>J — Adds No Extraneous Words/Sounds to Message</label><input type="number" id="r2j" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+
+          </div>
+          <div class="sec" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection('subs-r3')">Roman III Sub-Scores — Vocabulary <span id="subs-r3-icon" style="font-size:12px">▼</span></div>
+          <div id="subs-r3">
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px">Signs</div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>A — Amount of Sign Vocabulary</label><input type="number" id="r3a" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>B — Signs Made Correctly</label><input type="number" id="r3b" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>C — Fluency (Rhythm and Rate)</label><input type="number" id="r3c" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>D — Vocabulary Consistent with Sign System</label><input type="number" id="r3d" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>E — Key Vocabulary Represented</label><input type="number" id="r3e" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"></div>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px;margin-top:4px">Fingerspelling</div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>F — Production of Fingerspelling</label><input type="number" id="r3f" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>G — Spelled Correctly</label><input type="number" id="r3g" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
           <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>G — Sentence Types</label><input type="number" id="r2g" min="1" max="5" step="0.5"></div>
-            <div class="fld"><label>J — No Extraneous Words</label><input type="number" id="r2j" min="1" max="5" step="0.5"></div>
+            <div class="fld"><label>H — Appropriate Use of Fingerspelling</label><input type="number" id="r3h" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>I — Production of Numbers (Clarity, Fluency, Rate)</label><input type="number" id="r3i" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+
+          </div>
+          <div class="sec" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection('subs-r4')">Roman IV Sub-Scores — Overall Factors <span id="subs-r4-icon" style="font-size:12px">▼</span></div>
+          <div id="subs-r4">
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px">Message Processing</div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>A — Appropriate Eye Contact and Movement</label><input type="number" id="r4a" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>B — Developed Sense of Whole Message (V→S)</label><input type="number" id="r4b" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>C — Developed Sense of Whole Message (S→V)</label><input type="number" id="r4c" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>D — Process Decalage / Lag Time (V→S)</label><input type="number" id="r4d" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
+          <div class="fr fr2" style="margin-bottom:4px">
+            <div class="fld"><label>E — Process Decalage / Lag Time (S→V)</label><input type="number" id="r4e" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"></div>
+          </div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-bottom:6px;margin-top:4px">Message Clarity &amp; Environment</div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>F — Follows Principles of Discourse Mapping</label><input type="number" id="r4f" min="1" max="5" step="0.5" placeholder="1–5"></div>
+            <div class="fld"><label>G — Indicates Who Is Speaking</label><input type="number" id="r4g" min="1" max="5" step="0.5" placeholder="1–5"></div>
+          </div>
           </div>
           <div class="sec" style="margin-bottom:6px">Evaluator Comments</div>
           <div class="fld" style="margin-bottom:8px"><label>Strengths (paste from report)</label>
@@ -3630,6 +3704,15 @@ function renderPD() {
 
 // ── EIPA ASSESSMENTS ─────────────────────────────────────────────────────────
 
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  const icon = document.getElementById(id+'-icon');
+  if(!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? '' : 'none';
+  if(icon) icon.textContent = hidden ? '▼' : '▶';
+}
+
 // Peer norms from Romans Analysis Tool (mean, SD per Roman at each overall score)
 const EIPA_NORMS = {
   2.5:{r1:{m:2.49,s:0.21},r2:{m:1.93,s:0.33},r3:{m:3.62,s:0.26},r4:{m:1.93,s:0.11}},
@@ -3665,8 +3748,10 @@ function saveEIPA() {
     overall: getV('eipa-overall'),
     r1: getV('eipa-r1'), r2: getV('eipa-r2'), r3: getV('eipa-r3'), r4: getV('eipa-r4'),
     subs: {
-      r1: { A:getV('r1a'),B:getV('r1b'),C:getV('r1c'),D:getV('r1d'),E:getV('r1e'),F:getV('r1f'),G:getV('r1g'),H:getV('r1h'),I:getV('r1i'),J:getV('r1j') },
-      r2: { A:getV('r2a'),B:getV('r2b'),C:getV('r2c'),D:getV('r2d'),E:getV('r2e'),F:getV('r2f'),G:getV('r2g'),J:getV('r2j') }
+      r1: { A:getV('r1a'),B:getV('r1b'),C:getV('r1c'),D:getV('r1d'),E:getV('r1e'),F:getV('r1f'),G:getV('r1g'),H:getV('r1h'),I:getV('r1i'),J:getV('r1j'),K:getV('r1k'),L:getV('r1l') },
+      r2: { A:getV('r2a'),B:getV('r2b'),C:getV('r2c'),D:getV('r2d'),E:getV('r2e'),F:getV('r2f'),G:getV('r2g'),H:getV('r2h'),I:getV('r2i'),J:getV('r2j') },
+      r3: { A:getV('r3a'),B:getV('r3b'),C:getV('r3c'),D:getV('r3d'),E:getV('r3e'),F:getV('r3f'),G:getV('r3g'),H:getV('r3h'),I:getV('r3i') },
+      r4: { A:getV('r4a'),B:getV('r4b'),C:getV('r4c'),D:getV('r4d'),E:getV('r4e'),F:getV('r4f'),G:getV('r4g') }
     },
     strengths: getS('eipa-strengths'),
     dev: getS('eipa-dev'),
@@ -3685,8 +3770,11 @@ function clearEIPAForm() {
   document.getElementById('eipa-edit-id').value='';
   ['eipa-record','eipa-state','eipa-strengths','eipa-dev','eipa-comments'].forEach(f=>document.getElementById(f).value='');
   ['eipa-overall','eipa-r1','eipa-r2','eipa-r3','eipa-r4',
-   'r1a','r1b','r1c','r1d','r1e','r1f','r1g','r1h','r1i','r1j',
-   'r2a','r2b','r2c','r2d','r2e','r2f','r2g','r2j'].forEach(f=>{ const el=document.getElementById(f); if(el) el.value=''; });
+   'r1a','r1b','r1c','r1d','r1e','r1f','r1g','r1h','r1i','r1j','r1k','r1l',
+   'r2a','r2b','r2c','r2d','r2e','r2f','r2g','r2h','r2i','r2j',
+   'r3a','r3b','r3c','r3d','r3e','r3f','r3g','r3h','r3i',
+   'r4a','r4b','r4c','r4d','r4e','r4f','r4g'
+  ].forEach(f=>{ const el=document.getElementById(f); if(el) el.value=''; });
   document.getElementById('eipa-cancel-btn').style.display='none';
 }
 
@@ -3702,8 +3790,10 @@ function editEIPAModal(id) {
   document.getElementById('eipa-r2').value=e.r2||'';
   document.getElementById('eipa-r3').value=e.r3||'';
   document.getElementById('eipa-r4').value=e.r4||'';
-  if(e.subs?.r1){ ['a','b','c','d','e','f','g','h','i','j'].forEach(k=>{ const el=document.getElementById('r1'+k); if(el&&e.subs.r1[k.toUpperCase()]!=null) el.value=e.subs.r1[k.toUpperCase()]; }); }
-  if(e.subs?.r2){ ['a','b','c','d','e','f','g','j'].forEach(k=>{ const el=document.getElementById('r2'+k); if(el&&e.subs.r2[k.toUpperCase()]!=null) el.value=e.subs.r2[k.toUpperCase()]; }); }
+  if(e.subs?.r1){ ['a','b','c','d','e','f','g','h','i','j','k','l'].forEach(k=>{ const el=document.getElementById('r1'+k); if(el&&e.subs.r1[k.toUpperCase()]!=null) el.value=e.subs.r1[k.toUpperCase()]; }); }
+  if(e.subs?.r2){ ['a','b','c','d','e','f','g','h','i','j'].forEach(k=>{ const el=document.getElementById('r2'+k); if(el&&e.subs.r2[k.toUpperCase()]!=null) el.value=e.subs.r2[k.toUpperCase()]; }); }
+  if(e.subs?.r3){ ['a','b','c','d','e','f','g','h','i'].forEach(k=>{ const el=document.getElementById('r3'+k); if(el&&e.subs.r3[k.toUpperCase()]!=null) el.value=e.subs.r3[k.toUpperCase()]; }); }
+  if(e.subs?.r4){ ['a','b','c','d','e','f','g'].forEach(k=>{ const el=document.getElementById('r4'+k); if(el&&e.subs.r4[k.toUpperCase()]!=null) el.value=e.subs.r4[k.toUpperCase()]; }); }
   document.getElementById('eipa-strengths').value=e.strengths||'';
   document.getElementById('eipa-dev').value=e.dev||'';
   document.getElementById('eipa-comments').value=e.comments||'';
@@ -3734,10 +3824,10 @@ function toolComparisonHTML(entry) {
   if(!norms) return '<div class="tbl-empty">Score level not in norm table.</div>';
 
   const romans = [
-    {label:'I — Voice-to-Sign', score:entry.r1, norm:norms.r1},
-    {label:'II — Sign-to-Voice', score:entry.r2, norm:norms.r2},
-    {label:'III — Vocabulary', score:entry.r3, norm:norms.r3},
-    {label:'IV — Overall Factors', score:entry.r4, norm:norms.r4},
+    {label:'I — Voice-to-Sign',   score:entry.r1, norm:norms.r1},
+    {label:'II — Sign-to-Voice',  score:entry.r2, norm:norms.r2},
+    {label:'III — Vocabulary',    score:entry.r3, norm:norms.r3},
+    {label:'IV — Overall Factors',score:entry.r4, norm:norms.r4},
   ];
 
   const rows = romans.map(({label,score,norm})=>{
@@ -3745,33 +3835,70 @@ function toolComparisonHTML(entry) {
     const absDiff = Math.abs(diff);
     const withinRange = absDiff <= norm.s;
     const above = diff > 0;
-    const status = above && absDiff > norm.s ? '⬆ Above average' :
-                   withinRange ? '✓ Within average' :
-                   '⬇ Below average';
-    const color = above && absDiff > norm.s ? 'var(--sage-d)' :
-                  withinRange ? 'var(--ink2)' : 'var(--clay)';
-    const bg = above && absDiff > norm.s ? 'var(--sage-l)' :
-               withinRange ? 'var(--surf)' : 'var(--clay-l)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:${bg};border-radius:8px;margin-bottom:5px;border:1px solid var(--br)">
+    const status = above && absDiff > norm.s ? '⬆ Above average' : withinRange ? '✓ Within average' : '⬇ Below average';
+    const color = above && absDiff > norm.s ? 'var(--sage-d)' : withinRange ? 'var(--ink2)' : 'var(--clay)';
+    const bg    = above && absDiff > norm.s ? 'var(--sage-l)' : withinRange ? 'var(--surf)' : 'var(--clay-l)';
+    const diffStr = (diff>=0?'+':'')+diff.toFixed(2);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${bg};border-radius:8px;margin-bottom:5px;border:1px solid var(--br)">
       <div style="flex:1;font-size:12px;font-weight:500">Roman ${label}</div>
-      <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;width:30px;text-align:center">${score.toFixed(1)}</div>
-      <div style="font-size:10px;color:var(--ink3);width:90px;text-align:center;font-family:'DM Mono',monospace">avg ${norm.m.toFixed(2)} ±${norm.s.toFixed(2)}</div>
-      <div style="font-size:10px;font-weight:600;color:${color};min-width:110px;text-align:right">${status}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;width:32px;text-align:center">${score.toFixed(1)}</div>
+      <div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-align:center;min-width:80px">avg ${norm.m.toFixed(2)} ±${norm.s.toFixed(2)}</div>
+      <div style="font-size:9px;font-family:'DM Mono',monospace;color:${color};min-width:50px;text-align:right">${diffStr}</div>
+      <div style="font-size:10px;font-weight:600;color:${color};min-width:100px;text-align:right">${status}</div>
     </div>`;
   });
 
-  return `<div style="margin-bottom:8px;font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace">Norms for EIPA score ${key} (${entry.date})</div>
-    ${rows.join('')}
-    <div style="margin-top:10px;padding:9px 11px;background:var(--gold-l);border-radius:7px;font-size:11px;color:var(--gold);line-height:1.6">
-      <strong>How to read this:</strong> "Within average" = your score is within 1 SD of the peer mean at your score level. "Above" or "Below" means your score exceeds that range — a strength or priority PD area compared to peers at the same overall level.
+  // Sub-score detail tables
+  let subTables = '';
+  const r1subs = entry.subs?.r1;
+  const r2subs = entry.subs?.r2;
+  const r3subs = entry.subs?.r3;
+  const r4subs = entry.subs?.r4;
+
+  const hasAnySub = [r1subs,r2subs,r3subs,r4subs].some(s=>s && Object.values(s).some(v=>v!=null));
+
+  if(hasAnySub) {
+    const subTable = (title, subs, labels) => {
+      if(!subs || !Object.values(subs).some(v=>v!=null)) return '';
+      const rows = Object.entries(labels).map(([k,lbl])=>{
+        const v = subs[k];
+        if(v==null) return '';
+        const w = Math.round((v/5)*100);
+        const bar = `<div style="flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${w}%;height:100%;background:${v>=4?'var(--sage)':v>=3?'var(--sky)':v>=2?'var(--gold-m)':'var(--clay)'};border-radius:3px"></div></div>`;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid var(--br)">
+          <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--ink3);width:14px;flex-shrink:0">${k}</div>
+          <div style="flex:1;font-size:10px;color:var(--ink2)">${esc(lbl)}</div>
+          ${bar}
+          <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;width:24px;text-align:right;color:${v>=4?'var(--sage-d)':v>=3?'var(--sky)':v>=2?'var(--gold)':'var(--clay)'}">${v}</div>
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:10px"><div style="font-size:9px;font-family:'DM Mono',monospace;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${esc(title)}</div>${rows}</div>`;
+    };
+
+    subTables = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--br)">
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Sub-Score Detail</div>
+      ${subTable('Roman I — Voice-to-Sign', r1subs, {A:'Stress/Emphasis',B:'Affect & Emotions',C:'Register',D:'Sentence Boundaries',E:'Sentence Types/NMM',F:'NMM Adverbial Markers',G:'Verb Directionality',H:'Comparison/Contrast/Sequence',I:'ASL Classifier System',J:'Follows ASL/PSE Grammar',K:'English Morphological Markers',L:'Mouths English Clearly'})}
+      ${subTable('Roman II — Sign-to-Voice', r2subs, {A:'Read Signs',B:'Fingerspelling & Numbers',C:'Register',D:'NMM/ASL Morphology',E:'Speech Production',F:'Sentence Boundaries',G:'Sentence Types',H:'Emphasize Words/Affect',I:'Correct English Word Selection',J:'No Extraneous Words/Sounds'})}
+      ${subTable('Roman III — Vocabulary', r3subs, {A:'Amount of Sign Vocabulary',B:'Signs Made Correctly',C:'Fluency (Rhythm & Rate)',D:'Vocab Consistent with System',E:'Key Vocabulary Represented',F:'Fingerspelling Production',G:'Spelled Correctly',H:'Appropriate Use of FS',I:'Production of Numbers'})}
+      ${subTable('Roman IV — Overall Factors', r4subs, {A:'Eye Contact & Movement',B:'Sense of Whole Message V→S',C:'Sense of Whole Message S→V',D:'Process Decalage / Lag V→S',E:'Process Decalage / Lag S→V',F:'Discourse Mapping',G:'Indicates Who Is Speaking'})}
     </div>`;
+  }
+
+  return `<div style="margin-bottom:10px;font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace">
+    Peer norms for EIPA overall score <strong>${key}</strong> — assessment ${entry.date}
+  </div>
+  ${rows.join('')}
+  <div style="margin-top:10px;padding:9px 11px;background:var(--gold-l);border-radius:7px;font-size:11px;color:var(--gold);line-height:1.6">
+    <strong>How to read this:</strong> "Within average" = your score is within 1 SD of the peer mean at your score level.
+    "Above" = a strength vs peers. "Below" = a priority PD area. Difference shown as +/− from peer mean.
+  </div>
+  ${subTables}`;
 }
 
 function renderEIPAPage() {
   document.getElementById('eipa-count').textContent = DB.eipaAssessments.length;
   renderEIPAHistory();
   renderEIPAGoals();
-  // Show tool comparison for most recent assessment
   const latest = DB.eipaAssessments[DB.eipaAssessments.length-1];
   const toolOut = document.getElementById('eipa-tool-output');
   if(latest) toolOut.innerHTML = toolComparisonHTML(latest);
@@ -3782,35 +3909,88 @@ function renderEIPAHistory() {
   const el = document.getElementById('eipa-history-list');
   if(!DB.eipaAssessments.length){ el.innerHTML='<div class="tbl-empty">No assessments logged yet.</div>'; return; }
   const sorted = [...DB.eipaAssessments].sort((a,b)=>a.date.localeCompare(b.date));
-  // Score change arrows
+
   el.innerHTML = sorted.map((e,i)=>{
     const prev = sorted[i-1];
     const change = prev&&e.overall&&prev.overall ? (e.overall-prev.overall) : null;
-    const changeStr = change!=null ? (change>=0?`<span style="color:var(--sage-d);font-weight:600">▲ +${change.toFixed(1)}</span>`:`<span style="color:var(--clay);font-weight:600">▼ ${change.toFixed(1)}</span>`) : '';
-    const barW = (e.overall||0)/5*100;
+    const changeStr = change!=null
+      ? (change>=0
+          ? `<span style="color:var(--sage-d);font-weight:600;font-family:'DM Mono',monospace">▲ +${change.toFixed(1)}</span>`
+          : `<span style="color:var(--clay);font-weight:600;font-family:'DM Mono',monospace">▼ ${change.toFixed(1)}</span>`)
+      : '';
+
+    // Per-Roman change chips vs previous
+    const romanChange = (cur, prv, label) => {
+      if(!cur||!prv) return '';
+      const d = cur-prv;
+      const col = d>0?'var(--sage-d)':d<0?'var(--clay)':'var(--ink3)';
+      return `<div style="font-size:8px;font-family:'DM Mono',monospace;color:${col}">${label}: ${d>=0?'+':''}${d.toFixed(1)}</div>`;
+    };
+
+    const r1chg = prev ? romanChange(e.r1,prev.r1,'RI')   : '';
+    const r2chg = prev ? romanChange(e.r2,prev.r2,'RII')  : '';
+    const r3chg = prev ? romanChange(e.r3,prev.r3,'RIII') : '';
+    const r4chg = prev ? romanChange(e.r4,prev.r4,'RIV')  : '';
+
+    // Sub-score summary if available — flag any sub under 3.0
+    const subs = e.subs;
+    const lowSubs = [];
+    const subLabels = {
+      r1:{A:'RI-A Stress',B:'RI-B Affect',C:'RI-C Register',D:'RI-D Sent.Bound',E:'RI-E NMM Type',F:'RI-F NMM Adv',G:'RI-G Verb Dir',H:'RI-H Comp/Cont',I:'RI-I Classifiers',J:'RI-J Grammar',K:'RI-K Morph',L:'RI-L Mouths'},
+      r2:{A:'RII-A Signs',B:'RII-B FS',C:'RII-C Register',D:'RII-D NMM',E:'RII-E Speech',F:'RII-F Sent.Bound',G:'RII-G Sent.Types',H:'RII-H Emphasis',I:'RII-I Word Choice',J:'RII-J No Extra'},
+      r3:{A:'RIII-A Vocab Amt',B:'RIII-B Signs OK',C:'RIII-C Fluency',D:'RIII-D Consist',E:'RIII-E Key Vocab',F:'RIII-F FS Prod',G:'RIII-G Spelling',H:'RIII-H FS Use',I:'RIII-I Numbers'},
+      r4:{A:'RIV-A Eye Gaze',B:'RIV-B Whole V→S',C:'RIV-C Whole S→V',D:'RIV-D Lag V→S',E:'RIV-E Lag S→V',F:'RIV-F Discourse',G:'RIV-G Speaker'},
+    };
+    if(subs) {
+      ['r1','r2','r3','r4'].forEach(rk=>{
+        if(!subs[rk]) return;
+        Object.entries(subs[rk]).forEach(([k,v])=>{
+          if(v!=null&&v<3.0) lowSubs.push({lbl:(subLabels[rk]&&subLabels[rk][k])||`${rk.toUpperCase()}-${k}`,v});
+        });
+      });
+    }
+
     return `<div style="background:var(--s2);border:1px solid var(--br);border-radius:10px;padding:12px 14px;margin-bottom:8px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
         <div>
-          <div style="font-family:'Lora',serif;font-size:15px;font-weight:500">EIPA Score: <span style="color:var(--sage-d)">${e.overall||'—'}</span> ${changeStr}</div>
-          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:2px">${e.date}${e.level?' · '+e.level:''}${e.record?' · #'+e.record:''}</div>
+          <div style="font-family:'Lora',serif;font-size:15px;font-weight:500">
+            EIPA Score: <span style="color:var(--sage-d)">${e.overall||'—'}</span> ${changeStr}
+          </div>
+          <div style="font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:2px">
+            ${e.date}${e.level?' · '+e.level:''}${e.record?' · #'+e.record:''}
+          </div>
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
-          <button class="btn gh sm" style="font-size:10px;padding:3px 8px" onclick="showToolComparison('${e.id}')">Compare</button>
+          <button class="btn gh sm" style="font-size:10px;padding:3px 8px" onclick="showToolComparison('${e.id}')">📊 Compare</button>
           <button class="btn gh sm" style="font-size:10px;padding:3px 8px" onclick="editEIPAModal('${e.id}')">Edit</button>
           <button class="btn warn sm" style="font-size:10px;padding:3px 7px" onclick="deleteEIPA('${e.id}')">✕</button>
         </div>
       </div>
-      <!-- Score bar -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
-        ${[['I',e.r1,'V→S'],['II',e.r2,'S→V'],['III',e.r3,'Vocab'],['IV',e.r4,'Factors']].map(([n,v,lbl])=>`
-          <div style="text-align:center;background:var(--surf);border-radius:7px;padding:5px 4px;border:1px solid var(--br)">
-            <div style="font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace">${lbl}</div>
-            <div style="font-size:16px;font-weight:700;color:var(--sage-d);font-family:'Lora',serif">${v||'—'}</div>
-            <div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace">Roman ${n}</div>
-          </div>`).join('')}
+
+      <!-- Four Romans grid -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px">
+        ${[['I',e.r1,'V→S',r1chg],['II',e.r2,'S→V',r2chg],['III',e.r3,'Vocab',r3chg],['IV',e.r4,'Factors',r4chg]].map(([n,v,lbl,chg])=>{
+          const col = !v?'var(--ink3)':v>=4?'var(--sage-d)':v>=3?'var(--sky)':v>=2.5?'var(--gold)':'var(--clay)';
+          return `<div style="text-align:center;background:var(--surf);border-radius:7px;padding:6px 4px;border:1px solid var(--br)">
+            <div style="font-size:8px;color:var(--ink3);font-family:'DM Mono',monospace">${lbl}</div>
+            <div style="font-size:17px;font-weight:700;color:${col};font-family:'Lora',serif;line-height:1.1">${v||'—'}</div>
+            <div style="font-size:7px;color:var(--ink3);font-family:'DM Mono',monospace">Roman ${n}</div>
+            ${chg}
+          </div>`;
+        }).join('')}
       </div>
-      ${e.strengths?`<div style="font-size:11px;color:var(--sage-d);margin-bottom:4px;line-height:1.5"><strong>Strengths:</strong> ${esc(e.strengths.substring(0,150))}${e.strengths.length>150?'…':''}</div>`:''}
-      ${e.dev?`<div style="font-size:11px;color:var(--clay);line-height:1.5"><strong>Dev areas:</strong> ${esc(e.dev.substring(0,150))}${e.dev.length>150?'…':''}</div>`:''}
+
+      ${lowSubs.length ? `<div style="margin-bottom:6px">
+        <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--clay);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">Sub-scores below 3.0</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${lowSubs.map(s=>`<span style="background:var(--clay-l);color:var(--clay);font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:600">${esc(s.lbl)} ${s.v}</span>`).join('')}
+        </div>
+      </div>` : ''}
+
+      ${e.strengths?`<div style="font-size:11px;color:var(--sage-d);margin-bottom:4px;line-height:1.5;padding:6px 8px;background:var(--sage-l);border-radius:6px">
+        <strong>Strengths:</strong> ${esc(e.strengths.substring(0,200))}${e.strengths.length>200?'…':''}</div>`:''}
+      ${e.dev?`<div style="font-size:11px;color:var(--clay);line-height:1.5;padding:6px 8px;background:var(--clay-l);border-radius:6px">
+        <strong>Dev areas:</strong> ${esc(e.dev.substring(0,200))}${e.dev.length>200?'…':''}</div>`:''}
     </div>`;
   }).join('');
 }
