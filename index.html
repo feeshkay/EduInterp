@@ -550,57 +550,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
            PAGE: DAILY LOG
       ══════════════════════════════════════════════ -->
       <div class="page pi" id="page-daily-log">
-        <div class="card cp" style="margin-bottom:12px">
-          <div class="sec">New Log Entry</div>
-          <div class="fr fr3" style="margin-bottom:8px">
-            <div class="fld"><label>Date</label><input type="date" id="log-date"></div>
-            <div class="fld"><label>Student</label><select id="log-student"></select></div>
-            <div class="fld"><label>Class / Assignment</label><select id="log-class"></select></div>
-          </div>
-          <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>New Vocab Learned (comma separated)</label>
-              <input type="text" id="log-vocab" placeholder="e.g. dystonia, athetoid, proprioception"></div>
-            <div class="fld"><label>Topic / Unit</label>
-              <input type="text" id="log-topic" placeholder="e.g. Chapter 5 – Cell Biology"></div>
-          </div>
-          <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>Demands / Controls Encountered</label>
-              <textarea id="log-demands" placeholder="Environmental: gym acoustics, lighting issues&#10;Paralinguistic: fast pace, mumbling&#10;Interpersonal: student fatigue&#10;Intralingual: technical jargon" style="min-height:70px"></textarea></div>
-            <div class="fld"><label>Notes / Reflections</label>
-              <textarea id="log-notes" placeholder="What went well? What was challenging? Prep for next time?" style="min-height:70px"></textarea></div>
-          </div>
-          <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>Prep Done</label>
-              <textarea id="log-prep" placeholder="Materials reviewed, videos watched, vocab studied..." style="min-height:50px"></textarea></div>
-            <div class="fld"><label>Follow-Up Needed</label>
-              <textarea id="log-followup" placeholder="Words to research, concepts to clarify, vocab to practice..." style="min-height:50px"></textarea></div>
-          </div>
-          <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>Interpreting Mode Used</label>
-              <select id="log-mode">
-                <option value="">— select —</option>
-                <option>Simultaneous</option><option>Consecutive</option><option>Both</option>
-                <option>Transliteration (PSE/MCE)</option><option>Oral</option><option>Tactile</option>
-              </select>
-            </div>
-            <div class="fld"><label>Overall Rating (1–5)</label>
-              <select id="log-rating">
-                <option value="">— rate the session —</option>
-                <option value="5">⭐⭐⭐⭐⭐ Excellent</option><option value="4">⭐⭐⭐⭐ Good</option>
-                <option value="3">⭐⭐⭐ Average</option><option value="2">⭐⭐ Difficult</option>
-                <option value="1">⭐ Very Difficult</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn pri" onclick="saveLog()">Save Log Entry</button>
-        </div>
-
-        <!-- Log History -->
+        <!-- Log History — main content -->
         <div class="card cp">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div class="sec" style="margin:0">Log History</div>
-            <div style="display:flex;gap:6px">
-              <input class="search-input" type="text" placeholder="Search logs..." oninput="renderLogs()" id="log-search">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <input class="search-input" type="text" placeholder="Search logs..." oninput="renderLogs()" id="log-search" style="min-width:120px">
               <select id="log-filter-student" onchange="renderLogs()" class="filter-sel">
                 <option value="">All Students</option>
               </select>
@@ -614,117 +569,16 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
            PAGE: VOCABULARY
       ══════════════════════════════════════════════ -->
       <div class="page pi" id="page-vocab">
-
-        <!-- Quick Add Vocab -->
-        <div class="card cp" style="margin-bottom:10px;border-left:3px solid var(--sage)">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div class="sec" style="margin:0">⚡ Quick Add Vocabulary</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-            <div class="fld" style="flex:2;min-width:140px"><label>Word / Sign</label>
-              <input type="text" id="qv-word" placeholder="Type word here..." onkeydown="if(event.key==='Enter')quickAddVocab()"></div>
-            <div class="fld" style="flex:2;min-width:140px"><label>Appeared In (Class)</label>
-              <select id="qv-class" class="sel2"></select></div>
-            <div class="fld" style="flex:1;min-width:100px"><label>Student</label>
-              <select id="qv-student" class="sel2"><option value="all">General</option></select></div>
-            <button class="btn pri" onclick="quickAddVocab()" style="align-self:flex-end;flex-shrink:0">+ Add</button>
-          </div>
-          <div style="font-size:10px;color:var(--ink3);margin-top:6px;font-family:'DM Mono',monospace">Word is saved immediately as "Needs Research" — go back and fill in definition, sign info, etc. anytime.</div>
-        </div>
-
-        <!-- Full Add/Edit Form -->
-        <div class="card cp" style="margin-bottom:12px">
-          <div class="sec">Add / Edit Vocabulary</div>
-          <input type="hidden" id="vocab-edit-id">
-          <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>Word / Sign</label><input type="text" id="v-word" placeholder="e.g. photosynthesis"></div>
-            <div class="fld"><label>Sign Type / Domain</label>
-              <div style="position:relative">
-                <input type="text" id="v-signtype" placeholder="Search or type (e.g. Science, Country Name...)"
-                  oninput="filterSignTypes(this.value)" onfocus="showSignTypeDrop()" onblur="setTimeout(hideSignTypeDrop,200)"
-                  autocomplete="off">
-                <div id="signtype-drop" class="search-drop" style="display:none"></div>
-              </div>
-            </div>
-          </div>
-          <div class="fr fr3" style="margin-bottom:8px">
-            <div class="fld"><label>Category / Subject</label>
-              <div style="position:relative">
-                <input type="text" id="v-category" placeholder="Search or type subject..."
-                  oninput="filterCatDrop(this.value)" onfocus="showCatDrop()" onblur="setTimeout(hideCatDrop,200)"
-                  autocomplete="off">
-                <div id="cat-drop" class="search-drop" style="display:none"></div>
-              </div>
-            </div>
-            <div class="fld"><label>Class Where It Appeared</label>
-              <select id="v-class" class="sel2"><option value="">— General / Other —</option></select></div>
-            <div class="fld"><label>Student Context</label>
-              <select id="v-student" class="sel2"><option value="all">All / General</option></select></div>
-          </div>
-
-          <!-- Definition with lookup -->
-          <div class="fld" style="margin-bottom:6px"><label>Definition / English Gloss</label>
-            <div style="display:flex;gap:6px;align-items:flex-start">
-              <textarea id="v-def" placeholder="English definition or gloss..." style="min-height:60px;flex:1"></textarea>
-              <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-                <button class="btn sm gold" onclick="lookupDefinition()" title="Look up in dictionary">📖 Dictionary</button>
-                <button class="btn sm" onclick="lookupThesaurus()" style="font-size:10px" title="Thesaurus">📝 Thesaurus</button>
-              </div>
-            </div>
-            <div id="v-lookup-result" style="display:none;margin-top:6px;padding:9px 11px;background:var(--sky-l);border:1px solid rgba(42,94,138,.15);border-radius:7px;font-size:11px;line-height:1.6;max-height:180px;overflow-y:auto"></div>
-          </div>
-
-          <div class="fld" style="margin-bottom:8px"><label>ASL Parameters / Notes</label>
-            <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM, mnemonic..." style="min-height:55px"></textarea></div>
-
-          <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>Sign Resource / Source</label>
-              <input type="text" id="v-source" placeholder="e.g. ASLPro, Signing Savvy, textbook, teacher, colleague"></div>
-            <div class="fld"><label>Video / Resource Link</label>
-              <input type="url" id="v-link" placeholder="https://aslpro.com/..."></div>
-          </div>
-          <div class="fr fr2" style="margin-bottom:8px">
-            <div class="fld"><label>Mastery Level</label>
-              <select id="v-mastery" class="sel2">
-                <option value="1">1 — New / Just Seen</option>
-                <option value="2">2 — Recognizing</option>
-                <option value="3" selected>3 — Learning</option>
-                <option value="4">4 — Comfortable</option>
-                <option value="5">5 — Mastered</option>
-              </select>
-            </div>
-            <div class="fld"><label>Status</label>
-              <select id="v-status" class="sel2">
-                <option value="ok">✅ Complete</option>
-                <option value="needs-def">📖 Needs Definition</option>
-                <option value="needs-sign">🤟 Needs Sign Research</option>
-                <option value="needs-both" selected>🔍 Needs Research</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn pri" onclick="saveVocab()">Save Word</button>
-            <button class="btn gold sm" onclick="lookupDefinition()">📖 Look Up Definition</button>
-            <button class="btn gh sm" onclick="clearVocabForm()" id="vocab-cancel-btn" style="display:none">Cancel Edit</button>
-          </div>
-        </div>
-
-        <!-- Dictionary -->
+        <!-- Dictionary — main content -->
         <div class="card cp">
-          <div class="filter-hdr">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <div class="sec" style="margin:0">Dictionary (<span id="vocab-count">0</span> words)</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
             <input class="search-input" type="text" placeholder="Search words, definitions, notes..." oninput="renderVocab()" id="vocab-search" style="flex:1;min-width:140px">
-            <select id="vocab-filter-cat" onchange="renderVocab()" class="filter-sel">
-              <option value="">All Subjects</option>
-            </select>
-            <select id="vocab-filter-class" onchange="renderVocab()" class="filter-sel">
-              <option value="">All Classes</option>
-            </select>
-            <select id="vocab-filter-signtype" onchange="renderVocab()" class="filter-sel">
-              <option value="">All Types</option>
-            </select>
+            <select id="vocab-filter-cat" onchange="renderVocab()" class="filter-sel"><option value="">All Subjects</option></select>
+            <select id="vocab-filter-class" onchange="renderVocab()" class="filter-sel"><option value="">All Classes</option></select>
+            <select id="vocab-filter-signtype" onchange="renderVocab()" class="filter-sel"><option value="">All Types</option></select>
             <select id="vocab-filter-mastery" onchange="renderVocab()" class="filter-sel">
               <option value="">All Mastery</option>
               <option value="1">★ New</option><option value="2">★★ Recognizing</option>
@@ -1159,6 +1013,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <div class="fld"></div>
           </div>
 
+          <div class="fr fr2" style="margin-top:8px;margin-bottom:4px">
+            <div class="fld"><label>Roman I — Areas of Strength</label>
+              <textarea id="r1-strengths" placeholder="Paste evaluator strengths for V-to-S..." style="min-height:55px"></textarea></div>
+            <div class="fld"><label>Roman I — Areas for Development</label>
+              <textarea id="r1-dev" placeholder="Paste evaluator development notes for V-to-S..." style="min-height:55px"></textarea></div>
+          </div>
           </div>
           <div class="sec" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection('subs-r2')">Roman II Sub-Scores — Sign-to-Voice <span id="subs-r2-icon" style="font-size:12px">▼</span></div>
           <div id="subs-r2">
@@ -1186,6 +1046,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <div class="fld"><label>J — Adds No Extraneous Words/Sounds to Message</label><input type="number" id="r2j" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
 
+          <div class="fr fr2" style="margin-top:8px;margin-bottom:4px">
+            <div class="fld"><label>Roman II — Areas of Strength</label>
+              <textarea id="r2-strengths" placeholder="Paste evaluator strengths for S-to-V..." style="min-height:55px"></textarea></div>
+            <div class="fld"><label>Roman II — Areas for Development</label>
+              <textarea id="r2-dev" placeholder="Paste evaluator development notes for S-to-V..." style="min-height:55px"></textarea></div>
+          </div>
           </div>
           <div class="sec" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection('subs-r3')">Roman III Sub-Scores — Vocabulary <span id="subs-r3-icon" style="font-size:12px">▼</span></div>
           <div id="subs-r3">
@@ -1212,6 +1078,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <div class="fld"><label>I — Production of Numbers (Clarity, Fluency, Rate)</label><input type="number" id="r3i" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
 
+          <div class="fr fr2" style="margin-top:8px;margin-bottom:4px">
+            <div class="fld"><label>Roman III — Areas of Strength</label>
+              <textarea id="r3-strengths" placeholder="Paste evaluator strengths for Vocabulary..." style="min-height:55px"></textarea></div>
+            <div class="fld"><label>Roman III — Areas for Development</label>
+              <textarea id="r3-dev" placeholder="Paste evaluator development notes for Vocabulary..." style="min-height:55px"></textarea></div>
+          </div>
           </div>
           <div class="sec" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection('subs-r4')">Roman IV Sub-Scores — Overall Factors <span id="subs-r4-icon" style="font-size:12px">▼</span></div>
           <div id="subs-r4">
@@ -1233,8 +1105,14 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <div class="fld"><label>F — Follows Principles of Discourse Mapping</label><input type="number" id="r4f" min="1" max="5" step="0.5" placeholder="1–5"></div>
             <div class="fld"><label>G — Indicates Who Is Speaking</label><input type="number" id="r4g" min="1" max="5" step="0.5" placeholder="1–5"></div>
           </div>
+          <div class="fr fr2" style="margin-top:8px;margin-bottom:4px">
+            <div class="fld"><label>Roman IV — Areas of Strength</label>
+              <textarea id="r4-strengths" placeholder="Paste evaluator strengths for Overall Factors..." style="min-height:55px"></textarea></div>
+            <div class="fld"><label>Roman IV — Areas for Development</label>
+              <textarea id="r4-dev" placeholder="Paste evaluator development notes for Overall Factors..." style="min-height:55px"></textarea></div>
           </div>
-          <div class="sec" style="margin-bottom:6px">Evaluator Comments</div>
+          </div>
+          <div class="sec" style="margin-bottom:6px">Overall Evaluator Comments</div>
           <div class="fld" style="margin-bottom:8px"><label>Strengths (paste from report)</label>
             <textarea id="eipa-strengths" placeholder="Paste or type evaluator comments about areas of strength..." style="min-height:80px"></textarea></div>
           <div class="fld" style="margin-bottom:8px"><label>Development Areas (paste from report)</label>
@@ -1486,13 +1364,22 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 
 
       <div class="page pi" id="page-calendar">
-        <div class="g2">
-          <div class="card cp">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <!-- Calendar header: month view + day view tabs -->
+        <div class="tb-bar">
+          <div class="tab active" onclick="switchTab(this,'cal-month-tab')">Month</div>
+          <div class="tab" onclick="switchTab(this,'cal-day-tab');renderDayView()">Day View</div>
+          <div class="tab" onclick="switchTab(this,'cal-events-tab')">Events</div>
+        </div>
+
+        <!-- MONTH TAB -->
+        <div class="tp active" id="cal-month-tab">
+          <div class="card cp" style="margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
               <button class="btn gh sm" onclick="calPrev()">← Prev</button>
-              <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <div style="font-family:'Lora',serif;font-size:15px" id="cal-month-label"></div>
                 <button class="btn sm" style="font-size:10px;padding:3px 7px" onclick="calToday()">Today</button>
+                <input type="month" id="cal-jump-month" style="font-size:14px;padding:4px 8px;border:1px solid var(--brk);border-radius:7px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif;-webkit-appearance:none" onchange="calJumpToMonth(this.value)">
               </div>
               <button class="btn gh sm" onclick="calNext()">Next →</button>
             </div>
@@ -1501,17 +1388,34 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <div class="cdn">Wed</div><div class="cdn">Thu</div><div class="cdn">Fri</div><div class="cdn">Sat</div>
             </div>
           </div>
+        </div>
+
+        <!-- DAY VIEW TAB -->
+        <div class="tp" id="cal-day-tab">
+          <div class="card cp">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+              <button class="btn gh sm" onclick="dayNav(-1)">← Prev</button>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div style="font-family:'Lora',serif;font-size:14px" id="day-view-label"></div>
+                <button class="btn sm" style="font-size:10px;padding:3px 7px" onclick="dayToday()">Today</button>
+                <input type="date" id="day-jump-date" style="font-size:14px;padding:4px 8px;border:1px solid var(--brk);border-radius:7px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif;-webkit-appearance:none" onchange="dayJumpTo(this.value)">
+              </div>
+              <button class="btn gh sm" onclick="dayNav(1)">Next →</button>
+            </div>
+            <div id="day-view-grid" style="position:relative"></div>
+          </div>
+        </div>
+
+        <!-- EVENTS TAB -->
+        <div class="tp" id="cal-events-tab">
           <div class="card cp">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div class="sec" style="margin:0">Events</div>
-              <div style="display:flex;gap:6px">
-                <button class="btn pri sm" onclick="openModal('modal-add-event')">+ Event</button>
-                <button class="btn gold sm" onclick="exportICS()">Export .ics</button>
-              </div>
+              <div class="sec" style="margin:0">Upcoming Events</div>
+              <button class="btn gold sm" onclick="exportICS()">Export .ics</button>
             </div>
             <div id="cal-events-list"></div>
-            <div style="margin-top:12px;padding:9px 11px;background:var(--gold-l);border-radius:7px;font-size:10px;color:var(--gold);line-height:1.5;font-family:'DM Mono',monospace">
-              <strong>Google Calendar:</strong> Click "Export .ics" to download an iCal file, then import it into Google Calendar via Settings → Import.
+            <div style="margin-top:10px;padding:9px 11px;background:var(--gold-l);border-radius:7px;font-size:10px;color:var(--gold);line-height:1.5;font-family:'DM Mono',monospace">
+              <strong>Google Calendar:</strong> Export .ics → import into Google Calendar via Settings → Import &amp; Export.
             </div>
           </div>
         </div>
@@ -1776,8 +1680,158 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
   </div>
 </div>
 
-<!-- Add Calendar Event -->
-<div class="ov" id="modal-add-event">
+<!-- New Log Modal -->
+<div class="ov" id="modal-new-log">
+  <div class="mod">
+    <div class="mh"><h2>New Log Entry</h2><button class="mod-close" onclick="closeModal('modal-new-log')">✕</button></div>
+    <div class="mb">
+      <div class="fr fr3" style="margin-bottom:8px">
+        <div class="fld"><label>Date</label><input type="date" id="log-date"></div>
+        <div class="fld"><label>Student</label><select id="log-student" class="sel2"></select></div>
+        <div class="fld"><label>Class / Assignment</label><select id="log-class" class="sel2"></select></div>
+      </div>
+      <div class="fr fr2" style="margin-bottom:8px">
+        <div class="fld"><label>New Vocab Learned (comma separated)</label>
+          <input type="text" id="log-vocab" placeholder="e.g. dystonia, athetoid, proprioception"></div>
+        <div class="fld"><label>Topic / Unit</label>
+          <input type="text" id="log-topic" placeholder="e.g. Chapter 5 – Cell Biology"></div>
+      </div>
+      <div class="fr fr2" style="margin-bottom:8px">
+        <div class="fld"><label>Demands / Controls Encountered</label>
+          <textarea id="log-demands" placeholder="Environmental, Paralinguistic, Interpersonal, Intralingual..." style="min-height:65px"></textarea></div>
+        <div class="fld"><label>Notes / Reflections</label>
+          <textarea id="log-notes" placeholder="What went well? What was challenging?" style="min-height:65px"></textarea></div>
+      </div>
+      <div class="fr fr2" style="margin-bottom:8px">
+        <div class="fld"><label>Prep Done</label>
+          <textarea id="log-prep" placeholder="Materials reviewed, videos watched..." style="min-height:50px"></textarea></div>
+        <div class="fld"><label>Follow-Up Needed</label>
+          <textarea id="log-followup" placeholder="Words to research, concepts to clarify..." style="min-height:50px"></textarea></div>
+      </div>
+      <div class="fr fr2">
+        <div class="fld"><label>Interpreting Mode</label>
+          <select id="log-mode" class="sel2">
+            <option value="">— select —</option>
+            <option>Simultaneous</option><option>Consecutive</option><option>Both</option>
+            <option>Transliteration (PSE/MCE)</option><option>Oral</option><option>Tactile</option>
+          </select>
+        </div>
+        <div class="fld"><label>Session Rating</label>
+          <select id="log-rating" class="sel2">
+            <option value="">— rate —</option>
+            <option value="5">⭐⭐⭐⭐⭐ Excellent</option><option value="4">⭐⭐⭐⭐ Good</option>
+            <option value="3">⭐⭐⭐ Average</option><option value="2">⭐⭐ Difficult</option>
+            <option value="1">⭐ Very Difficult</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-new-log')">Cancel</button>
+      <button class="btn pri" onclick="saveLog()">Save Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Vocab Modal -->
+<div class="ov" id="modal-quick-vocab">
+  <div class="mod">
+    <div class="mh"><h2>⚡ Quick Add Word</h2><button class="mod-close" onclick="closeModal('modal-quick-vocab')">✕</button></div>
+    <div class="mb">
+      <div class="fld" style="margin-bottom:10px"><label>Word / Sign</label>
+        <input type="text" id="qv-word" placeholder="Type word here..." onkeydown="if(event.key==='Enter')quickAddVocab()"></div>
+      <div class="fr fr2" style="margin-bottom:8px">
+        <div class="fld"><label>Appeared In (Class)</label>
+          <select id="qv-class" class="sel2"><option value="">— General —</option></select></div>
+        <div class="fld"><label>Student</label>
+          <select id="qv-student" class="sel2"><option value="all">All / General</option></select></div>
+      </div>
+      <div class="notice n-ok">
+        <span>⚡</span>
+        <div style="font-size:11px">Saves immediately as "Needs Research." Tap the word in the dictionary anytime to fill in the definition, sign info, and source.</div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-quick-vocab')">Cancel</button>
+      <button class="btn pri" onclick="quickAddVocabModal()">+ Add Word</button>
+    </div>
+  </div>
+</div>
+
+<!-- Full Add/Edit Vocab Modal -->
+<div class="ov" id="modal-full-vocab">
+  <div class="mod" style="max-width:640px">
+    <div class="mh"><h2 id="vocab-modal-title">Add Vocabulary</h2><button class="mod-close" onclick="closeModal('modal-full-vocab')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="vocab-edit-id">
+      <div class="fr fr2" style="margin-bottom:8px">
+        <div class="fld"><label>Word / Sign</label><input type="text" id="v-word" placeholder="e.g. photosynthesis"></div>
+        <div class="fld"><label>Sign Type / Domain</label>
+          <div style="position:relative">
+            <input type="text" id="v-signtype" placeholder="Search or type..."
+              oninput="filterSignTypes(this.value)" onfocus="showSignTypeDrop()" onblur="setTimeout(hideSignTypeDrop,200)" autocomplete="off">
+            <div id="signtype-drop" class="search-drop" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+      <div class="fr fr3" style="margin-bottom:8px">
+        <div class="fld"><label>Category / Subject</label>
+          <div style="position:relative">
+            <input type="text" id="v-category" placeholder="Search or type subject..."
+              oninput="filterCatDrop(this.value)" onfocus="showCatDrop()" onblur="setTimeout(hideCatDrop,200)" autocomplete="off">
+            <div id="cat-drop" class="search-drop" style="display:none"></div>
+          </div>
+        </div>
+        <div class="fld"><label>Class Where It Appeared</label>
+          <select id="v-class" class="sel2"><option value="">— General —</option></select></div>
+        <div class="fld"><label>Student</label>
+          <select id="v-student" class="sel2"><option value="all">All</option></select></div>
+      </div>
+      <div class="fld" style="margin-bottom:6px"><label>Definition / English Gloss</label>
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <textarea id="v-def" placeholder="English definition or gloss..." style="min-height:60px;flex:1"></textarea>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            <button class="btn sm gold" onclick="lookupDefinition()" title="Look up">📖</button>
+            <button class="btn sm" onclick="lookupThesaurus()" style="font-size:10px" title="Thesaurus">📝</button>
+          </div>
+        </div>
+        <div id="v-lookup-result" style="display:none;margin-top:6px;padding:9px 11px;background:var(--sky-l);border:1px solid rgba(42,94,138,.15);border-radius:7px;font-size:11px;line-height:1.6;max-height:160px;overflow-y:auto"></div>
+      </div>
+      <div class="fld" style="margin-bottom:8px"><label>ASL Parameters / Notes</label>
+        <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM, mnemonic..." style="min-height:55px"></textarea></div>
+      <div class="fr fr2" style="margin-bottom:8px">
+        <div class="fld"><label>Sign Resource / Source</label>
+          <input type="text" id="v-source" placeholder="e.g. ASLPro, Signing Savvy, colleague"></div>
+        <div class="fld"><label>Video / Link</label>
+          <input type="url" id="v-link" placeholder="https://..."></div>
+      </div>
+      <div class="fr fr2">
+        <div class="fld"><label>Mastery Level</label>
+          <select id="v-mastery" class="sel2">
+            <option value="1">1 — New / Just Seen</option><option value="2">2 — Recognizing</option>
+            <option value="3" selected>3 — Learning</option><option value="4">4 — Comfortable</option>
+            <option value="5">5 — Mastered</option>
+          </select>
+        </div>
+        <div class="fld"><label>Status</label>
+          <select id="v-status" class="sel2">
+            <option value="needs-both" selected>🔍 Needs Research</option>
+            <option value="needs-def">📖 Needs Definition</option>
+            <option value="needs-sign">🤟 Needs Sign Research</option>
+            <option value="ok">✅ Complete</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="clearVocabForm();closeModal('modal-full-vocab')" id="vocab-cancel-btn">Cancel</button>
+      <button class="btn gold sm" onclick="lookupDefinition()">📖 Look Up</button>
+      <button class="btn pri" onclick="saveVocab()">Save Word</button>
+    </div>
+  </div>
+</div>
+
+
   <div class="mod">
     <div class="mh"><h2>Add Calendar Event</h2><button class="mod-close" onclick="closeModal('modal-add-event')">✕</button></div>
     <div class="mb">
@@ -1828,7 +1882,8 @@ let DB = {
   eipaAssessments: [],
   eipaGoals: [],
   scheduleBlocks: [],
-  noSchoolDays: []
+  noSchoolDays: [],
+  skippedClasses: []
 };
 
 function save() {
@@ -1867,6 +1922,7 @@ function initApp() {
   renderBlockList();
   renderNoSchool();
   renderWeekView();
+  renderDayView();
   loadSettings();
   updateBadge();
 }
@@ -1905,10 +1961,40 @@ function nav(btn) {
   const [title,sub] = pageMeta[pg] || [pg,''];
   document.getElementById('page-title').textContent = title;
   document.getElementById('page-sub').textContent = sub;
-  document.getElementById('tb-acts').innerHTML = '';
+  setTopbarActions(pg);
   document.getElementById('page-scroll').scrollTop = 0;
-  // Close sidebar on mobile after navigation
   if (window.innerWidth <= 680) closeSidebar();
+}
+
+function setTopbarActions(pg) {
+  const acts = document.getElementById('tb-acts');
+  acts.innerHTML = '';
+  const btn = (label, fn, cls='btn sm') => {
+    const b = document.createElement('button');
+    b.className = cls; b.textContent = label;
+    b.onclick = fn; acts.appendChild(b);
+  };
+  if (pg === 'daily-log') {
+    btn('+ New Log', ()=>{ resetLogForm(); openModal('modal-new-log'); }, 'btn pri sm');
+  }
+  if (pg === 'vocab') {
+    btn('⚡ Quick Add', ()=>openModal('modal-quick-vocab'), 'btn sm');
+    btn('+ Add Word', ()=>{ clearVocabForm(); document.getElementById('vocab-modal-title').textContent='Add Vocabulary'; openModal('modal-full-vocab'); }, 'btn pri sm');
+  }
+  if (pg === 'calendar') {
+    btn('+ Event', ()=>openModal('modal-add-event'), 'btn pri sm');
+  }
+  if (pg === 'schedule') {
+    btn('+ Class', ()=>openModal('modal-add-class'), 'btn pri sm');
+  }
+  if (pg === 'eipa') {
+    btn('Export PDF', ()=>toast('Use browser Print → Save as PDF','gold'), 'btn gold sm');
+  }
+  if (pg === 'bugs') {
+    btn('+ Log Issue', ()=>{
+      document.getElementById('page-bugs').querySelector('.card.cp').scrollIntoView({behavior:'smooth'});
+    }, 'btn pri sm');
+  }
 }
 
 // ── SIDEBAR MOBILE OPEN/CLOSE ────────────────────────────────────────────────
@@ -2201,6 +2287,7 @@ function saveLog() {
   document.getElementById('log-mode').value='';
   document.getElementById('log-rating').value='';
   renderDashboard(); renderLogs(); renderVocab(); populateClassSelectors();
+  closeModal('modal-new-log');
   toast('Log entry saved!');
 }
 
@@ -2272,29 +2359,28 @@ function saveVocab() {
   const idx = DB.vocab.findIndex(x=>x.id===id);
   if (idx>=0) DB.vocab[idx]=v; else DB.vocab.push(v);
   save(); clearVocabForm(); renderVocab(); populateClassSelectors(); renderDashboard();
+  closeModal('modal-full-vocab');
   toast(editId ? 'Vocabulary updated' : 'Word added to dictionary');
 }
 
-function quickAddVocab() {
+function quickAddVocabModal() {
   const word = document.getElementById('qv-word').value.trim();
   if(!word) { toast('Enter a word first','warn'); return; }
   const classId = document.getElementById('qv-class').value;
   const studentId = document.getElementById('qv-student').value;
   const classObj = DB.classes.find(c=>c.id===classId);
-  // Don't add duplicates
   if(DB.vocab.find(v=>v.word.toLowerCase()===word.toLowerCase())) {
-    toast('Already in dictionary — find it below to edit','warn'); return;
+    toast('Already in dictionary — find it to edit','warn'); return;
   }
-  const v = {
-    id: uid(), word, category: classObj?.name||'', signType:'', classId, studentId,
-    definition:'', params:'', mastery:1, source:'', link:'',
-    status:'needs-both', createdAt:Date.now()
-  };
-  DB.vocab.unshift(v);
+  DB.vocab.unshift({ id:uid(), word, category:classObj?.name||'', signType:'', classId, studentId,
+    definition:'', params:'', mastery:1, source:'', link:'', status:'needs-both', createdAt:Date.now() });
   save(); renderVocab(); populateClassSelectors();
   document.getElementById('qv-word').value='';
-  toast(`"${word}" added — needs definition & sign research`);
+  closeModal('modal-quick-vocab');
+  toast(`"${word}" added — tap it to research`);
 }
+
+function quickAddVocab() { quickAddVocabModal(); }
 
 function clearVocabForm() {
   document.getElementById('vocab-edit-id').value='';
@@ -2325,7 +2411,8 @@ function editVocab(id) {
   document.getElementById('v-link').value = v.link||'';
   document.getElementById('v-status').value = v.status||'needs-both';
   document.getElementById('vocab-cancel-btn').style.display='inline-flex';
-  document.getElementById('page-scroll').scrollTop=0;
+  document.getElementById('vocab-modal-title').textContent='Edit Vocabulary';
+  openModal('modal-full-vocab');
 }
 
 function deleteVocab(id) {
@@ -3187,6 +3274,154 @@ function renderEventsList(){
 function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
 function calToday(){calYear=new Date().getFullYear();calMonth=new Date().getMonth();renderCalendar();}
+function calJumpToMonth(val) {
+  if(!val) return;
+  const [y,m] = val.split('-').map(Number);
+  calYear=y; calMonth=m-1; renderCalendar();
+}
+
+// ── DAY VIEW ──────────────────────────────────────────────────────────────────
+let dayViewDate = new Date();
+
+function dayNav(dir) {
+  dayViewDate = new Date(dayViewDate);
+  dayViewDate.setDate(dayViewDate.getDate() + dir);
+  renderDayView();
+}
+function dayToday() { dayViewDate = new Date(); renderDayView(); }
+function dayJumpTo(val) { if(val) { dayViewDate = new Date(val+'T12:00:00'); renderDayView(); } }
+
+function renderDayView() {
+  const label = document.getElementById('day-view-label');
+  const grid = document.getElementById('day-view-grid');
+  const jumpInput = document.getElementById('day-jump-date');
+  if(!label||!grid) return;
+
+  const dateStr = dayViewDate.toISOString().split('T')[0];
+  label.textContent = dayViewDate.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  if(jumpInput) jumpInput.value = dateStr;
+
+  const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayViewDate.getDay()];
+  const nsEntry = getNoSchoolEntry(dateStr);
+
+  if(nsEntry) {
+    grid.innerHTML = `<div style="padding:20px;background:var(--clay-l);border-radius:9px;text-align:center;font-size:13px;color:var(--clay);font-weight:500">${NS_ICONS[nsEntry.type]||'🚫'} ${esc(nsEntry.desc||nsEntry.type)}</div>`;
+    return;
+  }
+
+  // Collect all items for this day with times
+  const items = [];
+
+  // Events on this date
+  DB.events.filter(e=>e.date===dateStr).forEach(e=>{
+    const start = e.time||'';
+    items.push({start, end:'', label: esc(e.title), type:'event', color:'var(--sky)', bg:'var(--sky-l)'});
+  });
+
+  // Classes (check not-interpreting)
+  sortedClasses('').forEach(c=>{
+    const sched = (c.schedule||[]).find(s=>s.day===dayName);
+    const legacyMatch = !c.schedule?.length && (c.days||[]).includes(dayName);
+    if(!sched && !legacyMatch) return;
+    const skipKey = `${c.id}::${dateStr}`;
+    const skipped = (DB.skippedClasses||[]).includes(skipKey);
+    items.push({
+      start: sched?.start||'', end: sched?.end||'',
+      label: (c.periodNum?`P${c.periodNum} `:'') + esc(c.name),
+      sub: skipped ? '🚫 Not interpreting today' : (c.teacher?esc(c.teacher):''),
+      type:'class', skipped,
+      color: skipped ? 'var(--ink3)' : 'var(--sage-d)',
+      bg: skipped ? 'var(--s3)' : 'var(--sage-l)',
+      classId: c.id
+    });
+  });
+
+  // Blocks
+  (DB.scheduleBlocks||[]).forEach(b=>{
+    const sched = (b.schedule||[]).find(s=>s.day===dayName);
+    if(!sched) return;
+    const bgMap={prep:'#E8F1F8',drive:'#E8F1F8',lunch:'var(--gold-l)',tod:'var(--clay-l)',break:'var(--sage-l)',off:'var(--s3)',other:'var(--s3)'};
+    const colMap={prep:'var(--sky)',drive:'var(--sky)',lunch:'var(--gold)',tod:'var(--clay)',break:'var(--sage)',off:'var(--ink3)',other:'var(--ink3)'};
+    items.push({
+      start: sched.start||'', end: sched.end||'',
+      label: BLK_ICONS[b.type]+' '+esc(b.name),
+      sub: b.type==='tod'||b.type==='off' ? 'Not interpreting' : '',
+      type:'block', color:colMap[b.type]||'var(--ink3)', bg:bgMap[b.type]||'var(--s3)'
+    });
+  });
+
+  // Sort by start time
+  items.sort((a,b)=>(a.start||'99:99').localeCompare(b.start||'99:99'));
+
+  // Build hourly grid 6am–9pm
+  const hours = [];
+  for(let h=6;h<=21;h++) hours.push(h);
+  const SLOT_H = 52; // px per hour
+  const totalH = hours.length * SLOT_H;
+
+  // Position items on timeline
+  const positioned = items.map(item=>{
+    if(!item.start) return {...item, top:null};
+    const [sh,sm] = item.start.split(':').map(Number);
+    const [eh,em] = item.end ? item.end.split(':').map(Number) : [sh+1,sm||0];
+    const topPct = ((sh-6)*60+sm) / ((21-6)*60) * totalH;
+    const botPct = ((eh-6)*60+em) / ((21-6)*60) * totalH;
+    const height = Math.max(botPct-topPct, 28);
+    return {...item, top:topPct, height};
+  });
+
+  const hourLines = hours.map(h=>{
+    const top = ((h-6)/15)*totalH;
+    const label = h===12?'12 PM':h>12?`${h-12} PM`:h===0?'12 AM':`${h} AM`;
+    return `<div style="position:absolute;left:0;right:0;top:${top}px;display:flex;align-items:center;gap:6px;pointer-events:none">
+      <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--ink3);width:36px;text-align:right;flex-shrink:0">${label}</div>
+      <div style="flex:1;height:1px;background:var(--br)"></div>
+    </div>`;
+  }).join('');
+
+  const noTimeItems = positioned.filter(i=>i.top===null);
+  const timedItems = positioned.filter(i=>i.top!==null);
+
+  const timedHTML = timedItems.map(item=>{
+    const timeStr = item.start ? fmtTime(item.start)+(item.end?'–'+fmtTime(item.end):'') : '';
+    const toggleBtn = item.type==='class'
+      ? `<button onclick="toggleClassSkip('${item.classId}','${dateStr}')" style="font-size:9px;padding:2px 6px;border-radius:4px;border:1px solid ${item.skipped?'var(--clay)':'var(--sage-m)'};background:${item.skipped?'var(--clay-l)':'transparent'};color:${item.skipped?'var(--clay)':'var(--sage)'};cursor:pointer;margin-top:2px;font-family:'DM Mono',monospace">${item.skipped?'↩ Mark Active':'🚫 Skip Today'}</button>`
+      : '';
+    return `<div style="position:absolute;left:44px;right:4px;top:${item.top}px;height:${item.height}px;background:${item.bg};border-left:3px solid ${item.color};border-radius:0 6px 6px 0;padding:3px 7px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:${item.color};font-weight:600">${timeStr}</div>
+      <div style="font-size:11px;font-weight:500;color:var(--ink);line-height:1.2;${item.skipped?'text-decoration:line-through;opacity:.5':''}">${item.label}</div>
+      ${item.sub?`<div style="font-size:9px;color:var(--ink3)">${item.sub}</div>`:''}
+      ${toggleBtn}
+    </div>`;
+  }).join('');
+
+  const noTimeHTML = noTimeItems.length ? `
+    <div style="margin-bottom:10px;padding:8px 10px;background:var(--s2);border-radius:8px">
+      <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--ink3);margin-bottom:5px;text-transform:uppercase">All day / no time set</div>
+      ${noTimeItems.map(i=>`<div style="font-size:12px;padding:3px 0;border-bottom:1px solid var(--br);color:${i.color}">${i.label}</div>`).join('')}
+    </div>` : '';
+
+  grid.innerHTML = noTimeHTML + `<div style="position:relative;height:${totalH}px;margin-left:0">${hourLines}${timedHTML}</div>`;
+}
+
+function toggleClassSkip(classId, dateStr) {
+  if(!DB.skippedClasses) DB.skippedClasses=[];
+  const key = `${classId}::${dateStr}`;
+  const idx = DB.skippedClasses.indexOf(key);
+  if(idx>=0) DB.skippedClasses.splice(idx,1);
+  else DB.skippedClasses.push(key);
+  save(); renderDayView();
+  // Also update today view if needed
+  renderTodaySchedule();
+}
+
+// ── LOG FORM ──────────────────────────────────────────────────────────────────
+function resetLogForm() {
+  ['log-vocab','log-topic','log-demands','log-notes','log-prep','log-followup'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  const lm=document.getElementById('log-mode'); if(lm) lm.value='';
+  const lr=document.getElementById('log-rating'); if(lr) lr.value='';
+  document.getElementById('log-date').value=new Date().toISOString().split('T')[0];
+}
 
 function saveEvent(){
   const id=document.getElementById('ce-id').value||uid();
@@ -3753,6 +3988,12 @@ function saveEIPA() {
       r3: { A:getV('r3a'),B:getV('r3b'),C:getV('r3c'),D:getV('r3d'),E:getV('r3e'),F:getV('r3f'),G:getV('r3g'),H:getV('r3h'),I:getV('r3i') },
       r4: { A:getV('r4a'),B:getV('r4b'),C:getV('r4c'),D:getV('r4d'),E:getV('r4e'),F:getV('r4f'),G:getV('r4g') }
     },
+    // Per-Roman comments
+    r1strengths: getS('r1-strengths'), r1dev: getS('r1-dev'),
+    r2strengths: getS('r2-strengths'), r2dev: getS('r2-dev'),
+    r3strengths: getS('r3-strengths'), r3dev: getS('r3-dev'),
+    r4strengths: getS('r4-strengths'), r4dev: getS('r4-dev'),
+    // Overall comments
     strengths: getS('eipa-strengths'),
     dev: getS('eipa-dev'),
     comments: getS('eipa-comments'),
@@ -3768,18 +4009,22 @@ function saveEIPA() {
 
 function clearEIPAForm() {
   document.getElementById('eipa-edit-id').value='';
-  ['eipa-record','eipa-state','eipa-strengths','eipa-dev','eipa-comments'].forEach(f=>document.getElementById(f).value='');
+  ['eipa-record','eipa-state','eipa-strengths','eipa-dev','eipa-comments',
+   'r1-strengths','r1-dev','r2-strengths','r2-dev',
+   'r3-strengths','r3-dev','r4-strengths','r4-dev'
+  ].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
   ['eipa-overall','eipa-r1','eipa-r2','eipa-r3','eipa-r4',
    'r1a','r1b','r1c','r1d','r1e','r1f','r1g','r1h','r1i','r1j','r1k','r1l',
    'r2a','r2b','r2c','r2d','r2e','r2f','r2g','r2h','r2i','r2j',
    'r3a','r3b','r3c','r3d','r3e','r3f','r3g','r3h','r3i',
    'r4a','r4b','r4c','r4d','r4e','r4f','r4g'
   ].forEach(f=>{ const el=document.getElementById(f); if(el) el.value=''; });
-  document.getElementById('eipa-cancel-btn').style.display='none';
+  const cb=document.getElementById('eipa-cancel-btn'); if(cb) cb.style.display='none';
 }
 
 function editEIPAModal(id) {
   const e=DB.eipaAssessments.find(x=>x.id===id); if(!e) return;
+  clearEIPAForm();
   document.getElementById('eipa-edit-id').value=e.id;
   document.getElementById('eipa-date').value=e.date||'';
   document.getElementById('eipa-record').value=e.record||'';
@@ -3794,10 +4039,16 @@ function editEIPAModal(id) {
   if(e.subs?.r2){ ['a','b','c','d','e','f','g','h','i','j'].forEach(k=>{ const el=document.getElementById('r2'+k); if(el&&e.subs.r2[k.toUpperCase()]!=null) el.value=e.subs.r2[k.toUpperCase()]; }); }
   if(e.subs?.r3){ ['a','b','c','d','e','f','g','h','i'].forEach(k=>{ const el=document.getElementById('r3'+k); if(el&&e.subs.r3[k.toUpperCase()]!=null) el.value=e.subs.r3[k.toUpperCase()]; }); }
   if(e.subs?.r4){ ['a','b','c','d','e','f','g'].forEach(k=>{ const el=document.getElementById('r4'+k); if(el&&e.subs.r4[k.toUpperCase()]!=null) el.value=e.subs.r4[k.toUpperCase()]; }); }
+  // Per-Roman comments
+  const rmap={r1:['r1-strengths','r1-dev'],r2:['r2-strengths','r2-dev'],r3:['r3-strengths','r3-dev'],r4:['r4-strengths','r4-dev']};
+  Object.entries(rmap).forEach(([rk,[sf,df]])=>{
+    const sel=document.getElementById(sf); if(sel) sel.value=e[rk+'strengths']||'';
+    const del=document.getElementById(df); if(del) del.value=e[rk+'dev']||'';
+  });
   document.getElementById('eipa-strengths').value=e.strengths||'';
   document.getElementById('eipa-dev').value=e.dev||'';
   document.getElementById('eipa-comments').value=e.comments||'';
-  document.getElementById('eipa-cancel-btn').style.display='inline-flex';
+  const cb=document.getElementById('eipa-cancel-btn'); if(cb) cb.style.display='inline-flex';
   document.getElementById('page-scroll').scrollTop=0;
 }
 
@@ -3858,29 +4109,49 @@ function toolComparisonHTML(entry) {
   const hasAnySub = [r1subs,r2subs,r3subs,r4subs].some(s=>s && Object.values(s).some(v=>v!=null));
 
   if(hasAnySub) {
-    const subTable = (title, subs, labels) => {
-      if(!subs || !Object.values(subs).some(v=>v!=null)) return '';
-      const rows = Object.entries(labels).map(([k,lbl])=>{
-        const v = subs[k];
-        if(v==null) return '';
-        const w = Math.round((v/5)*100);
-        const bar = `<div style="flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${w}%;height:100%;background:${v>=4?'var(--sage)':v>=3?'var(--sky)':v>=2?'var(--gold-m)':'var(--clay)'};border-radius:3px"></div></div>`;
-        return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid var(--br)">
-          <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--ink3);width:14px;flex-shrink:0">${k}</div>
-          <div style="flex:1;font-size:10px;color:var(--ink2)">${esc(lbl)}</div>
-          ${bar}
-          <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;width:24px;text-align:right;color:${v>=4?'var(--sage-d)':v>=3?'var(--sky)':v>=2?'var(--gold)':'var(--clay)'}">${v}</div>
-        </div>`;
-      }).join('');
-      return `<div style="margin-bottom:10px"><div style="font-size:9px;font-family:'DM Mono',monospace;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${esc(title)}</div>${rows}</div>`;
+    const subTable = (title, subs, labels, strengths, dev) => {
+      const hasScores = subs && Object.values(subs).some(v=>v!=null);
+      const hasComments = strengths || dev;
+      if(!hasScores && !hasComments) return '';
+      let scoreRows = '';
+      if(hasScores) {
+        scoreRows = Object.entries(labels).map(([k,lbl])=>{
+          const v = subs[k];
+          if(v==null) return '';
+          const w = Math.round((v/5)*100);
+          const barColor = v>=4?'var(--sage)':v>=3?'var(--sky)':v>=2?'var(--gold-m)':'var(--clay)';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid var(--br)">
+            <div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--ink3);width:14px;flex-shrink:0">${k}</div>
+            <div style="flex:1;font-size:10px;color:var(--ink2)">${esc(lbl)}</div>
+            <div style="width:60px;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;flex-shrink:0">
+              <div style="width:${w}%;height:100%;background:${barColor};border-radius:3px"></div>
+            </div>
+            <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:600;width:24px;text-align:right;color:${barColor}">${v}</div>
+          </div>`;
+        }).join('');
+      }
+      const commentBlock = (hasComments) ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px">
+        ${strengths?`<div style="padding:7px 9px;background:var(--sage-l);border-radius:6px;border-left:3px solid var(--sage)">
+          <div style="font-size:8px;font-family:'DM Mono',monospace;color:var(--sage-d);font-weight:600;text-transform:uppercase;margin-bottom:3px">Strengths</div>
+          <div style="font-size:11px;color:var(--ink2);line-height:1.55">${esc(strengths)}</div>
+        </div>`:'<div></div>'}
+        ${dev?`<div style="padding:7px 9px;background:var(--clay-l);border-radius:6px;border-left:3px solid var(--clay)">
+          <div style="font-size:8px;font-family:'DM Mono',monospace;color:var(--clay);font-weight:600;text-transform:uppercase;margin-bottom:3px">Development</div>
+          <div style="font-size:11px;color:var(--ink2);line-height:1.55">${esc(dev)}</div>
+        </div>`:'<div></div>'}
+      </div>` : '';
+      return `<div style="margin-bottom:12px;border:1px solid var(--br);border-radius:8px;overflow:hidden">
+        <div style="padding:6px 10px;background:var(--s2);font-size:9px;font-family:'DM Mono',monospace;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em">${esc(title)}</div>
+        <div style="padding:6px 10px">${scoreRows}${commentBlock}</div>
+      </div>`;
     };
 
     subTables = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--br)">
-      <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Sub-Score Detail</div>
-      ${subTable('Roman I — Voice-to-Sign', r1subs, {A:'Stress/Emphasis',B:'Affect & Emotions',C:'Register',D:'Sentence Boundaries',E:'Sentence Types/NMM',F:'NMM Adverbial Markers',G:'Verb Directionality',H:'Comparison/Contrast/Sequence',I:'ASL Classifier System',J:'Follows ASL/PSE Grammar',K:'English Morphological Markers',L:'Mouths English Clearly'})}
-      ${subTable('Roman II — Sign-to-Voice', r2subs, {A:'Read Signs',B:'Fingerspelling & Numbers',C:'Register',D:'NMM/ASL Morphology',E:'Speech Production',F:'Sentence Boundaries',G:'Sentence Types',H:'Emphasize Words/Affect',I:'Correct English Word Selection',J:'No Extraneous Words/Sounds'})}
-      ${subTable('Roman III — Vocabulary', r3subs, {A:'Amount of Sign Vocabulary',B:'Signs Made Correctly',C:'Fluency (Rhythm & Rate)',D:'Vocab Consistent with System',E:'Key Vocabulary Represented',F:'Fingerspelling Production',G:'Spelled Correctly',H:'Appropriate Use of FS',I:'Production of Numbers'})}
-      ${subTable('Roman IV — Overall Factors', r4subs, {A:'Eye Contact & Movement',B:'Sense of Whole Message V→S',C:'Sense of Whole Message S→V',D:'Process Decalage / Lag V→S',E:'Process Decalage / Lag S→V',F:'Discourse Mapping',G:'Indicates Who Is Speaking'})}
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">Sub-Score Detail &amp; Evaluator Comments</div>
+      ${subTable('Roman I — Voice-to-Sign', r1subs, {A:'Stress/Emphasis',B:'Affect & Emotions',C:'Register',D:'Sentence Boundaries',E:'Sentence Types/NMM',F:'NMM Adverbial Markers',G:'Verb Directionality',H:'Comparison/Contrast/Sequence',I:'ASL Classifier System',J:'Follows ASL/PSE Grammar',K:'English Morphological Markers',L:'Mouths English Clearly'}, entry.r1strengths, entry.r1dev)}
+      ${subTable('Roman II — Sign-to-Voice', r2subs, {A:'Read Signs',B:'Fingerspelling & Numbers',C:'Register',D:'NMM/ASL Morphology',E:'Speech Production',F:'Sentence Boundaries',G:'Sentence Types',H:'Emphasize Words/Affect',I:'Correct English Word Selection',J:'No Extraneous Words/Sounds'}, entry.r2strengths, entry.r2dev)}
+      ${subTable('Roman III — Vocabulary', r3subs, {A:'Amount of Sign Vocabulary',B:'Signs Made Correctly',C:'Fluency (Rhythm & Rate)',D:'Vocab Consistent with System',E:'Key Vocabulary Represented',F:'Fingerspelling Production',G:'Spelled Correctly',H:'Appropriate Use of FS',I:'Production of Numbers'}, entry.r3strengths, entry.r3dev)}
+      ${subTable('Roman IV — Overall Factors', r4subs, {A:'Eye Contact & Movement',B:'Sense of Whole Message V→S',C:'Sense of Whole Message S→V',D:'Process Decalage / Lag V→S',E:'Process Decalage / Lag S→V',F:'Discourse Mapping',G:'Indicates Who Is Speaking'}, entry.r4strengths, entry.r4dev)}
     </div>`;
   }
 
@@ -4120,6 +4391,7 @@ if(!DB.eipaAssessments) DB.eipaAssessments=[];
 if(!DB.eipaGoals) DB.eipaGoals=[];
 if(!DB.scheduleBlocks) DB.scheduleBlocks=[];
 if(!DB.noSchoolDays) DB.noSchoolDays=[];
+if(!DB.skippedClasses) DB.skippedClasses=[];
 
 // Populate student selectors before init
 ['global-student','mc-student','mp-student','iep-filter-student'].forEach(id=>{
