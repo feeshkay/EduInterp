@@ -2540,7 +2540,8 @@ function buildAIResearchPrompt(words) {
 2. MNEMONIC — a memory tip or mental trick to help remember the sign or the meaning.
 3. DEAF_LINKS — at least 3 trustworthy links written or created BY DEAF PEOPLE, not hearing authors, hearing-run organizations, or interpreter-made content. Deaf-run blogs, Deaf educators, Deaf-owned ASL resource sites, and Deaf social media creators all count. Double-check that each source is actually Deaf-led before including it.
 4. ASL_VIDEOS — ASL videos of the sign(s), made BY DEAF ASL users/creators. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools.
-5. TEXT_RESOURCES — trustworthy resources explaining the underlying concept, in BOTH video and text form (at least one of each). These can be non-Deaf-authored if needed, but should be reputable.
+5. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
+6. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
 Only include real, working links — never invent a URL. If you can't verify a source is Deaf-led, say so instead of guessing.
 
@@ -2556,7 +2557,10 @@ DEAF_LINKS:
 ASL_VIDEOS:
 - [Title] — [URL]
 - [Title] — [URL]
-TEXT_RESOURCES:
+CONCEPT_VIDEOS:
+- [Title] — [URL]
+- [Title] — [URL]
+YOUTH_EXPLAINERS:
 - [Title] — [URL]
 - [Title] — [URL]
 ---
@@ -2593,7 +2597,7 @@ function copyAIResearchPrompt() {
   }
 }
 
-const AI_RES_LABELS = ['DEFINITION','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','TEXT_RESOURCES'];
+const AI_RES_LABELS = ['DEFINITION','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
 
 function extractAISection(block, label) {
   const others = AI_RES_LABELS.filter(l=>l!==label).join('|');
@@ -2616,7 +2620,9 @@ function parseAIResearchResponse(text) {
       mnemonic: extractAISection(block,'MNEMONIC'),
       deafLinks: extractAILinks(extractAISection(block,'DEAF_LINKS')),
       aslVideos: extractAILinks(extractAISection(block,'ASL_VIDEOS')),
-      textResources: extractAILinks(extractAISection(block,'TEXT_RESOURCES'))
+      conceptVideos: extractAILinks(extractAISection(block,'CONCEPT_VIDEOS')),
+      youthExplainers: extractAILinks(extractAISection(block,'YOUTH_EXPLAINERS')),
+      textResources: extractAILinks(extractAISection(block,'TEXT_RESOURCES')) // legacy label, older pasted responses may still use this
     };
   }).filter(r=>r.word);
 }
@@ -2638,6 +2644,8 @@ function applyAIResearchResults() {
     if (r.mnemonic) v.mnemonic = r.mnemonic;
     if (r.deafLinks) v.deafResources = r.deafLinks;
     if (r.aslVideos) v.aslVideos = r.aslVideos;
+    if (r.conceptVideos) v.conceptVideos = r.conceptVideos;
+    if (r.youthExplainers) v.youthExplainers = r.youthExplainers;
     if (r.textResources) v.textResources = r.textResources;
     if (v.definition && v.params) v.status='ok';
     else if (v.definition && !v.params) v.status='needs-sign';
@@ -2812,12 +2820,14 @@ function renderVocab() {
 
 // ── AI RESEARCH BLOCK RENDERING ─────────────────────────────────────────────────
 function renderAIResearchBlock(v) {
-  if (!v.mnemonic && !v.deafResources && !v.aslVideos && !v.textResources) return '';
+  if (!v.mnemonic && !v.deafResources && !v.aslVideos && !v.conceptVideos && !v.youthExplainers && !v.textResources) return '';
   return `<details class="ai-res-block">
     <summary>🧏 Deaf-Led Research &amp; Memory Tips</summary>
     ${v.mnemonic?`<div class="res-group"><div class="res-label">💡 Remember It</div><div class="res-line">${esc(v.mnemonic)}</div></div>`:''}
     ${v.deafResources?`<div class="res-group"><div class="res-label">✋ From Deaf Creators</div>${renderResourceLines(v.deafResources)}</div>`:''}
     ${v.aslVideos?`<div class="res-group"><div class="res-label">🎥 ASL Videos</div>${renderResourceLines(v.aslVideos)}</div>`:''}
+    ${v.conceptVideos?`<div class="res-group"><div class="res-label">🎬 Video Explainers</div>${renderResourceLines(v.conceptVideos)}</div>`:''}
+    ${v.youthExplainers?`<div class="res-group"><div class="res-label">🧒 Explained for Students</div>${renderResourceLines(v.youthExplainers)}</div>`:''}
     ${v.textResources?`<div class="res-group"><div class="res-label">📚 Concept Explainers</div>${renderResourceLines(v.textResources)}</div>`:''}
   </details>`;
 }
@@ -3970,10 +3980,10 @@ function doImport(e){
 
 function exportVocabCSV(){
   if(!DB.vocab.length){toast('No vocabulary to export','warn');return;}
-  const headers=['Word','Category','Definition','ASL Parameters','Mastery','Source','Student','Link','Mnemonic','Deaf-Led Resources','ASL Videos','Concept Explainers'];
+  const headers=['Word','Category','Definition','ASL Parameters','Mastery','Source','Student','Link','Mnemonic','Deaf-Led Resources','ASL Videos','Video Explainers','Explained for Students','Concept Explainers (legacy)'];
   const rows=DB.vocab.map(v=>{
     const student=DB.students.find(s=>s.id===v.studentId);
-    return [v.word,v.category||'',v.definition||'',v.params||'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.deafResources||'',v.aslVideos||'',v.textResources||''].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
+    return [v.word,v.category||'',v.definition||'',v.params||'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.deafResources||'',v.aslVideos||'',v.conceptVideos||'',v.youthExplainers||'',v.textResources||''].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
   });
   const csv=[headers.join(','),...rows].join('\n');
   const a=document.createElement('a');
