@@ -2546,8 +2546,26 @@ async function autoDefineAll() {
 }
 
 // ── AI RESEARCH PREP (Deaf-led resources, ASL videos, mnemonics) ───────────────
-function buildAIResearchPrompt(words) {
-  const list = words.map(w=>`- ${w}`).join('\n');
+function buildAIResearchPrompt(entries) {
+  // Group words by the class they appeared in and the day they were added —
+  // words from the same lesson often share the same explainer video/article.
+  const groups = {};
+  entries.forEach(v=>{
+    const cls = DB.classes.find(c=>c.id===v.classId);
+    const clsName = cls ? classLabel(cls) : 'General / No Class';
+    const ts = v.createdAt || 0;
+    const dateKey = ts ? new Date(ts).toDateString() : 'Unknown date';
+    const key = clsName+'|'+dateKey;
+    if (!groups[key]) groups[key] = { clsName, dateKey, ts, words: [] };
+    groups[key].words.push(v.word);
+    if (ts > groups[key].ts) groups[key].ts = ts;
+  });
+  const dateFmt = d => d==='Unknown date' ? d : new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  const sortedGroups = Object.values(groups).sort((a,b)=> b.ts-a.ts || a.clsName.localeCompare(b.clsName));
+  const groupedList = sortedGroups.map(g=>
+    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>`- ${w}`).join('\n')}`
+  ).join('\n\n');
+
   return `I'm a K-12 educational ASL interpreter prepping to interpret the vocabulary/concepts below for my Deaf/DHH students. For EACH word or phrase, please research and provide:
 
 1. DEFINITION — a plain-English explanation of what the word/concept means (2–4 sentences, no jargon).
@@ -2559,6 +2577,8 @@ function buildAIResearchPrompt(words) {
 7. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
 Only include real, working links — never invent a URL. If you can't verify a source is Deaf-led, say so instead of guessing.
+
+The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
 Format your answer EXACTLY like this, repeated for every word, so I can paste it back into my app:
 
@@ -2581,21 +2601,22 @@ YOUTH_EXPLAINERS:
 - [Title] — [URL]
 ---
 
-Here are my words:
-${list}`;
+Here are my words, grouped by class and date added:
+
+${groupedList}`;
 }
 
 function openAIResearchModal() {
-  let words, usingSelection = vocabSelection.size>0;
+  let entries, usingSelection = vocabSelection.size>0;
   if (usingSelection) {
-    words = DB.vocab.filter(v=>vocabSelection.has(v.id)).map(v=>v.word);
+    entries = DB.vocab.filter(v=>vocabSelection.has(v.id));
   } else {
-    words = DB.vocab.filter(v=>(v.status||'needs-both')!=='ok').map(v=>v.word);
+    entries = DB.vocab.filter(v=>(v.status||'needs-both')!=='ok');
   }
-  if (!words.length) { toast('No words to research — add vocabulary first, or clear filters','warn'); return; }
+  if (!entries.length) { toast('No words to research — add vocabulary first, or clear filters','warn'); return; }
   document.getElementById('ai-research-count').textContent =
-    `${words.length} word${words.length===1?'':'s'} (${usingSelection?'selected':'everything needing research'})`;
-  document.getElementById('ai-prompt-text').value = buildAIResearchPrompt(words);
+    `${entries.length} word${entries.length===1?'':'s'} (${usingSelection?'selected':'everything needing research'})`;
+  document.getElementById('ai-prompt-text').value = buildAIResearchPrompt(entries);
   document.getElementById('ai-response-text').value = '';
   openModal('modal-ai-research');
 }
