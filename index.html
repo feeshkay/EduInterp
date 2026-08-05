@@ -166,6 +166,8 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .vc-word{font-family:'Lora',serif;font-size:15px;font-weight:500;color:var(--ink)}
 .vc-meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .vc-def{font-size:12px;color:var(--ink2);line-height:1.55}
+.vc-nomen{font-size:11.5px;color:var(--sky);font-style:italic;margin-top:2px}
+.vc-mnem{font-size:11.5px;color:var(--gold);background:var(--gold-l);border-radius:6px;padding:5px 8px;margin-top:5px;line-height:1.5}
 .vc-params{font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:3px}
 /* Always show actions on mobile (no hover) */
 .vc-actions{display:flex;gap:4px}
@@ -1826,8 +1828,14 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         </div>
         <div id="v-lookup-result" style="display:none;margin-top:6px;padding:9px 11px;background:var(--sky-l);border:1px solid rgba(42,94,138,.15);border-radius:7px;font-size:11px;line-height:1.6;max-height:160px;overflow-y:auto"></div>
       </div>
+      <div class="fr fr2" style="margin-bottom:8px">
+        <div class="fld"><label>Simple Term / Synonym</label>
+          <input type="text" id="v-nomen" placeholder="e.g. 'making food from sunlight'"></div>
+        <div class="fld"><label>Memory Tip / Mnemonic</label>
+          <input type="text" id="v-mnemonic" placeholder="e.g. trick to remember the sign or meaning"></div>
+      </div>
       <div class="fld" style="margin-bottom:8px"><label>ASL Parameters / Notes</label>
-        <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM, mnemonic..." style="min-height:55px"></textarea></div>
+        <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM..." style="min-height:55px"></textarea></div>
       <div class="fr fr2" style="margin-bottom:8px">
         <div class="fld"><label>Sign Resource / Source</label>
           <input type="text" id="v-source" placeholder="e.g. ASLPro, Signing Savvy, colleague"></div>
@@ -2397,7 +2405,9 @@ function deleteLog(id) {
 function saveVocab() {
   const editId = document.getElementById('vocab-edit-id').value;
   const id = editId || uid();
+  const existing = editId ? DB.vocab.find(x=>x.id===editId) : null;
   const v = {
+    ...existing,
     id,
     word: document.getElementById('v-word').value.trim(),
     category: document.getElementById('v-category').value.trim(),
@@ -2405,12 +2415,14 @@ function saveVocab() {
     classId: document.getElementById('v-class').value,
     studentId: document.getElementById('v-student').value,
     definition: document.getElementById('v-def').value.trim(),
+    nomenclature: document.getElementById('v-nomen').value.trim(),
+    mnemonic: document.getElementById('v-mnemonic').value.trim(),
     params: document.getElementById('v-params').value.trim(),
     mastery: parseInt(document.getElementById('v-mastery').value)||3,
     source: document.getElementById('v-source').value.trim(),
     link: document.getElementById('v-link').value.trim(),
     status: document.getElementById('v-status').value||'needs-both',
-    createdAt: editId ? (DB.vocab.find(x=>x.id===editId)?.createdAt||Date.now()) : Date.now()
+    createdAt: existing?.createdAt||Date.now()
   };
   if (!v.word) { toast('Word required','warn'); return; }
   // Auto-set status if definition and params are filled
@@ -2445,7 +2457,7 @@ function quickAddVocab() { quickAddVocabModal(); }
 
 function clearVocabForm() {
   document.getElementById('vocab-edit-id').value='';
-  ['v-word','v-category','v-signtype','v-source','v-link','v-def','v-params'].forEach(f=>{
+  ['v-word','v-category','v-signtype','v-source','v-link','v-def','v-nomen','v-mnemonic','v-params'].forEach(f=>{
     const el=document.getElementById(f); if(el) el.value='';
   });
   document.getElementById('v-mastery').value='3';
@@ -2466,6 +2478,8 @@ function editVocab(id) {
   document.getElementById('v-class').value = v.classId||'';
   document.getElementById('v-student').value = v.studentId||'all';
   document.getElementById('v-def').value = v.definition||'';
+  document.getElementById('v-nomen').value = v.nomenclature||'';
+  document.getElementById('v-mnemonic').value = v.mnemonic||'';
   document.getElementById('v-params').value = v.params||'';
   document.getElementById('v-mastery').value = v.mastery||3;
   document.getElementById('v-source').value = v.source||'';
@@ -2537,11 +2551,12 @@ function buildAIResearchPrompt(words) {
   return `I'm a K-12 educational ASL interpreter prepping to interpret the vocabulary/concepts below for my Deaf/DHH students. For EACH word or phrase, please research and provide:
 
 1. DEFINITION — a plain-English explanation of what the word/concept means (2–4 sentences, no jargon).
-2. MNEMONIC — a memory tip or mental trick to help remember the sign or the meaning.
-3. DEAF_LINKS — at least 3 trustworthy links written or created BY DEAF PEOPLE, not hearing authors, hearing-run organizations, or interpreter-made content. Deaf-run blogs, Deaf educators, Deaf-owned ASL resource sites, and Deaf social media creators all count. Double-check that each source is actually Deaf-led before including it.
-4. ASL_VIDEOS — ASL videos of the sign(s), made BY DEAF ASL users/creators. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools.
-5. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
-6. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
+2. NOMENCLATURE — a short, simple everyday synonym or plain-language term for the word (a few words, not a full sentence) — e.g. for "photosynthesis" something like "how plants make food from sunlight."
+3. MNEMONIC — a memory tip or mental trick to help remember the sign or the meaning.
+4. DEAF_LINKS — at least 3 trustworthy links written or created BY DEAF PEOPLE, not hearing authors, hearing-run organizations, or interpreter-made content. Deaf-run blogs, Deaf educators, Deaf-owned ASL resource sites, and Deaf social media creators all count. Double-check that each source is actually Deaf-led before including it.
+5. ASL_VIDEOS — ASL videos of the sign(s), made BY DEAF ASL users/creators. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools.
+6. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
+7. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
 Only include real, working links — never invent a URL. If you can't verify a source is Deaf-led, say so instead of guessing.
 
@@ -2549,6 +2564,7 @@ Format your answer EXACTLY like this, repeated for every word, so I can paste it
 
 ### WORD: [word]
 DEFINITION: [plain-English explanation]
+NOMENCLATURE: [simple synonym or everyday term]
 MNEMONIC: [memory tip]
 DEAF_LINKS:
 - [Title] — [URL]
@@ -2597,7 +2613,7 @@ function copyAIResearchPrompt() {
   }
 }
 
-const AI_RES_LABELS = ['DEFINITION','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
+const AI_RES_LABELS = ['DEFINITION','NOMENCLATURE','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
 
 function extractAISection(block, label) {
   const others = AI_RES_LABELS.filter(l=>l!==label).join('|');
@@ -2617,6 +2633,7 @@ function parseAIResearchResponse(text) {
     return {
       word,
       definition: extractAISection(block,'DEFINITION'),
+      nomenclature: extractAISection(block,'NOMENCLATURE'),
       mnemonic: extractAISection(block,'MNEMONIC'),
       deafLinks: extractAILinks(extractAISection(block,'DEAF_LINKS')),
       aslVideos: extractAILinks(extractAISection(block,'ASL_VIDEOS')),
@@ -2641,6 +2658,7 @@ function applyAIResearchResults() {
       DB.vocab.push(v); created++;
     } else updated++;
     if (r.definition) v.definition = r.definition;
+    if (r.nomenclature) v.nomenclature = r.nomenclature;
     if (r.mnemonic) v.mnemonic = r.mnemonic;
     if (r.deafLinks) v.deafResources = r.deafLinks;
     if (r.aslVideos) v.aslVideos = r.aslVideos;
@@ -2810,6 +2828,8 @@ function renderVocab() {
         </div>
       </div>
       ${v.definition?`<div class="vc-def">${esc(v.definition)}</div>`:'<div class="vc-def" style="color:var(--ink3);font-style:italic">No definition yet</div>'}
+      ${v.nomenclature?`<div class="vc-nomen">🔤 ${esc(v.nomenclature)}</div>`:''}
+      ${v.mnemonic?`<div class="vc-mnem">💡 ${esc(v.mnemonic)}</div>`:''}
       ${v.params?`<div class="vc-params">🤟 ${esc(v.params)}</div>`:'<div class="vc-params" style="color:var(--clay)">No sign info yet</div>'}
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
       ${cls?`<div class="vc-params">Class: ${esc(classLabel(cls))}</div>`:''}
@@ -2820,10 +2840,9 @@ function renderVocab() {
 
 // ── AI RESEARCH BLOCK RENDERING ─────────────────────────────────────────────────
 function renderAIResearchBlock(v) {
-  if (!v.mnemonic && !v.deafResources && !v.aslVideos && !v.conceptVideos && !v.youthExplainers && !v.textResources) return '';
+  if (!v.deafResources && !v.aslVideos && !v.conceptVideos && !v.youthExplainers && !v.textResources) return '';
   return `<details class="ai-res-block">
-    <summary>🧏 Deaf-Led Research &amp; Memory Tips</summary>
-    ${v.mnemonic?`<div class="res-group"><div class="res-label">💡 Remember It</div><div class="res-line">${esc(v.mnemonic)}</div></div>`:''}
+    <summary>🧏 Deaf-Led Research &amp; Resources</summary>
     ${v.deafResources?`<div class="res-group"><div class="res-label">✋ From Deaf Creators</div>${renderResourceLines(v.deafResources)}</div>`:''}
     ${v.aslVideos?`<div class="res-group"><div class="res-label">🎥 ASL Videos</div>${renderResourceLines(v.aslVideos)}</div>`:''}
     ${v.conceptVideos?`<div class="res-group"><div class="res-label">🎬 Video Explainers</div>${renderResourceLines(v.conceptVideos)}</div>`:''}
@@ -3980,10 +3999,10 @@ function doImport(e){
 
 function exportVocabCSV(){
   if(!DB.vocab.length){toast('No vocabulary to export','warn');return;}
-  const headers=['Word','Category','Definition','ASL Parameters','Mastery','Source','Student','Link','Mnemonic','Deaf-Led Resources','ASL Videos','Video Explainers','Explained for Students','Concept Explainers (legacy)'];
+  const headers=['Word','Category','Definition','Simple Term/Synonym','ASL Parameters','Mastery','Source','Student','Link','Mnemonic','Deaf-Led Resources','ASL Videos','Video Explainers','Explained for Students','Concept Explainers (legacy)'];
   const rows=DB.vocab.map(v=>{
     const student=DB.students.find(s=>s.id===v.studentId);
-    return [v.word,v.category||'',v.definition||'',v.params||'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.deafResources||'',v.aslVideos||'',v.conceptVideos||'',v.youthExplainers||'',v.textResources||''].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
+    return [v.word,v.category||'',v.definition||'',v.nomenclature||'',v.params||'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.deafResources||'',v.aslVideos||'',v.conceptVideos||'',v.youthExplainers||'',v.textResources||''].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
   });
   const csv=[headers.join(','),...rows].join('\n');
   const a=document.createElement('a');
