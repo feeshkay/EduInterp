@@ -1903,7 +1903,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       </div>
       <div class="notice n-ok" style="margin-bottom:10px">
         <span>2️⃣</span>
-        <div style="font-size:11px">Once the AI replies, paste its full answer below and tap "Parse &amp; Save." It'll fill in definitions, mnemonics, and resource links for each matching word — and add any new ones it doesn't find.</div>
+        <div style="font-size:11px">Once the AI replies, paste its full answer below and tap "Parse &amp; Save." It'll fill in definitions, mnemonics, and resource links for each matching word — and add any new ones it doesn't find. <strong>Tip:</strong> use the AI's own Copy button under its reply rather than manually selecting the text — that copies cleanly and parses more reliably.</div>
       </div>
       <textarea id="ai-response-text" placeholder="Paste the AI's full response here..." style="min-height:150px;font-size:11px"></textarea>
     </div>
@@ -2599,25 +2599,27 @@ Only include real, working links — never invent a URL. If you can't verify a s
 
 The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
+IMPORTANT — formatting: reply in PLAIN TEXT only, no markdown. Do not use #, ##, ###, **, or numbered/bulleted list markers on the label lines below — just the bare labels exactly as written, each on its own line. (Plain text survives copy-paste better than markdown headers, which sometimes get stripped when copying out of a chat window.) Links can be plain URLs.
+
 Format your answer EXACTLY like this, repeated for every word, so I can paste it back into my app:
 
-### WORD: [word]
+WORD: [word]
 DEFINITION: [plain-English explanation]
 NOMENCLATURE: [simple synonym or everyday term]
 MNEMONIC: [memory tip]
 DEAF_LINKS:
-- [Title] — [URL]
-- [Title] — [URL]
-- [Title] — [URL]
+[Title] — [URL]
+[Title] — [URL]
+[Title] — [URL]
 ASL_VIDEOS:
-- [Title] — [URL]
-- [Title] — [URL]
+[Title] — [URL]
+[Title] — [URL]
 CONCEPT_VIDEOS:
-- [Title] — [URL]
-- [Title] — [URL]
+[Title] — [URL]
+[Title] — [URL]
 YOUTH_EXPLAINERS:
-- [Title] — [URL]
-- [Title] — [URL]
+[Title] — [URL]
+[Title] — [URL]
 ---
 
 Here are my words, grouped by class and date added:
@@ -2654,22 +2656,28 @@ function copyAIResearchPrompt() {
 }
 
 const AI_RES_LABELS = ['DEFINITION','NOMENCLATURE','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
+// Matches a WORD: line whether or not markdown leftovers (###, **, -, numbering) are still attached —
+// copying a rendered AI reply out of a chat window strips markdown inconsistently depending on the site.
+const WORD_LINE_RE = /^[\s>*_#\-\d.]{0,8}WORD:\s*(.+?)[\s*]*$/im;
+function findWordBlocks(text) {
+  return text.split(/(?=^[\s>*_#\-\d.]{0,8}WORD:)/im).filter(p=>WORD_LINE_RE.test(p));
+}
 
 function extractAISection(block, label) {
   const others = AI_RES_LABELS.filter(l=>l!==label).join('|');
-  const re = new RegExp(label+':\\s*([\\s\\S]*?)(?=\\n\\s*(?:'+others+'):|\\n\\s*---|$)','i');
+  const re = new RegExp('[\\s>*_#\\-\\d.]{0,8}'+label+':\\s*([\\s\\S]*?)(?=\\n\\s*[\\s>*_#\\-\\d.]{0,8}(?:'+others+'):|\\n\\s*---|$)','i');
   const m = block.match(re);
-  return m ? m[1].trim() : '';
+  return m ? m[1].replace(/\*\*/g,'').trim() : '';
 }
 function extractAILinks(text) {
   if (!text) return '';
-  return text.split('\n').map(l=>l.replace(/^[-*•]\s*/,'').trim()).filter(Boolean).join('\n');
+  return text.split('\n').map(l=>l.replace(/^[-*•]\s*/,'').replace(/\*\*/g,'').trim()).filter(Boolean).join('\n');
 }
 function parseAIResearchResponse(text) {
-  const parts = text.split(/(?=^###\s*WORD:)/im).filter(p=>/^###\s*WORD:/im.test(p));
+  const parts = findWordBlocks(text);
   return parts.map(block=>{
-    const headerMatch = block.match(/^###\s*WORD:\s*(.+)$/im);
-    const word = headerMatch ? headerMatch[1].trim().replace(/[\[\]]/g,'') : '';
+    const headerMatch = block.match(WORD_LINE_RE);
+    const word = headerMatch ? headerMatch[1].replace(/[\[\]*]/g,'').trim() : '';
     return {
       word,
       definition: extractAISection(block,'DEFINITION'),
@@ -2688,7 +2696,7 @@ function applyAIResearchResults() {
   const raw = document.getElementById('ai-response-text').value.trim();
   if (!raw) { toast('Paste the AI response first','warn'); return; }
   const results = parseAIResearchResponse(raw);
-  if (!results.length) { toast('Couldn\'t find any "### WORD:" sections — check the pasted text','warn'); return; }
+  if (!results.length) { toast('No "WORD:" lines found — copy the AI\'s reply using its own Copy button (not manual select), or ask it to resend in plain text','warn'); return; }
   let updated=0, created=0;
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
