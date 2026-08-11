@@ -1250,7 +1250,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 
 
       <div class="page pi" id="page-iep">
-        <div class="notice n-ok" style="margin-bottom:14px"><span>📋</span><div>Track IEP-relevant data privately. No student names required — use coded labels only. This data never leaves your device.</div></div>
+        <div class="notice n-ok" style="margin-bottom:14px"><span>📋</span><div>Track IEP-relevant data privately. No student names required — use coded labels only. This data stays local unless you turn on Cloud Sync in Settings.</div></div>
         <div class="g2" style="margin-bottom:12px">
           <!-- Add IEP Goal -->
           <div class="card cp">
@@ -1532,7 +1532,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <div class="sec">Privacy</div>
             <div class="notice n-ok">
               <span>🔒</span>
-              <div>All data is stored locally in your browser only. Nothing ever leaves your device.</div>
+              <div>All data is stored locally in your browser by default. Nothing leaves your device unless you turn on Cloud Sync in Data Management and tap Push or Pull.</div>
             </div>
           </div>
         </div>
@@ -1551,12 +1551,30 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
           </div>
         </div>
         <div class="card cp" style="margin-top:12px">
+          <div class="sec">☁️ Cloud Sync (GitHub Gist)</div>
+          <div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-bottom:10px">
+            Sync your data between devices using a private GitHub Gist — only you can see it. Your token stays saved on this device only and is never included in exports or the Gist itself. Needs a token with <code>gist</code> access (classic token with the "gist" scope, or a fine-grained token with "Gists: read and write").
+          </div>
+          <div class="fr fr2" style="margin-bottom:8px">
+            <div class="fld"><label>GitHub Token</label>
+              <input type="password" id="sync-token" placeholder="ghp_..." onblur="persistSyncFields()"></div>
+            <div class="fld"><label>Gist ID (auto-filled)</label>
+              <input type="text" id="sync-gist-id" placeholder="leave blank the first time" onblur="persistSyncFields()"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <button class="btn pri" id="sync-push-btn" onclick="pushToCloud()">☁️ Push to Cloud</button>
+            <button class="btn gold" id="sync-pull-btn" onclick="pullFromCloud()">⬇️ Pull from Cloud</button>
+            <button class="btn gh" onclick="disconnectSync()">Disconnect on This Device</button>
+          </div>
+          <div id="sync-status" style="font-size:11px;color:var(--ink3)"></div>
+        </div>
+        <div class="card cp" style="margin-top:12px">
           <div class="sec">App Info</div>
           <div style="font-size:11px;color:var(--ink3);line-height:1.8;font-family:'DM Mono',monospace">
             <div>App: EduInterp v1.0</div>
-            <div>Storage: Browser localStorage (private, local only)</div>
+            <div>Storage: Browser localStorage, plus an optional private GitHub Gist if you turn on Cloud Sync above</div>
             <div>Purpose: Personal educational interpreting professional log</div>
-            <div>No data transmission — fully offline capable</div>
+            <div>No data transmission unless Cloud Sync is turned on and you tap Push/Pull</div>
           </div>
         </div>
       </div>
@@ -1993,6 +2011,7 @@ function initApp() {
   renderWeekView();
   renderDayView();
   loadSettings();
+  loadSyncUI();
   updateBadge();
 }
 
@@ -4070,6 +4089,144 @@ function clearAllData(){
   if(!confirm('Delete ALL data? This cannot be undone.')) return;
   if(!confirm('Are you sure? All logs, vocabulary, materials will be lost.')) return;
   localStorage.removeItem(DB_KEY); location.reload();
+}
+
+// ── CLOUD SYNC (GITHUB GIST) ────────────────────────────────────────────────────
+// Manual push/pull sync via a private GitHub Gist. The token/gist ID are kept in
+// their own localStorage key (SYNC_KEY) — separate from DB — so they're never
+// swept into JSON/CSV exports or pushed into the gist's own content.
+const SYNC_KEY = 'eduinterp_sync_v1';
+const GIST_FILENAME = 'eduinterp-data.json';
+const GIST_API = 'https://api.github.com/gists';
+
+function getSyncSettings() {
+  try {
+    const raw = localStorage.getItem(SYNC_KEY);
+    return raw ? JSON.parse(raw) : { token:'', gistId:'', lastSyncAt:0 };
+  } catch(e) { return { token:'', gistId:'', lastSyncAt:0 }; }
+}
+function setSyncSettings(s) { localStorage.setItem(SYNC_KEY, JSON.stringify(s)); }
+
+function persistSyncFields() {
+  const s = getSyncSettings();
+  s.token = document.getElementById('sync-token').value.trim();
+  s.gistId = document.getElementById('sync-gist-id').value.trim();
+  setSyncSettings(s);
+}
+
+function loadSyncUI() {
+  const s = getSyncSettings();
+  document.getElementById('sync-token').value = s.token||'';
+  document.getElementById('sync-gist-id').value = s.gistId||'';
+  updateSyncStatus(s);
+}
+
+function updateSyncStatus(s) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  s = s || getSyncSettings();
+  if (!s.gistId) { el.textContent = 'Not connected yet — tap Push to create your private Gist.'; return; }
+  const when = s.lastSyncAt ? new Date(s.lastSyncAt).toLocaleString() : 'never';
+  el.innerHTML = `Gist: <a href="https://gist.github.com/${esc(s.gistId)}" target="_blank" rel="noopener">${esc(s.gistId)}</a> · Last synced: ${esc(when)}`;
+}
+
+function setSyncBusy(busy, msg) {
+  const el = document.getElementById('sync-status');
+  if (el) el.textContent = busy ? (msg||'Working…') : '';
+  ['sync-push-btn','sync-pull-btn'].forEach(id=>{
+    const b=document.getElementById(id); if (b) b.disabled = busy;
+  });
+  if (!busy) updateSyncStatus();
+}
+
+async function pushToCloud() {
+  persistSyncFields();
+  const s = getSyncSettings();
+  if (!s.token) { toast('Add your GitHub token first','warn'); return; }
+  setSyncBusy(true, 'Pushing to cloud…');
+  try {
+    const payload = {
+      description: 'EduInterp data backup (private)',
+      public: false,
+      files: { [GIST_FILENAME]: { content: JSON.stringify(DB, null, 2) } }
+    };
+    const isUpdate = !!s.gistId;
+    const res = await fetch(isUpdate ? `${GIST_API}/${s.gistId}` : GIST_API, {
+      method: isUpdate ? 'PATCH' : 'POST',
+      headers: {
+        'Authorization': `Bearer ${s.token}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      if (res.status===404 && isUpdate) {
+        s.gistId=''; setSyncSettings(s); document.getElementById('sync-gist-id').value='';
+        throw new Error('That Gist ID no longer exists — cleared it. Tap Push again to create a fresh one.');
+      }
+      if (res.status===401) throw new Error('GitHub rejected the token — check it has "gist" access.');
+      throw new Error(`GitHub error (${res.status})`);
+    }
+    const data = await res.json();
+    s.gistId = data.id;
+    s.lastSyncAt = Date.now();
+    setSyncSettings(s);
+    document.getElementById('sync-gist-id').value = s.gistId;
+    toast('Pushed to cloud ✅');
+  } catch(e) {
+    toast(e.message||'Push failed','warn');
+  } finally {
+    setSyncBusy(false);
+  }
+}
+
+async function pullFromCloud() {
+  persistSyncFields();
+  const s = getSyncSettings();
+  if (!s.token) { toast('Add your GitHub token first','warn'); return; }
+  if (!s.gistId) { toast('No Gist ID yet — push from another device first, or paste its Gist ID here','warn'); return; }
+  if (!confirm('This will REPLACE all data on this device with the cloud version. Continue?')) return;
+  setSyncBusy(true, 'Pulling from cloud…');
+  try {
+    const res = await fetch(`${GIST_API}/${s.gistId}`, {
+      headers: {
+        'Authorization': `Bearer ${s.token}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    });
+    if (!res.ok) {
+      if (res.status===401) throw new Error('GitHub rejected the token — check it has "gist" access.');
+      if (res.status===404) throw new Error('Gist not found — check the Gist ID.');
+      throw new Error(`GitHub error (${res.status})`);
+    }
+    const data = await res.json();
+    const file = data.files[GIST_FILENAME];
+    if (!file) throw new Error('No EduInterp data found in that Gist.');
+    let content = file.content;
+    if (file.truncated) { const rawRes = await fetch(file.raw_url); content = await rawRes.text(); }
+    const parsed = JSON.parse(content);
+    DB = { ...DB, ...parsed };
+    save();
+    s.lastSyncAt = Date.now();
+    setSyncSettings(s);
+    toast('Pulled from cloud ✅ — reloading…');
+    setTimeout(()=>location.reload(), 700);
+  } catch(e) {
+    toast(e.message||'Pull failed','warn');
+    setSyncBusy(false);
+  }
+}
+
+function disconnectSync() {
+  if (!confirm('Disconnect Cloud Sync on this device? Your Gist itself will NOT be deleted, just forgotten here.')) return;
+  localStorage.removeItem(SYNC_KEY);
+  document.getElementById('sync-token').value='';
+  document.getElementById('sync-gist-id').value='';
+  updateSyncStatus({gistId:'',lastSyncAt:0});
+  toast('Disconnected on this device');
 }
 
 // ── IEP TRACKER ───────────────────────────────────────────────────────────────
