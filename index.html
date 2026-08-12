@@ -1903,9 +1903,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       </div>
       <div class="notice n-ok" style="margin-bottom:10px">
         <span>2️⃣</span>
-        <div style="font-size:11px">Once the AI replies, paste its full answer below and tap "Parse &amp; Save." It'll fill in definitions, mnemonics, and resource links for each matching word — and add any new ones it doesn't find. <strong>Tip:</strong> use the AI's own Copy button under its reply rather than manually selecting the text — that copies cleanly and parses more reliably.</div>
+        <div style="font-size:11px">Once the AI replies, paste its full answer below and tap "Parse &amp; Save." It'll fill in definitions, mnemonics, and resource links for each matching word — and add any new ones it doesn't find. <strong>Tip:</strong> use the AI's own Copy button under its reply rather than manually selecting the text. If ChatGPT's copy pastes spaces as <code>%20</code>, don't worry — "Parse &amp; Save" fixes that automatically, or tap "Fix Spacing" below to clean it up first.</div>
       </div>
       <textarea id="ai-response-text" placeholder="Paste the AI's full response here..." style="min-height:150px;font-size:11px"></textarea>
+      <div style="margin-top:6px">
+        <button class="btn gh sm" onclick="fixPastedSpacing()">🧹 Fix Spacing (%20 → space)</button>
+      </div>
     </div>
     <div class="mf">
       <button class="btn gh sm" onclick="closeModal('modal-ai-research')">Close</button>
@@ -2671,7 +2674,7 @@ function extractAISection(block, label) {
 }
 function extractAILinks(text) {
   if (!text) return '';
-  return text.split('\n').map(l=>l.replace(/^[-*•]\s*/,'').replace(/\*\*/g,'').trim()).filter(Boolean).join('\n');
+  return text.split('\n').map(l=>l.replace(/^[-*•]\s*/,'').replace(/^\d+\.\s*/,'').replace(/\*\*/g,'').trim()).filter(Boolean).join('\n');
 }
 function parseAIResearchResponse(text) {
   const parts = findWordBlocks(text);
@@ -2692,9 +2695,40 @@ function parseAIResearchResponse(text) {
   }).filter(r=>r.word);
 }
 
+// Some chat apps (ChatGPT's Copy button on iOS especially) sometimes hand the clipboard
+// URL-encoded text instead of plain text, so pasted spaces show up as literal "%20."
+// Detect and repair that before we try to parse anything.
+function cleanPercentEncoding(text) {
+  if (!text) return text;
+  const hits = (text.match(/%[0-9A-Fa-f]{2}/g)||[]).length;
+  if (hits < 3) return text; // too few hits to assume this is encoded — leave real "%" usage (like "50%") alone
+  try {
+    return decodeURIComponent(text.replace(/\+/g,' '));
+  } catch(e) {
+    // Full decode failed (often because of a stray literal '%'); fix just the common safe sequences instead
+    return text
+      .replace(/%20/gi,' ').replace(/%0A/gi,'\n').replace(/%0D/gi,'')
+      .replace(/%E2%80%94/gi,'—').replace(/%E2%80%93/gi,'–')
+      .replace(/%2C/gi,',').replace(/%3A/gi,':').replace(/%27/gi,"'").replace(/%22/gi,'"');
+  }
+}
+function fixPastedSpacing() {
+  const ta = document.getElementById('ai-response-text');
+  const before = ta.value;
+  const after = cleanPercentEncoding(before);
+  if (after===before) { toast('Nothing to fix — text looks clean'); return; }
+  ta.value = after;
+  toast('Fixed — spaces/punctuation were showing as %-codes','gold');
+}
+
 function applyAIResearchResults() {
-  const raw = document.getElementById('ai-response-text').value.trim();
+  let raw = document.getElementById('ai-response-text').value.trim();
   if (!raw) { toast('Paste the AI response first','warn'); return; }
+  const cleaned = cleanPercentEncoding(raw);
+  if (cleaned !== raw) {
+    raw = cleaned;
+    document.getElementById('ai-response-text').value = raw;
+  }
   const results = parseAIResearchResponse(raw);
   if (!results.length) { toast('No "WORD:" lines found — copy the AI\'s reply using its own Copy button (not manual select), or ask it to resend in plain text','warn'); return; }
   let updated=0, created=0;
@@ -2902,12 +2936,21 @@ function renderAIResearchBlock(v) {
 function renderResourceLines(text) {
   return text.split('\n').filter(Boolean).map(line=>{
     let title=line.trim(), url='';
-    const emIdx = title.lastIndexOf('—');
-    if (emIdx>-1) { url=title.slice(emIdx+1).trim(); title=title.slice(0,emIdx).trim(); }
-    else {
-      const m=title.match(/(https?:\/\/\S+)/);
-      if (m) { url=m[1]; title=title.replace(url,'').replace(/[-–—:]\s*$/,'').trim()||url; }
+    // Markdown link syntax the AI sometimes uses despite instructions: [Title](URL)
+    const mdMatch = title.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/);
+    if (mdMatch) {
+      title = mdMatch[1].trim(); url = mdMatch[2];
+    } else {
+      const emIdx = title.lastIndexOf('—');
+      const enIdx = title.lastIndexOf('–');
+      const sepIdx = emIdx>-1 ? emIdx : enIdx;
+      if (sepIdx>-1) { url=title.slice(sepIdx+1).trim(); title=title.slice(0,sepIdx).trim(); }
+      else {
+        const m=title.match(/(https?:\/\/\S+)/);
+        if (m) { url=m[1]; title=title.replace(url,'').replace(/[-–—:]\s*$/,'').trim()||url; }
+      }
     }
+    if (url) url = url.replace(/[)\]}>,.;'"]+$/,''); // trailing punctuation the AI or a paste sometimes tacks onto a URL
     if (url) return `<div class="res-line"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(title||url)}</a></div>`;
     return `<div class="res-line">${esc(title)}</div>`;
   }).join('');
