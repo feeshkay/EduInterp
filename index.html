@@ -104,6 +104,8 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 
 /* ── PILLS ── */
 .pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:14px;font-size:10px;font-weight:500;font-family:'DM Mono',monospace}
+.pill-select{font-size:10px;font-family:'DM Mono',monospace;padding:2px 6px;border-radius:14px;border:1px solid var(--brk);background:var(--s2);color:var(--ink2);cursor:pointer;max-width:130px}
+.pill-select:hover{background:var(--sage-l);border-color:var(--sage)}
 .pg{background:var(--sage-l);color:var(--sage-d)}.pa{background:var(--gold-l);color:var(--gold)}.pr{background:var(--clay-l);color:var(--clay)}
 .pb{background:var(--sky-l);color:var(--sky)}.pz{background:var(--s3);color:var(--ink2)}
 
@@ -313,6 +315,14 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .doc-word-pop{display:none;white-space:normal;font-size:11.5px;line-height:1.6;background:var(--sage-l);border:1px solid rgba(74,122,90,.2);border-radius:8px;padding:8px 10px;margin:4px 0}
 .doc-word-pop.open{display:block}
 .doc-word-pop a{color:var(--sky)}
+.doc-heading{font-family:'Lora',serif;font-weight:600;font-size:15px;color:var(--sage-d);white-space:normal;margin:14px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--br)}
+.doc-heading:first-child{margin-top:0}
+.doc-vocab-list{margin-top:16px;padding-top:12px;border-top:1px solid var(--br);white-space:normal}
+.doc-vocab-list-hdr{font-family:'Lora',serif;font-size:13px;color:var(--sage-d);margin-bottom:8px}
+.doc-vocab-item{font-size:12px;margin-bottom:8px;line-height:1.5}
+.doc-vocab-item b{cursor:pointer;color:var(--ink)}
+.doc-vocab-item b:hover{color:var(--sage-d)}
+.doc-attach-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;background:var(--s2);color:var(--ink2);padding:3px 8px;border-radius:6px;margin-top:6px}
 
 /* ── VOCAB SELECTION BAR ── */
 #vocab-selection-bar{display:none;align-items:center;gap:8px;background:var(--sage-l);border:1px solid var(--sage-m);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--sage-d);font-weight:500}
@@ -668,10 +678,17 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <option value="">All Links</option>
               <option value="yes">⚠️ Has unverified generic link</option>
             </select>
+            <select id="vocab-sort" onchange="renderVocab()" class="filter-sel">
+              <option value="alpha">Sort: A–Z</option>
+              <option value="recent">Sort: Recently Added</option>
+              <option value="oldest">Sort: Oldest Added</option>
+            </select>
           </div>
           <div id="vocab-selection-bar">
             <span id="vocab-sel-count">0 selected</span>
             <span style="flex:1"></span>
+            <select id="bulk-cat-select" class="pill-select" onchange="bulkSetCategory(this.value)"></select>
+            <select id="bulk-class-select" class="pill-select" onchange="bulkSetClass(this.value)"></select>
             <button class="btn sm pri" onclick="openAIResearchModal()">🧏 Research Selected</button>
             <button class="btn gh sm" onclick="clearVocabSelection()">Clear</button>
           </div>
@@ -2019,13 +2036,23 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 <!-- Class Notes / Document Builder -->
 <div class="ov" id="modal-doc-builder">
   <div class="mod" style="max-width:640px">
-    <div class="mh"><h2>📄 New Class Notes Document</h2><button class="mod-close" onclick="closeModal('modal-doc-builder')">✕</button></div>
+    <div class="mh"><h2 id="doc-builder-title">📄 New Class Notes Document</h2><button class="mod-close" onclick="closeModal('modal-doc-builder')">✕</button></div>
     <div class="mb">
       <div id="doc-builder-step1">
         <div class="fr fr3" style="margin-bottom:8px">
           <div class="fld"><label>Title</label><input type="text" id="doc-title" placeholder="e.g. Ch. 4 Reading Notes"></div>
           <div class="fld"><label>Class</label><select id="doc-class" class="sel2"><option value="">— General —</option></select></div>
           <div class="fld"><label>Date</label><input type="date" id="doc-date"></div>
+        </div>
+        <div class="fld" style="margin-bottom:8px"><label>Document Type <span style="font-weight:400;color:var(--ink3)">— helps clean up the extracted text and tune the prompt</span></label>
+          <select id="doc-type" class="sel2">
+            <option value="reading">📖 Reading / Textbook Excerpt</option>
+            <option value="worksheet">📝 Worksheet</option>
+            <option value="presentation">🖥️ Presentation / Slides</option>
+            <option value="handout">📄 Handout</option>
+            <option value="notes">🗒️ Notes</option>
+            <option value="other">Other</option>
+          </select>
         </div>
         <div class="drop-zone" id="doc-drop-zone" onclick="document.getElementById('doc-file-input').click()"
              ondragover="event.preventDefault();this.classList.add('dragover')"
@@ -2035,7 +2062,8 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         </div>
         <input type="file" id="doc-file-input" accept=".txt,.pdf" style="display:none" onchange="handleDocFileSelect(event)">
         <div id="doc-file-preview"></div>
-        <div class="fld" style="margin-top:8px"><label>Or paste source text</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);margin:4px 0 8px"><input type="checkbox" id="doc-attach-file" checked> Keep the original file attached to this document (under 4MB)</label>
+        <div class="fld" style="margin-top:2px"><label>Or paste source text</label>
           <textarea id="doc-source-text" placeholder="Paste the reading, handout, or notes text here..." style="min-height:140px;font-size:12px"></textarea></div>
         <button class="btn pri" style="margin-top:10px" onclick="buildDocPrompt()">Build Prompt →</button>
       </div>
@@ -2051,10 +2079,19 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         <textarea id="doc-response-text" placeholder="Paste the AI's full response here..." style="min-height:150px;font-size:11px"></textarea>
         <div style="margin-top:6px"><button class="btn gh sm" onclick="fixDocPastedSpacing()">🧹 Fix Spacing (%20 → space)</button></div>
       </div>
+      <div id="doc-builder-editmode" style="display:none">
+        <div class="fr fr2" style="margin-bottom:8px">
+          <div class="fld"><label>Title</label><input type="text" id="doc-edit-title"></div>
+          <div class="fld"><label>Class</label><select id="doc-edit-class" class="sel2"></select></div>
+        </div>
+        <div class="notice n-ok" style="margin-bottom:8px"><span>ℹ️</span><div style="font-size:11px">Use <code>## Heading</code> on its own line for a section heading, and wrap any word in <code>**double asterisks**</code> to link/highlight it as vocabulary. New wrapped words that aren't in your dictionary yet get added automatically (Uncategorized).</div></div>
+        <textarea id="doc-edit-body" style="min-height:280px;font-size:12px"></textarea>
+      </div>
     </div>
     <div class="mf">
       <button class="btn gh sm" onclick="closeModal('modal-doc-builder')">Close</button>
       <button class="btn pri" id="doc-save-btn" style="display:none" onclick="applyDocBuilderResults()">✅ Save Document</button>
+      <button class="btn pri" id="doc-edit-save-btn" style="display:none" onclick="saveDocEdits()">✅ Save Changes</button>
     </div>
   </div>
 </div>
@@ -2163,6 +2200,10 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 
 // Words currently checked in the Vocabulary dictionary, for AI research prompts
 let vocabSelection = new Set();
+// Which words' "Deaf-Led Research" <details> panel should render open — tracked
+// separately so it survives the innerHTML re-render every time you edit a card
+// (otherwise clicking a ✕ inside it would collapse the panel on every click).
+let openResearchBlocks = new Set();
 // Holds the "new" word data while the duplicate-word merge modal is open
 let pendingMergeExistingId = null;
 let pendingMergeData = null;
@@ -3017,6 +3058,7 @@ function updateSelectionBar() {
   if (vocabSelection.size) {
     bar.style.display='flex';
     document.getElementById('vocab-sel-count').textContent = `${vocabSelection.size} selected`;
+    populateBulkAssignSelects();
   } else {
     bar.style.display='none';
   }
@@ -3142,7 +3184,7 @@ function copyAIResearchPrompt() {
   }
 }
 
-const AI_RES_LABELS = ['DEFINITION','NOMENCLATURE','WORD_BREAKDOWN','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
+const AI_RES_LABELS = ['DEFINITION','NOMENCLATURE','WORD_BREAKDOWN','MNEMONIC','SIGN_DESCRIPTION','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
 // Matches a WORD: line whether or not markdown leftovers (###, **, -, numbering) are still attached —
 // copying a rendered AI reply out of a chat window strips markdown inconsistently depending on the site.
 const WORD_LINE_RE = /^[\s>*_#\-\d.]{0,8}WORD:\s*(.+?)[\s*]*$/im;
@@ -3176,6 +3218,7 @@ function parseAIResearchResponse(text) {
       nomenclature: extractAISection(block,'NOMENCLATURE'),
       wordBreakdown: breakdown,
       mnemonic: extractAISection(block,'MNEMONIC'),
+      signDescription: extractAISection(block,'SIGN_DESCRIPTION'),
       deafLinks: extractAILinks(extractAISection(block,'DEAF_LINKS')),
       aslVideos: extractAILinks(extractAISection(block,'ASL_VIDEOS')),
       conceptVideos: extractAILinks(extractAISection(block,'CONCEPT_VIDEOS')),
@@ -3214,14 +3257,54 @@ function fixPastedSpacing() {
 // Applies one parsed AI result onto a vocab entry. Text fields only fill blanks
 // unless overwriteMode is on (explicit re-research); link fields always union
 // in new, non-duplicate links rather than replacing the whole list.
+// ASL sign-dictionary sites — if the AI files one of these under DEAF_LINKS,
+// it almost always belongs under ASL_VIDEOS instead (it's showing the sign,
+// not explaining the word), so we move it automatically.
+const SIGN_DICTIONARY_HOSTS = ['lifeprint.com','handspeak.com','signingsavvy.com','aslpro.com','spreadthesign.com','atomichands.com','aslcore.org','babysignlanguage.com','asluniversity.com','signasl.org'];
+function isSignDictionaryUrl(url) {
+  if (!url) return false;
+  try { const h = new URL(url).hostname.replace(/^www\./,''); return SIGN_DICTIONARY_HOSTS.some(host=>h===host||h.endsWith('.'+host)); }
+  catch(e) { return false; }
+}
+
 function applyResultToVocab(v, r, overwriteMode) {
-  let linksAdded = 0;
+  let linksAdded = 0, genericSkipped = 0;
   const setText = (field, val) => { if (val && (overwriteMode || !v[field])) v[field] = val; };
   setText('definition', r.definition);
   setText('nomenclature', r.nomenclature);
   setText('wordBreakdown', r.wordBreakdown);
   setText('mnemonic', r.mnemonic);
-  [['deafLinks','deafResources'],['aslVideos','aslVideos'],['conceptVideos','conceptVideos'],['youthExplainers','youthExplainers'],['textResources','textResources']].forEach(([rKey,vField])=>{
+  setText('params', r.signDescription);
+
+  // DEAF_LINKS: reclassify sign-dictionary pages into ASL Videos; reject anything
+  // that still looks like a bare homepage rather than a page for this word — it
+  // never gets saved in the first place, so it can't "come back" after you delete it.
+  if (r.deafLinks) {
+    const incoming = parseResourceLinesToArray(r.deafLinks);
+    const toAslVideos = incoming.filter(link=>isSignDictionaryUrl(link.url));
+    const toDeafLinks = incoming.filter(link=>!isSignDictionaryUrl(link.url));
+    const goodDeaf = toDeafLinks.filter(link=>!isGenericResourceUrl(link.url, v.word));
+    genericSkipped += toDeafLinks.length - goodDeaf.length;
+    const rd = mergeResourceArrays(v.deafResources||[], goodDeaf);
+    v.deafResources = rd.merged; linksAdded += rd.addedCount;
+    if (toAslVideos.length) {
+      const goodAsl = toAslVideos.filter(link=>!isGenericResourceUrl(link.url, v.word));
+      genericSkipped += toAslVideos.length - goodAsl.length;
+      const ra = mergeResourceArrays(v.aslVideos||[], goodAsl);
+      v.aslVideos = ra.merged; linksAdded += ra.addedCount;
+    }
+  }
+  if (r.aslVideos) {
+    const incoming = parseResourceLinesToArray(r.aslVideos);
+    const good = incoming.filter(link=>!isGenericResourceUrl(link.url, v.word));
+    genericSkipped += incoming.length - good.length;
+    const ra = mergeResourceArrays(v.aslVideos||[], good);
+    v.aslVideos = ra.merged; linksAdded += ra.addedCount;
+  }
+  // Concept videos / youth explainers / general text resources aren't required to
+  // be word-specific (a Khan Academy overview page is a fine, legitimate link) —
+  // no generic-link filtering applied here.
+  [['conceptVideos','conceptVideos'],['youthExplainers','youthExplainers'],['textResources','textResources']].forEach(([rKey,vField])=>{
     if (!r[rKey]) return;
     const incoming = parseResourceLinesToArray(r[rKey]);
     if (!incoming.length) return;
@@ -3230,7 +3313,7 @@ function applyResultToVocab(v, r, overwriteMode) {
     linksAdded += addedCount;
   });
   v.status = computeVocabStatus(v);
-  return linksAdded;
+  return { linksAdded, genericSkipped };
 }
 
 function applyAIResearchResults() {
@@ -3243,7 +3326,7 @@ function applyAIResearchResults() {
   }
   const results = parseAIResearchResponse(raw);
   if (!results.length) { toast('No "WORD:" lines found — copy the AI\'s reply using its own Copy button (not manual select), or ask it to resend in plain text','warn'); return; }
-  let updated=0, created=0, linksAdded=0;
+  let updated=0, created=0, linksAdded=0, genericSkipped=0;
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
@@ -3254,18 +3337,21 @@ function applyAIResearchResults() {
         createdAt:Date.now() };
       DB.vocab.push(v); created++;
     } else updated++;
-    linksAdded += applyResultToVocab(v, r, aiResearchOverwriteMode);
+    const res = applyResultToVocab(v, r, aiResearchOverwriteMode);
+    linksAdded += res.linksAdded; genericSkipped += res.genericSkipped;
   });
   save(); renderVocab(); populateClassSelectors(); renderDashboard();
   vocabSelection.clear(); updateSelectionBar();
   closeModal('modal-ai-research');
-  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''} — tap 🧏 on a word to review`);
+  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''}${genericSkipped?` — skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'} (not word-specific)`:''}`);
 }
 
 // ── CLASS NOTES / DOCUMENTS ─────────────────────────────────────────────────────
 // Documents don't store their own copy of vocab info — each highlighted word just
 // stores a vocabId pointing back into DB.vocab, so editing a word anywhere (card
 // or document) is instantly reflected everywhere else. One source of truth.
+let pendingDocAttachment = null;
+let pendingEditDocId = null;
 
 function populateDocClassSelect() {
   const el = document.getElementById('doc-class');
@@ -3277,14 +3363,21 @@ function populateDocClassSelect() {
 function openDocBuilder() {
   document.getElementById('doc-title').value='';
   document.getElementById('doc-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('doc-type').value = 'reading';
+  document.getElementById('doc-attach-file').checked = true;
   document.getElementById('doc-source-text').value='';
   document.getElementById('doc-file-preview').innerHTML='';
   document.getElementById('doc-file-input').value='';
   document.getElementById('doc-prompt-text').value='';
   document.getElementById('doc-response-text').value='';
+  document.getElementById('doc-builder-title').textContent = '📄 New Class Notes Document';
   document.getElementById('doc-builder-step1').style.display='block';
   document.getElementById('doc-builder-step2').style.display='none';
+  document.getElementById('doc-builder-editmode').style.display='none';
   document.getElementById('doc-save-btn').style.display='none';
+  document.getElementById('doc-edit-save-btn').style.display='none';
+  pendingDocAttachment = null;
+  pendingEditDocId = null;
   populateDocClassSelect();
   openModal('modal-doc-builder');
 }
@@ -3320,6 +3413,32 @@ async function extractPdfText(arrayBuffer) {
   return text.trim();
 }
 
+// Strips lone page/slide numbers and other extraction artifacts that pdf.js
+// pulls out of PDFs (especially exported slide decks) along with the real text.
+function cleanExtractedText(text, docType) {
+  let lines = text.split('\n').filter(line=>{
+    const t = line.trim();
+    if (!t) return true;
+    if (/^\d{1,4}$/.test(t)) return false;                                  // lone page/slide number
+    if (/^(page|slide)\s*\d+(\s*(of|\/)\s*\d+)?$/i.test(t)) return false;    // "Page 3", "Slide 4 of 20"
+    if (/^[-–—]\s*\d{1,4}\s*[-–—]$/.test(t)) return false;                  // "- 3 -" style footers
+    return true;
+  });
+  let cleaned = lines.join('\n');
+  if (docType==='presentation') cleaned = stripRepeatedShortLines(cleaned);
+  cleaned = cleaned.replace(/\n{3,}/g,'\n\n').replace(/[ \t]{2,}/g,' ');
+  return cleaned.trim();
+}
+// A line that repeats 3+ times (like a footer, class name, or unit title on
+// every slide) is boilerplate, not content — only applied to presentations,
+// since worksheets/readings are much less likely to have this pattern.
+function stripRepeatedShortLines(text) {
+  const lines = text.split('\n');
+  const counts = {};
+  lines.forEach(l=>{ const t=l.trim(); if (t && t.split(/\s+/).length<=6) counts[t]=(counts[t]||0)+1; });
+  return lines.filter(l=>{ const t=l.trim(); return !t || counts[t]<3; }).join('\n');
+}
+
 function handleDocFileSelect(event) {
   const file = event.target.files[0];
   if (file) readDocFile(file);
@@ -3333,17 +3452,33 @@ function handleDocDrop(event) {
 async function readDocFile(file) {
   if (file.size > 15*1024*1024) { toast('File too large (max 15MB)','warn'); return; }
   const ext = (file.name.split('.').pop()||'').toLowerCase();
+  const docType = document.getElementById('doc-type')?.value || 'reading';
   const preview = document.getElementById('doc-file-preview');
   preview.innerHTML = `<div class="file-item"><span class="file-ext">${esc(ext.toUpperCase())}</span>${esc(file.name)} <span style="color:var(--ink3);font-size:10px;font-family:'DM Mono',monospace">(reading…)</span></div>`;
+  pendingDocAttachment = null;
   try {
     let text = '';
     if (ext==='txt') text = await file.text();
-    else if (ext==='pdf') text = await extractPdfText(await file.arrayBuffer());
+    else if (ext==='pdf') text = cleanExtractedText(await extractPdfText(await file.arrayBuffer()), docType);
     else { toast('Only .txt and .pdf are supported — paste the text below instead','warn'); preview.innerHTML=''; return; }
     if (!text.trim()) { toast('Nothing readable came out of that file — try pasting the text instead','warn'); preview.innerHTML=''; return; }
     document.getElementById('doc-source-text').value = text;
-    preview.innerHTML = `<div class="file-item"><span class="file-ext">${esc(ext.toUpperCase())}</span>${esc(file.name)} <span style="color:var(--sage-d);font-size:10px;font-family:'DM Mono',monospace">(${text.length.toLocaleString()} characters extracted)</span>
-      <button class="btn gh sm" style="margin-left:auto;font-size:10px;color:var(--clay)" onclick="document.getElementById('doc-file-preview').innerHTML='';document.getElementById('doc-file-input').value=''">✕</button></div>`;
+    let attachNote = '';
+    if (document.getElementById('doc-attach-file')?.checked) {
+      if (file.size <= 4*1024*1024) {
+        pendingDocAttachment = await new Promise(resolve=>{
+          const r = new FileReader();
+          r.onload = () => resolve({ name:file.name, type:file.type||'application/octet-stream', dataUrl:r.result });
+          r.onerror = () => resolve(null);
+          r.readAsDataURL(file);
+        });
+        if (pendingDocAttachment) attachNote = ' · attached';
+      } else {
+        attachNote = ' · not attached, over 4MB';
+      }
+    }
+    preview.innerHTML = `<div class="file-item"><span class="file-ext">${esc(ext.toUpperCase())}</span>${esc(file.name)} <span style="color:var(--sage-d);font-size:10px;font-family:'DM Mono',monospace">(${text.length.toLocaleString()} characters extracted${attachNote})</span>
+      <button class="btn gh sm" style="margin-left:auto;font-size:10px;color:var(--clay)" onclick="document.getElementById('doc-file-preview').innerHTML='';document.getElementById('doc-file-input').value='';pendingDocAttachment=null">✕</button></div>`;
     if (!document.getElementById('doc-title').value.trim()) document.getElementById('doc-title').value = file.name.replace(/\.[^.]+$/,'');
   } catch(e) {
     toast(e?.message==='pdf-load-failed' ? 'Could not load the PDF reader — check your internet connection' : 'Could not read that file — try pasting the text instead', 'warn');
@@ -3649,7 +3784,12 @@ function getFilteredVocab() {
   const filterStatus = document.getElementById('vocab-filter-status')?.value||'';
   const filterVerified = document.getElementById('vocab-filter-verified')?.value||'';
   const filterGeneric = document.getElementById('vocab-filter-generic')?.value||'';
-  let vocab = [...DB.vocab].sort((a,b)=>a.word.localeCompare(b.word));
+  const sortMode = document.getElementById('vocab-sort')?.value||'alpha';
+  let vocab = [...DB.vocab].sort((a,b)=>{
+    if (sortMode==='recent') return (b.createdAt||0)-(a.createdAt||0);
+    if (sortMode==='oldest') return (a.createdAt||0)-(b.createdAt||0);
+    return a.word.localeCompare(b.word);
+  });
   if (filterCat) vocab = vocab.filter(v=>v.category===filterCat);
   if (filterClass==='__none__') vocab = vocab.filter(v=>!v.classId);
   else if (filterClass) vocab = vocab.filter(v=>v.classId===filterClass);
@@ -3687,6 +3827,15 @@ function renderVocab() {
     'needs-sign':'<span class="vbadge vb-needs-sign">🤟 Needs Sign</span>',
     'needs-both':'<span class="vbadge vb-needs-both">🔍 Needs Research</span>',
   };
+  // Built once per render, reused on every card's inline quick-pick dropdowns
+  const allCats = getAllCategories();
+  const allClasses = sortedClasses();
+  const catOptions = (selected) => `<option value="">— none —</option>` +
+    allCats.map(c=>`<option value="${esc(c)}" ${c===selected?'selected':''}>${esc(c)}</option>`).join('') +
+    `<option value="__new__">+ New Category…</option>`;
+  const classOptions = (selectedId) => `<option value="">— No Class —</option>` +
+    allClasses.map(c=>`<option value="${c.id}" ${c.id===selectedId?'selected':''}>${esc(classLabel(c))}</option>`).join('');
+
   list.innerHTML = vocab.map(v => {
     const student = DB.students.find(s=>s.id===v.studentId);
     const cls = DB.classes.find(c=>c.id===v.classId);
@@ -3707,8 +3856,8 @@ function renderVocab() {
         </div>
         <div class="vc-meta">
           ${v.signType?`<span class="pill pb">${esc(v.signType)}</span>`:''}
-          ${v.category?`<span class="pill pz">${esc(v.category)}</span>`:''}
-          ${cls?`<span class="pill pg">${esc(classLabel(cls))}</span>`:'<span class="pill pz" title="No class assigned yet">❓ Unassigned Class</span>'}
+          <select class="pill-select" title="Category — change instantly" onchange="quickSetCategory('${v.id}', this.value)">${catOptions(v.category)}</select>
+          <select class="pill-select" title="Class — change instantly" onchange="quickSetClass('${v.id}', this.value)">${classOptions(v.classId)}</select>
           <span class="pill ${masteryColors[v.mastery]||'pz'}" title="Mastery: ${masteryLabel(v.mastery)}">${masteryStars(v.mastery)}</span>
           ${student&&student.label!=='all'?`<span class="pill pb">${esc(student.label)}</span>`:''}
           <div class="vc-actions">
@@ -3728,7 +3877,6 @@ function renderVocab() {
         ? `<div class="vc-confirmed-sign">🤟 Confirmed sign: <a href="${esc(v.confirmedSignLink.url)}" target="_blank" rel="noopener">${esc(v.confirmedSignLink.title||v.confirmedSignLink.url)}</a><button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')">✕ remove</button></div>`
         : (v.params?`<div class="vc-params" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start"><span>🤟 ${esc(v.params)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="clearVocabField('${v.id}','params')" title="Remove">✕</button></div>`:'<div class="vc-params" style="color:var(--clay)">No sign info yet — type parameters below, or pick a video from ASL Videos once researched</div>')}
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
-      ${cls?`<div class="vc-params">Class: ${esc(classLabel(cls))}</div>`:''}
       ${v.createdAt?`<div class="vc-params" style="color:var(--ink3)">🕓 Added ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} at ${new Date(v.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>`:''}
       ${missing.length?`<div class="vc-missing">Still needed for research: ${missing.join(', ')}</div>`:''}
       ${renderAIResearchBlock(v)}
@@ -3736,11 +3884,63 @@ function renderVocab() {
   }).join('');
 }
 
+// ── QUICK CATEGORIZE (inline, no modal) ─────────────────────────────────────────
+function getAllCategories() {
+  return [...new Set(DB.vocab.map(v=>v.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+function quickSetCategory(id, val) {
+  if (val==='__new__') {
+    const name = prompt('New category name:');
+    if (!name || !name.trim()) { renderVocab(); return; }
+    val = name.trim();
+  }
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v) return;
+  v.category = val;
+  save(); renderVocab(); populateClassSelectors();
+}
+function quickSetClass(id, val) {
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v) return;
+  v.classId = val;
+  save(); renderVocab();
+}
+function populateBulkAssignSelects() {
+  const catSel = document.getElementById('bulk-cat-select');
+  if (catSel) catSel.innerHTML = '<option value="">🏷️ Set Category for Selected…</option>' +
+    getAllCategories().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('') +
+    '<option value="__new__">+ New Category…</option>';
+  const clsSel = document.getElementById('bulk-class-select');
+  if (clsSel) clsSel.innerHTML = '<option value="">🏫 Set Class for Selected…</option><option value="__none__">— No Class —</option>' +
+    sortedClasses().map(c=>`<option value="${c.id}">${esc(classLabel(c))}</option>`).join('');
+}
+function bulkSetCategory(val) {
+  if (!val) return;
+  if (vocabSelection.size===0) { toast('Select some words first (checkboxes)','warn'); document.getElementById('bulk-cat-select').value=''; return; }
+  if (val==='__new__') {
+    const name = prompt('New category name:');
+    if (!name || !name.trim()) { document.getElementById('bulk-cat-select').value=''; return; }
+    val = name.trim();
+  }
+  const n = vocabSelection.size;
+  DB.vocab.forEach(v=>{ if (vocabSelection.has(v.id)) v.category = val; });
+  save(); renderVocab(); populateClassSelectors();
+  toast(`Category set for ${n} word${n===1?'':'s'}`);
+}
+function bulkSetClass(val) {
+  if (vocabSelection.size===0) { toast('Select some words first (checkboxes)','warn'); document.getElementById('bulk-class-select').value=''; return; }
+  const classId = val==='__none__' ? '' : val;
+  const n = vocabSelection.size;
+  DB.vocab.forEach(v=>{ if (vocabSelection.has(v.id)) v.classId = classId; });
+  save(); renderVocab();
+  toast(`Class set for ${n} word${n===1?'':'s'}`);
+}
+
 // ── AI RESEARCH BLOCK RENDERING ─────────────────────────────────────────────────
 function renderAIResearchBlock(v) {
   const any = VOCAB_RESOURCE_FIELDS.some(f=>(v[f]||[]).length);
   if (!any) return '';
-  return `<details class="ai-res-block">
+  return `<details class="ai-res-block" ${openResearchBlocks.has(v.id)?'open':''} ontoggle="if(this.open)openResearchBlocks.add('${v.id}');else openResearchBlocks.delete('${v.id}')">
     <summary>🧏 Deaf-Led Research &amp; Resources</summary>
     ${v.deafResources?.length?`<div class="res-group"><div class="res-label">✋ From Deaf Creators</div>${renderResourceLinesArray(v.deafResources,v.id,'deafResources',v.word)}</div>`:''}
     ${v.aslVideos?.length?`<div class="res-group"><div class="res-label">🎥 ASL Videos</div>${renderResourceLinesArray(v.aslVideos,v.id,'aslVideos',v.word)}</div>`:''}
