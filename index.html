@@ -285,9 +285,34 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .ai-res-block[open] summary::before{content:'▾ '}
 .res-group{margin-top:7px}
 .res-label{font-size:9px;color:var(--ink3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
-.res-line{font-size:11px;color:var(--ink2);line-height:1.6}
+.res-line{font-size:11px;color:var(--ink2);line-height:1.6;display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:3px}
 .res-line a{color:var(--sky);text-decoration:none;word-break:break-word}
 .res-line a:hover,.res-line a:active{text-decoration:underline}
+.res-flag{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:8px;font-size:8.5px;font-family:'DM Mono',monospace;font-weight:600;background:var(--gold-l);color:var(--gold);white-space:nowrap}
+.res-mini-btn{border:none;background:var(--s2);color:var(--ink2);font-size:9px;font-family:'DM Mono',monospace;padding:1px 6px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.res-mini-btn:hover{background:var(--sage-l);color:var(--sage-d)}
+.res-mini-btn.sign{background:var(--sage-l);color:var(--sage-d)}
+
+/* ── VERIFIED / MISSING-FIELDS BADGES ── */
+.vb-verified{background:var(--sage-d);color:#fff}
+.vb-generic-flag{background:var(--gold-l);color:var(--gold)}
+.vc-confirmed-sign{font-size:11px;color:var(--sage-d);background:var(--sage-l);border-radius:6px;padding:5px 8px;margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.vc-confirmed-sign a{color:var(--sage-d)}
+.vc-missing{font-size:10px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:3px}
+
+/* ── CLASS NOTES / DOCUMENTS ── */
+.doc-card{background:var(--surf);border:1px solid var(--br);border-radius:10px;padding:12px 13px;margin-bottom:8px;box-shadow:var(--sh)}
+.doc-card-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;cursor:pointer}
+.doc-title{font-family:'Lora',serif;font-size:14.5px;font-weight:500;color:var(--ink)}
+.doc-meta-line{font-size:10.5px;color:var(--ink3);font-family:'DM Mono',monospace;margin-top:2px}
+.doc-group-hdr{font-family:'Lora',serif;font-size:13px;color:var(--sage-d);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--br)}
+.doc-body{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--brk);font-size:13px;line-height:1.8;white-space:pre-wrap}
+.doc-body.open{display:block}
+.doc-word{background:var(--gold-l);color:var(--gold);padding:1px 3px;border-radius:4px;cursor:pointer;font-weight:600;white-space:normal}
+.doc-word:hover{background:var(--gold-m);color:#fff}
+.doc-word-pop{display:none;white-space:normal;font-size:11.5px;line-height:1.6;background:var(--sage-l);border:1px solid rgba(74,122,90,.2);border-radius:8px;padding:8px 10px;margin:4px 0}
+.doc-word-pop.open{display:block}
+.doc-word-pop a{color:var(--sky)}
 
 /* ── VOCAB SELECTION BAR ── */
 #vocab-selection-bar{display:none;align-items:center;gap:8px;background:var(--sage-l);border:1px solid var(--sage-m);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--sage-d);font-weight:500}
@@ -399,6 +424,19 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
   /* Desktop: always-visible sidebar */
   .sb-overlay{display:none !important}
   .sb{position:relative;transform:none !important}
+}
+/* ── PRINT (Save Document as PDF) ── */
+#doc-print-area{display:none}
+@media print{
+  body.printing-doc > *{display:none!important}
+  body.printing-doc #doc-print-area{display:block!important;position:static;padding:24px;font-family:'DM Sans',sans-serif;color:#111;background:#fff}
+  body.printing-doc #doc-print-area h1{font-family:'Lora',serif;font-size:20px;margin-bottom:2px}
+  body.printing-doc #doc-print-area .print-meta{font-size:11px;color:#555;margin-bottom:16px}
+  body.printing-doc #doc-print-area .print-body{font-size:13px;line-height:1.8;white-space:pre-wrap}
+  body.printing-doc #doc-print-area .print-word{font-weight:700;text-decoration:underline}
+  body.printing-doc #doc-print-area .print-vocab-list{margin-top:20px;border-top:1px solid #999;padding-top:12px}
+  body.printing-doc #doc-print-area .print-vocab-item{margin-bottom:10px;font-size:12px}
+  body.printing-doc #doc-print-area .print-vocab-item b{font-family:'Lora',serif;font-size:13px}
 }
 </style>
 </head>
@@ -587,12 +625,19 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
            PAGE: VOCABULARY
       ══════════════════════════════════════════════ -->
       <div class="page pi" id="page-vocab">
-        <!-- Dictionary — main content -->
+        <div class="tb-bar">
+          <div class="tab active" onclick="switchTab(this,'vocab-dictionary')">Dictionary</div>
+          <div class="tab" onclick="switchTab(this,'vocab-docs')">📄 Class Notes</div>
+        </div>
+
+        <!-- DICTIONARY TAB -->
+        <div class="tp active" id="vocab-dictionary">
         <div class="card cp">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <div class="sec" style="margin:0">Dictionary (<span id="vocab-count">0</span> words)</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="btn sm gold" onclick="autoDefineAll()" title="Look up plain-English definitions for every word missing one">🔍 Auto-Define All</button>
+              <button class="btn sm" onclick="openDupFinder()" title="Scan for words entered more than once">🔗 Find Duplicate Words</button>
               <button class="btn sm pri" onclick="openAIResearchModal()" title="Build a prompt for an AI to find Deaf-led resources, ASL videos, and memory tips">🧏 AI Research Prep</button>
             </div>
           </div>
@@ -614,6 +659,15 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <option value="needs-sign">🤟 Needs Sign</option>
               <option value="ok">✅ Complete</option>
             </select>
+            <select id="vocab-filter-verified" onchange="renderVocab()" class="filter-sel">
+              <option value="">Verified: Any</option>
+              <option value="yes">✅ Verified only</option>
+              <option value="no">Not verified yet</option>
+            </select>
+            <select id="vocab-filter-generic" onchange="renderVocab()" class="filter-sel">
+              <option value="">All Links</option>
+              <option value="yes">⚠️ Has unverified generic link</option>
+            </select>
           </div>
           <div id="vocab-selection-bar">
             <span id="vocab-sel-count">0 selected</span>
@@ -621,10 +675,26 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <button class="btn sm pri" onclick="openAIResearchModal()">🧏 Research Selected</button>
             <button class="btn gh sm" onclick="clearVocabSelection()">Clear</button>
           </div>
-          <div style="margin-bottom:8px">
+          <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn gh sm" onclick="selectAllNeedsResearch()">☑️ Select All Needing Research</button>
           </div>
           <div id="vocab-list"></div>
+        </div>
+        </div>
+
+        <!-- CLASS NOTES / DOCUMENTS TAB -->
+        <div class="tp" id="vocab-docs">
+        <div class="card cp">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div class="sec" style="margin:0">Class Notes Documents</div>
+            <button class="btn sm pri" onclick="openDocBuilder()" title="Upload or paste source material and build a highlighted, dated document">📄 New Document</button>
+          </div>
+          <div class="notice n-ok" style="margin-bottom:10px">
+            <span>ℹ️</span>
+            <div style="font-size:11px">Upload a handout or paste text, get it back from the AI with key vocabulary highlighted and linked to your Dictionary — editing a word anywhere keeps everything else in sync automatically.</div>
+          </div>
+          <div id="doc-list"></div>
+        </div>
         </div>
       </div>
 
@@ -1970,7 +2040,8 @@ let DB = {
   eipaGoals: [],
   scheduleBlocks: [],
   noSchoolDays: [],
-  skippedClasses: []
+  skippedClasses: [],
+  classDocs: []
 };
 
 function save() {
@@ -1985,12 +2056,40 @@ function load() {
       DB = { ...DB, ...parsed };
     }
   } catch(e) { console.warn('Load error', e); }
+  if (!Array.isArray(DB.classDocs)) DB.classDocs = [];
+  migrateVocabResourceFields();
+}
+
+// Older entries stored resource links (Deaf links, ASL videos, etc.) as one big
+// newline-separated text blob. Newer features need each link as its own object
+// (so we can flag/review/reuse individual links) — this converts old data on
+// load, once, safely. Already-migrated (array) fields are left untouched.
+const VOCAB_RESOURCE_FIELDS = ['deafResources','aslVideos','conceptVideos','youthExplainers','textResources'];
+function migrateVocabResourceFields() {
+  let changed = false;
+  (DB.vocab||[]).forEach(v => {
+    VOCAB_RESOURCE_FIELDS.forEach(f => {
+      if (typeof v[f] === 'string') {
+        v[f] = parseResourceLinesToArray(v[f]);
+        changed = true;
+      } else if (!Array.isArray(v[f])) {
+        v[f] = [];
+      }
+    });
+    if (v.verified === undefined) v.verified = false;
+    if (v.confirmedSignLink === undefined) v.confirmedSignLink = null;
+    if (v.category === '' && v.source === 'AI Research') v.category = 'Uncategorized';
+  });
+  if (changed) save();
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 // Words currently checked in the Vocabulary dictionary, for AI research prompts
 let vocabSelection = new Set();
+// Holds the "new" word data while the duplicate-word merge modal is open
+let pendingMergeExistingId = null;
+let pendingMergeData = null;
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function initApp() {
@@ -2226,7 +2325,7 @@ function populateClassSelectors() {
   const vcf2 = document.getElementById('vocab-filter-class');
   if (vcf2) {
     const cur = vcf2.value;
-    vcf2.innerHTML = '<option value="">All Classes</option>';
+    vcf2.innerHTML = '<option value="">All Classes</option><option value="__none__">❓ Unassigned Class</option>';
     sorted.forEach(c => { vcf2.innerHTML += `<option value="${c.id}">${esc(classLabel(c))}</option>`; });
     if (cur) vcf2.value = cur;
   }
@@ -2424,14 +2523,103 @@ function deleteLog(id) {
 }
 
 // ── VOCAB ──────────────────────────────────────────────────────────────────────
+
+// -- Resource link helpers (Deaf links / ASL videos / etc. are stored as arrays
+//    of {id,title,url,reviewed} so individual links can be flagged, reviewed, or
+//    picked as a confirmed sign — see migrateVocabResourceFields() for old data.
+function parseResourceLinesToArray(text) {
+  if (!text) return [];
+  return text.split('\n').map(l=>l.trim()).filter(Boolean)
+    .filter(l=>!/^(none found|none|n\/a|no results?)\.?$/i.test(l))
+    .map(line=>{
+      let title=line, url='';
+      const mdMatch = title.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/);
+      if (mdMatch) { title = mdMatch[1].trim(); url = mdMatch[2]; }
+      else {
+        const emIdx = title.lastIndexOf('—');
+        const enIdx = title.lastIndexOf('–');
+        const sepIdx = emIdx>-1 ? emIdx : enIdx;
+        if (sepIdx>-1) { url=title.slice(sepIdx+1).trim(); title=title.slice(0,sepIdx).trim(); }
+        else {
+          const m=title.match(/(https?:\/\/\S+)/);
+          if (m) { url=m[1]; title=title.replace(url,'').replace(/[-–—:]\s*$/,'').trim()||url; }
+        }
+      }
+      if (url) url = url.replace(/[)\]}>,.;'"]+$/,'');
+      return { id: uid(), title: title||url, url, reviewed:false };
+    }).filter(r=>r.title||r.url);
+}
+function resourceArrayToText(arr) {
+  if (!arr || !arr.length) return '';
+  return arr.map(r => r.url ? `${r.title||r.url} — ${r.url}` : r.title).join('\n');
+}
+// Union two link arrays, skipping anything whose URL (or exact title, if no URL) already exists.
+function mergeResourceArrays(existingArr, incomingArr) {
+  const existing = existingArr||[];
+  const seen = new Set(existing.map(r=>(r.url||r.title||'').toLowerCase().trim()));
+  const added = [];
+  (incomingArr||[]).forEach(r=>{
+    const key = (r.url||r.title||'').toLowerCase().trim();
+    if (key && !seen.has(key)) { seen.add(key); existing.push(r); added.push(r); }
+  });
+  return { merged: existing, addedCount: added.length };
+}
+// Best-effort guess at whether a link is a specific-sign/word page vs. a bare
+// homepage or channel page — flags it for a manual double-check rather than
+// silently trusting it.
+function isGenericResourceUrl(url, word) {
+  if (!url) return false;
+  let u;
+  try { u = new URL(url); } catch(e) { return false; }
+  const path = u.pathname.replace(/\/+$/,'');
+  const wordLc = (word||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const hayLc = (path+' '+u.search).toLowerCase().replace(/[^a-z0-9]/g,'');
+  const hasWord = wordLc.length>1 && hayLc.includes(wordLc);
+  const segs = path.split('/').filter(Boolean);
+  const isRootish = segs.length===0 || (segs.length===1 && /^(index\.html?|home|en|search|dictionary)$/i.test(segs[0]));
+  const looksLikeChannelHome = /\/(channel|c|user|@)[^/]*$/i.test(path) && !/watch|shorts/i.test(path);
+  return (isRootish || looksLikeChannelHome) && !hasWord;
+}
+function hasGoodLinks(arr, word) {
+  const list = arr||[];
+  if (!list.length) return false;
+  return list.some(r => r.reviewed || !isGenericResourceUrl(r.url, word));
+}
+function hasSignInfo(v) { return !!(v.params || v.confirmedSignLink); }
+function computeVocabStatus(v) {
+  const hasSign = hasSignInfo(v);
+  if (v.definition && hasSign) return 'ok';
+  if (v.definition && !hasSign) return 'needs-sign';
+  if (!v.definition && hasSign) return 'needs-def';
+  return 'needs-both';
+}
+// Everything the AI Research prompt still needs for this word — used to skip
+// already-complete words in the prompt and to tell the AI exactly what's left.
+function getMissingResearchFields(v) {
+  const missing = [];
+  if (!v.definition) missing.push('DEFINITION');
+  if (!v.nomenclature) missing.push('NOMENCLATURE');
+  if (!v.mnemonic) missing.push('MNEMONIC');
+  if (!hasSignInfo(v)) missing.push('a confirmed sign (parameters or video)');
+  if (!hasGoodLinks(v.deafResources, v.word)) missing.push('DEAF_LINKS');
+  if (!hasGoodLinks(v.aslVideos, v.word)) missing.push('ASL_VIDEOS');
+  return missing;
+}
+
 function saveVocab() {
   const editId = document.getElementById('vocab-edit-id').value;
+  const wordVal = document.getElementById('v-word').value.trim();
+  if (!wordVal) { toast('Word required','warn'); return; }
+  if (!editId) {
+    const dupe = DB.vocab.find(x=>x.word.toLowerCase()===wordVal.toLowerCase());
+    if (dupe) { openVocabMergeModal(dupe.id, collectVocabFormData()); return; }
+  }
   const id = editId || uid();
   const existing = editId ? DB.vocab.find(x=>x.id===editId) : null;
   const v = {
     ...existing,
     id,
-    word: document.getElementById('v-word').value.trim(),
+    word: wordVal,
     category: document.getElementById('v-category').value.trim(),
     signType: document.getElementById('v-signtype').value.trim(),
     classId: document.getElementById('v-class').value,
@@ -2444,18 +2632,39 @@ function saveVocab() {
     source: document.getElementById('v-source').value.trim(),
     link: document.getElementById('v-link').value.trim(),
     status: document.getElementById('v-status').value||'needs-both',
+    verified: existing?.verified||false,
+    confirmedSignLink: existing?.confirmedSignLink||null,
+    deafResources: existing?.deafResources||[],
+    aslVideos: existing?.aslVideos||[],
+    conceptVideos: existing?.conceptVideos||[],
+    youthExplainers: existing?.youthExplainers||[],
+    textResources: existing?.textResources||[],
     createdAt: existing?.createdAt||Date.now()
   };
-  if (!v.word) { toast('Word required','warn'); return; }
-  // Auto-set status if definition and params are filled
-  if(v.definition && v.params) v.status='ok';
-  else if(v.definition && !v.params) v.status='needs-sign';
-  else if(!v.definition && v.params) v.status='needs-def';
+  v.status = computeVocabStatus(v);
   const idx = DB.vocab.findIndex(x=>x.id===id);
   if (idx>=0) DB.vocab[idx]=v; else DB.vocab.push(v);
   save(); clearVocabForm(); renderVocab(); populateClassSelectors(); renderDashboard();
   closeModal('modal-full-vocab');
   toast(editId ? 'Vocabulary updated' : 'Word added to dictionary');
+}
+
+// Grabs the current Add/Edit form values without saving — used so the merge
+// modal can show "what you were about to add" next to the existing entry.
+function collectVocabFormData() {
+  return {
+    word: document.getElementById('v-word').value.trim(),
+    category: document.getElementById('v-category').value.trim(),
+    signType: document.getElementById('v-signtype').value.trim(),
+    classId: document.getElementById('v-class').value,
+    studentId: document.getElementById('v-student').value,
+    definition: document.getElementById('v-def').value.trim(),
+    nomenclature: document.getElementById('v-nomen').value.trim(),
+    mnemonic: document.getElementById('v-mnemonic').value.trim(),
+    params: document.getElementById('v-params').value.trim(),
+    source: document.getElementById('v-source').value.trim(),
+    link: document.getElementById('v-link').value.trim()
+  };
 }
 
 function quickAddVocabModal() {
@@ -2464,11 +2673,17 @@ function quickAddVocabModal() {
   const classId = document.getElementById('qv-class').value;
   const studentId = document.getElementById('qv-student').value;
   const classObj = DB.classes.find(c=>c.id===classId);
-  if(DB.vocab.find(v=>v.word.toLowerCase()===word.toLowerCase())) {
-    toast('Already in dictionary — find it to edit','warn'); return;
+  const dupe = DB.vocab.find(v=>v.word.toLowerCase()===word.toLowerCase());
+  if (dupe) {
+    closeModal('modal-quick-vocab');
+    openVocabMergeModal(dupe.id, { word, category:classObj?.name||'', classId, studentId });
+    return;
   }
   DB.vocab.unshift({ id:uid(), word, category:classObj?.name||'', signType:'', classId, studentId,
-    definition:'', params:'', mastery:1, source:'', link:'', status:'needs-both', createdAt:Date.now() });
+    definition:'', params:'', mastery:1, source:'', link:'', status:'needs-both',
+    verified:false, confirmedSignLink:null,
+    deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+    createdAt:Date.now() });
   save(); renderVocab(); populateClassSelectors();
   document.getElementById('qv-word').value='';
   closeModal('modal-quick-vocab');
@@ -2529,10 +2744,170 @@ function toggleVocabSelect(id) {
 function clearVocabSelection() { vocabSelection.clear(); updateSelectionBar(); renderVocab(); }
 function selectAllNeedsResearch() {
   const visible = getFilteredVocab();
-  const targets = visible.filter(v=>(v.status||'needs-both')!=='ok');
+  const targets = visible.filter(v=>!v.verified && getMissingResearchFields(v).length>0);
   if (!targets.length) { toast('Nothing needing research in the current view','warn'); return; }
   targets.forEach(v=>vocabSelection.add(v.id));
   updateSelectionBar(); renderVocab();
+}
+
+// ── VERIFIED STATUS ──────────────────────────────────────────────────────────
+function toggleVerified(id) {
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v) return;
+  v.verified = !v.verified;
+  save(); renderVocab();
+  toast(v.verified ? `"${v.word}" marked verified — won't show up in future AI prompts` : `"${v.word}" unverified`);
+}
+
+// ── CONFIRMED SIGN (pick an ASL video link instead of typing parameters) ──────
+function useAsConfirmedSign(vocabId, linkId) {
+  const v = DB.vocab.find(x=>x.id===vocabId);
+  if (!v) return;
+  const link = (v.aslVideos||[]).find(r=>r.id===linkId);
+  if (!link) return;
+  v.confirmedSignLink = { title: link.title, url: link.url };
+  v.status = computeVocabStatus(v);
+  save(); renderVocab();
+  toast(`Confirmed sign set for "${v.word}"`);
+}
+function unlinkConfirmedSign(id) {
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v) return;
+  v.confirmedSignLink = null;
+  v.status = computeVocabStatus(v);
+  save(); renderVocab();
+}
+
+// ── GENERIC-LINK REVIEW ─────────────────────────────────────────────────────
+function markResourceReviewed(vocabId, field, linkId) {
+  const v = DB.vocab.find(x=>x.id===vocabId);
+  if (!v || !v[field]) return;
+  const link = v[field].find(r=>r.id===linkId);
+  if (link) link.reviewed = true;
+  save(); renderVocab();
+}
+// True if this word has at least one unreviewed link that looks like a generic
+// homepage rather than a page for the specific sign/word.
+function hasUnreviewedGenericLinks(v) {
+  return VOCAB_RESOURCE_FIELDS.some(f => (v[f]||[]).some(r => !r.reviewed && isGenericResourceUrl(r.url, v.word)));
+}
+
+// ── DUPLICATE / MERGE (single word, at add-time) ───────────────────────────────
+function openVocabMergeModal(existingId, incoming) {
+  const existing = DB.vocab.find(x=>x.id===existingId);
+  if (!existing) return;
+  pendingMergeExistingId = existingId;
+  pendingMergeData = incoming;
+  const clsName = id => { const c=DB.classes.find(x=>x.id===id); return c?classLabel(c):'—'; };
+  const rows = [
+    ['Category', existing.category||'—', incoming.category||'—'],
+    ['Class', existing.classId?clsName(existing.classId):'—', incoming.classId?clsName(incoming.classId):'—'],
+    ['Definition', existing.definition||'—', incoming.definition||'—'],
+    ['Simple Term', existing.nomenclature||'—', incoming.nomenclature||'—'],
+    ['Mnemonic', existing.mnemonic||'—', incoming.mnemonic||'—'],
+    ['Sign Parameters', existing.params||'—', incoming.params||'—'],
+    ['Link', existing.link||'—', incoming.link||'—']
+  ];
+  document.getElementById('merge-word-title').textContent = `"${existing.word}" is already in your dictionary`;
+  document.getElementById('merge-compare-table').innerHTML = rows.map(([label,oldV,newV])=>
+    `<div class="fr fr2" style="margin-bottom:6px;font-size:11px;gap:10px">
+      <div><b>${esc(label)}</b><br><span style="color:var(--ink3)">Existing:</span> ${esc(oldV)}</div>
+      <div><b>&nbsp;</b><br><span style="color:var(--sage-d)">New:</span> ${esc(newV)}</div>
+    </div>`
+  ).join('');
+  openModal('modal-vocab-merge');
+}
+function confirmVocabMerge(mode) {
+  const existing = DB.vocab.find(x=>x.id===pendingMergeExistingId);
+  const incoming = pendingMergeData;
+  if (!existing || !incoming) { closeModal('modal-vocab-merge'); return; }
+  if (mode==='merge') {
+    ['category','classId','studentId','definition','nomenclature','mnemonic','params','source','link'].forEach(f=>{
+      if (!existing[f] && incoming[f]) existing[f]=incoming[f];
+    });
+    existing.status = computeVocabStatus(existing);
+    save(); renderVocab(); populateClassSelectors(); renderDashboard();
+    toast(`Merged into existing "${existing.word}" — filled in what was blank`);
+  } else if (mode==='separate') {
+    const nv = {
+      id:uid(), word: incoming.word||existing.word,
+      category: incoming.category||'', signType: incoming.signType||'', classId: incoming.classId||'', studentId: incoming.studentId||'all',
+      definition: incoming.definition||'', nomenclature: incoming.nomenclature||'', mnemonic: incoming.mnemonic||'',
+      params: incoming.params||'', mastery:1, source: incoming.source||'', link: incoming.link||'',
+      status:'needs-both', verified:false, confirmedSignLink:null,
+      deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+      createdAt: Date.now()
+    };
+    nv.status = computeVocabStatus(nv);
+    DB.vocab.push(nv);
+    save(); renderVocab(); populateClassSelectors(); renderDashboard();
+    toast(`Added "${nv.word}" as a separate entry — different sign or meaning`);
+  }
+  pendingMergeExistingId=null; pendingMergeData=null;
+  closeModal('modal-vocab-merge');
+  clearVocabForm();
+}
+
+// ── DUPLICATE FINDER (whole dictionary sweep) ───────────────────────────────────
+function findDuplicateWordClusters() {
+  const groups = {};
+  DB.vocab.forEach(v=>{
+    const key = v.word.toLowerCase().trim();
+    if (!key) return;
+    (groups[key] = groups[key]||[]).push(v);
+  });
+  return Object.values(groups).filter(g=>g.length>1);
+}
+function openDupFinder() {
+  const clusters = findDuplicateWordClusters();
+  const box = document.getElementById('dup-finder-list');
+  if (!clusters.length) {
+    box.innerHTML = '<div class="tbl-empty">No duplicate words found — dictionary is clean!</div>';
+  } else {
+    box.innerHTML = clusters.map(cluster => {
+      const rows = cluster.map(v=>{
+        const cls = DB.classes.find(c=>c.id===v.classId);
+        return `<div style="font-size:11px;padding:6px 8px;background:var(--s2);border-radius:6px;margin-bottom:4px">
+          <b>${esc(v.category||'Uncategorized')}</b>${cls?` · ${esc(classLabel(cls))}`:''}<br>
+          <span style="color:var(--ink3)">${esc(v.definition||'No definition yet')}</span>
+        </div>`;
+      }).join('');
+      const ids = cluster.map(v=>v.id).join(',');
+      return `<div class="vc" style="margin-bottom:10px">
+        <div class="vc-word" style="margin-bottom:6px">${esc(cluster[0].word)} <span style="color:var(--ink3);font-size:11px;font-weight:400">(${cluster.length} entries)</span></div>
+        ${rows}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          <button class="btn sm pri" onclick="mergeDupCluster('${ids}')">🔀 Merge all into one</button>
+          <button class="btn gh sm" onclick="this.closest('.vc').style.opacity='0.4';this.closest('.vc').querySelectorAll('button').forEach(b=>b.disabled=true)">Keep separate — different signs</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  openModal('modal-dup-finder');
+}
+function mergeDupCluster(idsStr) {
+  const ids = idsStr.split(',');
+  const entries = ids.map(id=>DB.vocab.find(v=>v.id===id)).filter(Boolean);
+  if (entries.length<2) return;
+  if (!confirm(`Merge all ${entries.length} "${entries[0].word}" entries into one? Fields keep the first value found; all resource links are combined. This can't be undone.`)) return;
+  const keep = entries[0];
+  for (let i=1;i<entries.length;i++) {
+    const other = entries[i];
+    ['category','classId','studentId','definition','nomenclature','mnemonic','params','source','link'].forEach(f=>{
+      if (!keep[f] && other[f]) keep[f]=other[f];
+    });
+    if (!keep.confirmedSignLink && other.confirmedSignLink) keep.confirmedSignLink = other.confirmedSignLink;
+    VOCAB_RESOURCE_FIELDS.forEach(f=>{
+      const { merged } = mergeResourceArrays(keep[f]||[], other[f]||[]);
+      keep[f] = merged;
+    });
+  }
+  keep.status = computeVocabStatus(keep);
+  const removeIds = new Set(ids.slice(1));
+  DB.vocab = DB.vocab.filter(v=>!removeIds.has(v.id));
+  save(); renderVocab(); populateClassSelectors(); renderDashboard();
+  toast(`Merged into one "${keep.word}" entry`);
+  openDupFinder();
 }
 function updateSelectionBar() {
   const bar = document.getElementById('vocab-selection-bar');
@@ -2579,39 +2954,39 @@ function buildAIResearchPrompt(entries) {
     const dateKey = ts ? new Date(ts).toDateString() : 'Unknown date';
     const key = clsName+'|'+dateKey;
     if (!groups[key]) groups[key] = { clsName, dateKey, ts, words: [] };
-    groups[key].words.push(v.word);
+    const missing = getMissingResearchFields(v);
+    groups[key].words.push({ word:v.word, missing });
     if (ts > groups[key].ts) groups[key].ts = ts;
   });
   const dateFmt = d => d==='Unknown date' ? d : new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   const sortedGroups = Object.values(groups).sort((a,b)=> b.ts-a.ts || a.clsName.localeCompare(b.clsName));
   const groupedList = sortedGroups.map(g=>
-    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>`- ${w}`).join('\n')}`
+    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>`- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`).join('\n')}`
   ).join('\n\n');
 
-  return `I'm a K-12 educational ASL interpreter prepping to interpret the vocabulary/concepts below for my Deaf/DHH students. For EACH word or phrase, please research and provide:
+  return `I'm a K-12 educational ASL interpreter prepping to interpret the vocabulary/concepts below for my Deaf/DHH students. For EACH word or phrase, please research and provide only the fields listed as "missing" for that word — I already have everything else, so don't redo it:
 
 1. DEFINITION — a plain-English explanation of what the word/concept means (2–4 sentences, no jargon).
 2. NOMENCLATURE — a short, simple everyday synonym or plain-language term for the word (a few words, not a full sentence) — e.g. for "photosynthesis" something like "how plants make food from sunlight."
 3. MNEMONIC — a memory tip or mental trick to help remember the sign or the meaning.
-4. DEAF_LINKS — at least 3 trustworthy links written or created BY DEAF PEOPLE, not hearing authors, hearing-run organizations, or interpreter-made content. Deaf-run blogs, Deaf educators, Deaf-owned ASL resource sites, and Deaf social media creators all count. Double-check that each source is actually Deaf-led before including it.
-5. ASL_VIDEOS — ASL videos of the sign(s), made BY DEAF ASL users/creators. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools.
+4. DEAF_LINKS — at least 2–3 trustworthy links written or created BY DEAF PEOPLE that specifically explain or define THIS word — not just a Deaf-run organization's homepage or "about us" page. A specific blog post, glossary entry, or article about this exact term counts; a general homepage does not. Double-check that each source is actually Deaf-led before including it.
+5. ASL_VIDEOS — a video/page showing THIS SPECIFIC SIGN, made BY DEAF ASL users/creators — e.g. a dictionary entry page for the word, not a channel homepage or a general dictionary search page. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools. If a site like Lifeprint, Handspeak, or similar has a page for this exact word, link that exact page — never the site's homepage.
 6. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
 7. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
-Only include real, working links — never invent a URL. If you can't verify a source is Deaf-led, say so instead of guessing.
+Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — I'd rather know it doesn't exist than get a link that doesn't actually show the word.
 
 The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
-IMPORTANT — formatting: reply in PLAIN TEXT only, no markdown. Do not use #, ##, ###, **, or numbered/bulleted list markers on the label lines below — just the bare labels exactly as written, each on its own line. (Plain text survives copy-paste better than markdown headers, which sometimes get stripped when copying out of a chat window.) Links can be plain URLs.
+IMPORTANT — formatting: reply in PLAIN TEXT only, no markdown. Do not use #, ##, ###, **, or numbered/bulleted list markers on the label lines below — just the bare labels exactly as written, each on its own line. (Plain text survives copy-paste better than markdown headers, which sometimes get stripped when copying out of a chat window.) Links can be plain URLs. For any word where a field ISN'T in its "missing" list, just skip that label entirely for that word (don't write it at all) — that field is already done.
 
 Format your answer EXACTLY like this, repeated for every word, so I can paste it back into my app:
 
 WORD: [word]
-DEFINITION: [plain-English explanation]
-NOMENCLATURE: [simple synonym or everyday term]
-MNEMONIC: [memory tip]
+DEFINITION: [plain-English explanation, only if missing]
+NOMENCLATURE: [simple synonym or everyday term, only if missing]
+MNEMONIC: [memory tip, only if missing]
 DEAF_LINKS:
-[Title] — [URL]
 [Title] — [URL]
 [Title] — [URL]
 ASL_VIDEOS:
@@ -2619,25 +2994,30 @@ ASL_VIDEOS:
 [Title] — [URL]
 CONCEPT_VIDEOS:
 [Title] — [URL]
-[Title] — [URL]
 YOUTH_EXPLAINERS:
-[Title] — [URL]
 [Title] — [URL]
 ---
 
-Here are my words, grouped by class and date added:
+Here are my words, grouped by class and date added, each with what's still missing:
 
 ${groupedList}`;
 }
+
+// When re-researching words you explicitly checked (checkbox selection), a fresh
+// AI answer is allowed to overwrite existing text — you picked those on purpose.
+// For the default "everything needing research" pass, we only ever fill blanks,
+// so nothing you've already got gets silently redone.
+let aiResearchOverwriteMode = false;
 
 function openAIResearchModal() {
   let entries, usingSelection = vocabSelection.size>0;
   if (usingSelection) {
     entries = DB.vocab.filter(v=>vocabSelection.has(v.id));
   } else {
-    entries = DB.vocab.filter(v=>(v.status||'needs-both')!=='ok');
+    entries = DB.vocab.filter(v=>!v.verified && getMissingResearchFields(v).length>0);
   }
-  if (!entries.length) { toast('No words to research — add vocabulary first, or clear filters','warn'); return; }
+  aiResearchOverwriteMode = usingSelection;
+  if (!entries.length) { toast(usingSelection?'Selected words already look complete':'Nothing needs research right now — everything is either complete or verified','warn'); return; }
   document.getElementById('ai-research-count').textContent =
     `${entries.length} word${entries.length===1?'':'s'} (${usingSelection?'selected':'everything needing research'})`;
   document.getElementById('ai-prompt-text').value = buildAIResearchPrompt(entries);
@@ -2721,6 +3101,27 @@ function fixPastedSpacing() {
   toast('Fixed — spaces/punctuation were showing as %-codes','gold');
 }
 
+// Applies one parsed AI result onto a vocab entry. Text fields only fill blanks
+// unless overwriteMode is on (explicit re-research); link fields always union
+// in new, non-duplicate links rather than replacing the whole list.
+function applyResultToVocab(v, r, overwriteMode) {
+  let linksAdded = 0;
+  const setText = (field, val) => { if (val && (overwriteMode || !v[field])) v[field] = val; };
+  setText('definition', r.definition);
+  setText('nomenclature', r.nomenclature);
+  setText('mnemonic', r.mnemonic);
+  [['deafLinks','deafResources'],['aslVideos','aslVideos'],['conceptVideos','conceptVideos'],['youthExplainers','youthExplainers'],['textResources','textResources']].forEach(([rKey,vField])=>{
+    if (!r[rKey]) return;
+    const incoming = parseResourceLinesToArray(r[rKey]);
+    if (!incoming.length) return;
+    const { merged, addedCount } = mergeResourceArrays(v[vField]||[], incoming);
+    v[vField] = merged;
+    linksAdded += addedCount;
+  });
+  v.status = computeVocabStatus(v);
+  return linksAdded;
+}
+
 function applyAIResearchResults() {
   let raw = document.getElementById('ai-response-text').value.trim();
   if (!raw) { toast('Paste the AI response first','warn'); return; }
@@ -2731,31 +3132,23 @@ function applyAIResearchResults() {
   }
   const results = parseAIResearchResponse(raw);
   if (!results.length) { toast('No "WORD:" lines found — copy the AI\'s reply using its own Copy button (not manual select), or ask it to resend in plain text','warn'); return; }
-  let updated=0, created=0;
+  let updated=0, created=0, linksAdded=0;
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
-      v = { id:uid(), word:r.word, category:'', signType:'', classId:'', studentId:'all',
-        definition:'', params:'', mastery:1, source:'AI Research', link:'', status:'needs-both', createdAt:Date.now() };
+      v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId:'', studentId:'all',
+        definition:'', params:'', mastery:1, source:'AI Research', link:'', status:'needs-both',
+        verified:false, confirmedSignLink:null,
+        deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+        createdAt:Date.now() };
       DB.vocab.push(v); created++;
     } else updated++;
-    if (r.definition) v.definition = r.definition;
-    if (r.nomenclature) v.nomenclature = r.nomenclature;
-    if (r.mnemonic) v.mnemonic = r.mnemonic;
-    if (r.deafLinks) v.deafResources = r.deafLinks;
-    if (r.aslVideos) v.aslVideos = r.aslVideos;
-    if (r.conceptVideos) v.conceptVideos = r.conceptVideos;
-    if (r.youthExplainers) v.youthExplainers = r.youthExplainers;
-    if (r.textResources) v.textResources = r.textResources;
-    if (v.definition && v.params) v.status='ok';
-    else if (v.definition && !v.params) v.status='needs-sign';
-    else if (!v.definition && v.params) v.status='needs-def';
-    else v.status='needs-both';
+    linksAdded += applyResultToVocab(v, r, aiResearchOverwriteMode);
   });
   save(); renderVocab(); populateClassSelectors(); renderDashboard();
   vocabSelection.clear(); updateSelectionBar();
   closeModal('modal-ai-research');
-  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new)`:''} — tap 🧏 on a word to review`);
+  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''} — tap 🧏 on a word to review`);
 }
 
 // ── DEFINITION LOOKUP ────────────────────────────────────────────────────────
@@ -2848,12 +3241,18 @@ function getFilteredVocab() {
   const filterSignType = document.getElementById('vocab-filter-signtype')?.value||'';
   const filterMastery = document.getElementById('vocab-filter-mastery')?.value||'';
   const filterStatus = document.getElementById('vocab-filter-status')?.value||'';
+  const filterVerified = document.getElementById('vocab-filter-verified')?.value||'';
+  const filterGeneric = document.getElementById('vocab-filter-generic')?.value||'';
   let vocab = [...DB.vocab].sort((a,b)=>a.word.localeCompare(b.word));
   if (filterCat) vocab = vocab.filter(v=>v.category===filterCat);
-  if (filterClass) vocab = vocab.filter(v=>v.classId===filterClass);
+  if (filterClass==='__none__') vocab = vocab.filter(v=>!v.classId);
+  else if (filterClass) vocab = vocab.filter(v=>v.classId===filterClass);
   if (filterSignType) vocab = vocab.filter(v=>v.signType===filterSignType);
   if (filterMastery) vocab = vocab.filter(v=>v.mastery===parseInt(filterMastery));
   if (filterStatus) vocab = vocab.filter(v=>(v.status||'needs-both')===filterStatus);
+  if (filterVerified==='yes') vocab = vocab.filter(v=>v.verified);
+  else if (filterVerified==='no') vocab = vocab.filter(v=>!v.verified);
+  if (filterGeneric==='yes') vocab = vocab.filter(v=>hasUnreviewedGenericLinks(v));
   if (search) vocab = vocab.filter(v =>
     v.word.toLowerCase().includes(search)||
     (v.definition||'').toLowerCase().includes(search)||
@@ -2886,25 +3285,31 @@ function renderVocab() {
     const student = DB.students.find(s=>s.id===v.studentId);
     const cls = DB.classes.find(c=>c.id===v.classId);
     const st = v.status||'needs-both';
+    const missing = getMissingResearchFields(v);
     return `<div class="vc">
       <div class="vc-top">
         <div style="display:flex;gap:8px;align-items:flex-start">
           <input type="checkbox" class="vc-check" ${vocabSelection.has(v.id)?'checked':''} onchange="toggleVocabSelect('${v.id}')" title="Select for AI research">
           <div>
             <div class="vc-word">${esc(v.word)}</div>
-            ${statusBadge[st]||''}
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
+              ${statusBadge[st]||''}
+              ${v.verified?'<span class="vbadge vb-verified">✅ Verified</span>':''}
+              ${hasUnreviewedGenericLinks(v)?'<span class="vbadge vb-generic-flag">⚠️ Generic link</span>':''}
+            </div>
           </div>
         </div>
         <div class="vc-meta">
           ${v.signType?`<span class="pill pb">${esc(v.signType)}</span>`:''}
           ${v.category?`<span class="pill pz">${esc(v.category)}</span>`:''}
-          ${cls?`<span class="pill pg">${esc(classLabel(cls))}</span>`:''}
+          ${cls?`<span class="pill pg">${esc(classLabel(cls))}</span>`:'<span class="pill pz" title="No class assigned yet">❓ Unassigned Class</span>'}
           <span class="pill ${masteryColors[v.mastery]||'pz'}" title="Mastery: ${masteryLabel(v.mastery)}">${masteryStars(v.mastery)}</span>
           ${student&&student.label!=='all'?`<span class="pill pb">${esc(student.label)}</span>`:''}
           <div class="vc-actions">
             ${v.link?`<a href="${esc(v.link)}" target="_blank" class="btn gh sm" style="padding:3px 7px;font-size:10px">🔗</a>`:''}
             <button class="btn sm gold" style="padding:3px 7px;font-size:10px" onclick="editVocab('${v.id}');lookupDefinition()">📖</button>
             <button class="btn gh sm" style="padding:3px 7px;font-size:10px" onclick="editVocab('${v.id}')">Edit</button>
+            <button class="btn ${v.verified?'gold':'gh'} sm" style="padding:3px 7px;font-size:10px" onclick="toggleVerified('${v.id}')" title="${v.verified?'Marked verified — tap to unverify':'Mark verified by you'}">${v.verified?'✅':'☑️'}</button>
             <button class="btn gh sm" style="padding:3px 7px;font-size:10px;color:var(--clay)" onclick="deleteVocab('${v.id}')">✕</button>
           </div>
         </div>
@@ -2912,9 +3317,12 @@ function renderVocab() {
       ${v.definition?`<div class="vc-def">${esc(v.definition)}</div>`:'<div class="vc-def" style="color:var(--ink3);font-style:italic">No definition yet</div>'}
       ${v.nomenclature?`<div class="vc-nomen">🔤 ${esc(v.nomenclature)}</div>`:''}
       ${v.mnemonic?`<div class="vc-mnem">💡 ${esc(v.mnemonic)}</div>`:''}
-      ${v.params?`<div class="vc-params">🤟 ${esc(v.params)}</div>`:'<div class="vc-params" style="color:var(--clay)">No sign info yet</div>'}
+      ${v.confirmedSignLink
+        ? `<div class="vc-confirmed-sign">🤟 Confirmed sign: <a href="${esc(v.confirmedSignLink.url)}" target="_blank" rel="noopener">${esc(v.confirmedSignLink.title||v.confirmedSignLink.url)}</a><button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')">unlink</button></div>`
+        : (v.params?`<div class="vc-params">🤟 ${esc(v.params)}</div>`:'<div class="vc-params" style="color:var(--clay)">No sign info yet — type parameters below, or pick a video from ASL Videos once researched</div>')}
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
       ${cls?`<div class="vc-params">Class: ${esc(classLabel(cls))}</div>`:''}
+      ${missing.length?`<div class="vc-missing">Still needed for research: ${missing.join(', ')}</div>`:''}
       ${renderAIResearchBlock(v)}
     </div>`;
   }).join('');
@@ -2922,37 +3330,26 @@ function renderVocab() {
 
 // ── AI RESEARCH BLOCK RENDERING ─────────────────────────────────────────────────
 function renderAIResearchBlock(v) {
-  if (!v.deafResources && !v.aslVideos && !v.conceptVideos && !v.youthExplainers && !v.textResources) return '';
+  const any = VOCAB_RESOURCE_FIELDS.some(f=>(v[f]||[]).length);
+  if (!any) return '';
   return `<details class="ai-res-block">
     <summary>🧏 Deaf-Led Research &amp; Resources</summary>
-    ${v.deafResources?`<div class="res-group"><div class="res-label">✋ From Deaf Creators</div>${renderResourceLines(v.deafResources)}</div>`:''}
-    ${v.aslVideos?`<div class="res-group"><div class="res-label">🎥 ASL Videos</div>${renderResourceLines(v.aslVideos)}</div>`:''}
-    ${v.conceptVideos?`<div class="res-group"><div class="res-label">🎬 Video Explainers</div>${renderResourceLines(v.conceptVideos)}</div>`:''}
-    ${v.youthExplainers?`<div class="res-group"><div class="res-label">🧒 Explained for Students</div>${renderResourceLines(v.youthExplainers)}</div>`:''}
-    ${v.textResources?`<div class="res-group"><div class="res-label">📚 Concept Explainers</div>${renderResourceLines(v.textResources)}</div>`:''}
+    ${v.deafResources?.length?`<div class="res-group"><div class="res-label">✋ From Deaf Creators</div>${renderResourceLinesArray(v.deafResources,v.id,'deafResources',v.word)}</div>`:''}
+    ${v.aslVideos?.length?`<div class="res-group"><div class="res-label">🎥 ASL Videos</div>${renderResourceLinesArray(v.aslVideos,v.id,'aslVideos',v.word)}</div>`:''}
+    ${v.conceptVideos?.length?`<div class="res-group"><div class="res-label">🎬 Video Explainers</div>${renderResourceLinesArray(v.conceptVideos,v.id,'conceptVideos',v.word)}</div>`:''}
+    ${v.youthExplainers?.length?`<div class="res-group"><div class="res-label">🧒 Explained for Students</div>${renderResourceLinesArray(v.youthExplainers,v.id,'youthExplainers',v.word)}</div>`:''}
+    ${v.textResources?.length?`<div class="res-group"><div class="res-label">📚 Concept Explainers</div>${renderResourceLinesArray(v.textResources,v.id,'textResources',v.word)}</div>`:''}
   </details>`;
 }
 
-function renderResourceLines(text) {
-  return text.split('\n').filter(Boolean).map(line=>{
-    let title=line.trim(), url='';
-    // Markdown link syntax the AI sometimes uses despite instructions: [Title](URL)
-    const mdMatch = title.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/);
-    if (mdMatch) {
-      title = mdMatch[1].trim(); url = mdMatch[2];
-    } else {
-      const emIdx = title.lastIndexOf('—');
-      const enIdx = title.lastIndexOf('–');
-      const sepIdx = emIdx>-1 ? emIdx : enIdx;
-      if (sepIdx>-1) { url=title.slice(sepIdx+1).trim(); title=title.slice(0,sepIdx).trim(); }
-      else {
-        const m=title.match(/(https?:\/\/\S+)/);
-        if (m) { url=m[1]; title=title.replace(url,'').replace(/[-–—:]\s*$/,'').trim()||url; }
-      }
-    }
-    if (url) url = url.replace(/[)\]}>,.;'"]+$/,''); // trailing punctuation the AI or a paste sometimes tacks onto a URL
-    if (url) return `<div class="res-line"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(title||url)}</a></div>`;
-    return `<div class="res-line">${esc(title)}</div>`;
+function renderResourceLinesArray(arr, vocabId, field, word) {
+  return (arr||[]).map(r=>{
+    const generic = isGenericResourceUrl(r.url, word);
+    const flagged = generic && !r.reviewed;
+    const linkHtml = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : esc(r.title);
+    const flagHtml = flagged ? `<span class="res-flag">⚠️ Generic — verify</span><button class="res-mini-btn" onclick="markResourceReviewed('${vocabId}','${field}','${r.id}')">Mark reviewed</button>` : '';
+    const signBtn = (field==='aslVideos' && r.url) ? `<button class="res-mini-btn sign" onclick="useAsConfirmedSign('${vocabId}','${r.id}')">🤟 Use as sign</button>` : '';
+    return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}</div>`;
   }).join('');
 }
 
@@ -4090,10 +4487,10 @@ function doImport(e){
 
 function exportVocabCSV(){
   if(!DB.vocab.length){toast('No vocabulary to export','warn');return;}
-  const headers=['Word','Category','Definition','Simple Term/Synonym','ASL Parameters','Mastery','Source','Student','Link','Mnemonic','Deaf-Led Resources','ASL Videos','Video Explainers','Explained for Students','Concept Explainers (legacy)'];
+  const headers=['Word','Category','Definition','Simple Term/Synonym','ASL Parameters','Confirmed Sign Video','Mastery','Source','Student','Link','Mnemonic','Verified','Deaf-Led Resources','ASL Videos','Video Explainers','Explained for Students','Concept Explainers (legacy)'];
   const rows=DB.vocab.map(v=>{
     const student=DB.students.find(s=>s.id===v.studentId);
-    return [v.word,v.category||'',v.definition||'',v.nomenclature||'',v.params||'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.deafResources||'',v.aslVideos||'',v.conceptVideos||'',v.youthExplainers||'',v.textResources||''].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
+    return [v.word,v.category||'',v.definition||'',v.nomenclature||'',v.params||'',v.confirmedSignLink?`${v.confirmedSignLink.title||''} — ${v.confirmedSignLink.url||''}`:'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.verified?'Yes':'No',resourceArrayToText(v.deafResources),resourceArrayToText(v.aslVideos),resourceArrayToText(v.conceptVideos),resourceArrayToText(v.youthExplainers),resourceArrayToText(v.textResources)].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
   });
   const csv=[headers.join(','),...rows].join('\n');
   const a=document.createElement('a');
