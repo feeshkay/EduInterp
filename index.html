@@ -1919,9 +1919,11 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       <div class="fr fr2" style="margin-bottom:8px">
         <div class="fld"><label>Simple Term / Synonym</label>
           <input type="text" id="v-nomen" placeholder="e.g. 'making food from sunlight'"></div>
-        <div class="fld"><label>Memory Tip / Mnemonic</label>
-          <input type="text" id="v-mnemonic" placeholder="e.g. trick to remember the sign or meaning"></div>
+        <div class="fld"><label>Word Breakdown</label>
+          <input type="text" id="v-breakdown" placeholder="e.g. photo- (light) + synthesis (putting together)"></div>
       </div>
+      <div class="fld" style="margin-bottom:8px"><label>Memory Tip / Mnemonic <span style="font-weight:400;color:var(--ink3)">— the more clever/memorable, the better</span></label>
+        <input type="text" id="v-mnemonic" placeholder="e.g. a vivid image, wordplay, or sound-alike trick"></div>
       <div class="fld" style="margin-bottom:8px"><label>ASL Parameters / Notes</label>
         <textarea id="v-params" placeholder="Handshape, location, movement, palm orientation, NMM..." style="min-height:55px"></textarea></div>
       <div class="fr fr2" style="margin-bottom:8px">
@@ -1986,6 +1988,79 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
     </div>
   </div>
 </div>
+
+<!-- Duplicate Word — Merge Modal -->
+<div class="ov" id="modal-vocab-merge">
+  <div class="mod" style="max-width:560px">
+    <div class="mh"><h2 id="merge-word-title">Word already exists</h2><button class="mod-close" onclick="closeModal('modal-vocab-merge')">✕</button></div>
+    <div class="mb">
+      <div class="notice n-ok" style="margin-bottom:10px"><span>ℹ️</span><div style="font-size:11px">Sometimes the same word really does have two different signs or meanings — if that's the case here, keep them separate. Otherwise, merging fills in whatever's blank on the existing entry.</div></div>
+      <div id="merge-compare-table"></div>
+    </div>
+    <div class="mf" style="flex-wrap:wrap">
+      <button class="btn gh sm" onclick="pendingMergeExistingId=null;pendingMergeData=null;closeModal('modal-vocab-merge')">Cancel</button>
+      <button class="btn sm" onclick="confirmVocabMerge('separate')">➕ Keep Both (different sign)</button>
+      <button class="btn pri" onclick="confirmVocabMerge('merge')">🔀 Merge Into Existing</button>
+    </div>
+  </div>
+</div>
+
+<!-- Duplicate Word Finder (whole dictionary sweep) -->
+<div class="ov" id="modal-dup-finder">
+  <div class="mod" style="max-width:640px">
+    <div class="mh"><h2>🔗 Duplicate Words</h2><button class="mod-close" onclick="closeModal('modal-dup-finder')">✕</button></div>
+    <div class="mb">
+      <div id="dup-finder-list"></div>
+    </div>
+    <div class="mf"><button class="btn gh sm" onclick="closeModal('modal-dup-finder')">Close</button></div>
+  </div>
+</div>
+
+<!-- Class Notes / Document Builder -->
+<div class="ov" id="modal-doc-builder">
+  <div class="mod" style="max-width:640px">
+    <div class="mh"><h2>📄 New Class Notes Document</h2><button class="mod-close" onclick="closeModal('modal-doc-builder')">✕</button></div>
+    <div class="mb">
+      <div id="doc-builder-step1">
+        <div class="fr fr3" style="margin-bottom:8px">
+          <div class="fld"><label>Title</label><input type="text" id="doc-title" placeholder="e.g. Ch. 4 Reading Notes"></div>
+          <div class="fld"><label>Class</label><select id="doc-class" class="sel2"><option value="">— General —</option></select></div>
+          <div class="fld"><label>Date</label><input type="date" id="doc-date"></div>
+        </div>
+        <div class="drop-zone" id="doc-drop-zone" onclick="document.getElementById('doc-file-input').click()"
+             ondragover="event.preventDefault();this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="handleDocDrop(event)">
+          📎 Click or drag a .txt or .pdf file — or just paste text below
+        </div>
+        <input type="file" id="doc-file-input" accept=".txt,.pdf" style="display:none" onchange="handleDocFileSelect(event)">
+        <div id="doc-file-preview"></div>
+        <div class="fld" style="margin-top:8px"><label>Or paste source text</label>
+          <textarea id="doc-source-text" placeholder="Paste the reading, handout, or notes text here..." style="min-height:140px;font-size:12px"></textarea></div>
+        <button class="btn pri" style="margin-top:10px" onclick="buildDocPrompt()">Build Prompt →</button>
+      </div>
+      <div id="doc-builder-step2" style="display:none">
+        <div class="notice n-ok" style="margin-bottom:10px"><span>1️⃣</span><div style="font-size:11px">Copy this into Claude, ChatGPT, or your AI of choice.</div></div>
+        <textarea id="doc-prompt-text" readonly style="min-height:150px;font-size:11px;font-family:'DM Mono',monospace;margin-bottom:8px" onclick="this.select()"></textarea>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
+          <button class="btn pri sm" onclick="copyDocPrompt()">📋 Copy Prompt</button>
+          <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn sm">Open Claude ↗</a>
+          <a href="https://chatgpt.com/" target="_blank" rel="noopener" class="btn sm">Open ChatGPT ↗</a>
+        </div>
+        <div class="notice n-ok" style="margin-bottom:10px"><span>2️⃣</span><div style="font-size:11px">Paste the AI's full reply below, then tap "Save Document." Highlighted words are added to your Dictionary automatically.</div></div>
+        <textarea id="doc-response-text" placeholder="Paste the AI's full response here..." style="min-height:150px;font-size:11px"></textarea>
+        <div style="margin-top:6px"><button class="btn gh sm" onclick="fixDocPastedSpacing()">🧹 Fix Spacing (%20 → space)</button></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-doc-builder')">Close</button>
+      <button class="btn pri" id="doc-save-btn" style="display:none" onclick="applyDocBuilderResults()">✅ Save Document</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden print-only area used by "Save as PDF" -->
+<div id="doc-print-area"></div>
 
 
   <div class="ov" id="modal-add-event">
@@ -2078,6 +2153,7 @@ function migrateVocabResourceFields() {
     });
     if (v.verified === undefined) v.verified = false;
     if (v.confirmedSignLink === undefined) v.confirmedSignLink = null;
+    if (v.wordBreakdown === undefined) v.wordBreakdown = '';
     if (v.category === '' && v.source === 'AI Research') v.category = 'Uncategorized';
   });
   if (changed) save();
@@ -2099,6 +2175,7 @@ function initApp() {
   renderDashboard();
   renderLogs();
   renderVocab();
+  renderClassDocs();
   renderSchedule();
   renderMaterials();
   renderBugs();
@@ -2599,6 +2676,7 @@ function getMissingResearchFields(v) {
   const missing = [];
   if (!v.definition) missing.push('DEFINITION');
   if (!v.nomenclature) missing.push('NOMENCLATURE');
+  if (!v.wordBreakdown) missing.push('WORD_BREAKDOWN');
   if (!v.mnemonic) missing.push('MNEMONIC');
   if (!hasSignInfo(v)) missing.push('a confirmed sign (parameters or video)');
   if (!hasGoodLinks(v.deafResources, v.word)) missing.push('DEAF_LINKS');
@@ -2626,6 +2704,7 @@ function saveVocab() {
     studentId: document.getElementById('v-student').value,
     definition: document.getElementById('v-def').value.trim(),
     nomenclature: document.getElementById('v-nomen').value.trim(),
+    wordBreakdown: document.getElementById('v-breakdown').value.trim(),
     mnemonic: document.getElementById('v-mnemonic').value.trim(),
     params: document.getElementById('v-params').value.trim(),
     mastery: parseInt(document.getElementById('v-mastery').value)||3,
@@ -2660,6 +2739,7 @@ function collectVocabFormData() {
     studentId: document.getElementById('v-student').value,
     definition: document.getElementById('v-def').value.trim(),
     nomenclature: document.getElementById('v-nomen').value.trim(),
+    wordBreakdown: document.getElementById('v-breakdown').value.trim(),
     mnemonic: document.getElementById('v-mnemonic').value.trim(),
     params: document.getElementById('v-params').value.trim(),
     source: document.getElementById('v-source').value.trim(),
@@ -2680,7 +2760,7 @@ function quickAddVocabModal() {
     return;
   }
   DB.vocab.unshift({ id:uid(), word, category:classObj?.name||'', signType:'', classId, studentId,
-    definition:'', params:'', mastery:1, source:'', link:'', status:'needs-both',
+    definition:'', params:'', wordBreakdown:'', mastery:1, source:'', link:'', status:'needs-both',
     verified:false, confirmedSignLink:null,
     deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
     createdAt:Date.now() });
@@ -2694,7 +2774,7 @@ function quickAddVocab() { quickAddVocabModal(); }
 
 function clearVocabForm() {
   document.getElementById('vocab-edit-id').value='';
-  ['v-word','v-category','v-signtype','v-source','v-link','v-def','v-nomen','v-mnemonic','v-params'].forEach(f=>{
+  ['v-word','v-category','v-signtype','v-source','v-link','v-def','v-nomen','v-breakdown','v-mnemonic','v-params'].forEach(f=>{
     const el=document.getElementById(f); if(el) el.value='';
   });
   document.getElementById('v-mastery').value='3';
@@ -2716,6 +2796,7 @@ function editVocab(id) {
   document.getElementById('v-student').value = v.studentId||'all';
   document.getElementById('v-def').value = v.definition||'';
   document.getElementById('v-nomen').value = v.nomenclature||'';
+  document.getElementById('v-breakdown').value = (v.wordBreakdown&&v.wordBreakdown!=='NONE')?v.wordBreakdown:'';
   document.getElementById('v-mnemonic').value = v.mnemonic||'';
   document.getElementById('v-params').value = v.params||'';
   document.getElementById('v-mastery').value = v.mastery||3;
@@ -2791,6 +2872,26 @@ function markResourceReviewed(vocabId, field, linkId) {
 function hasUnreviewedGenericLinks(v) {
   return VOCAB_RESOURCE_FIELDS.some(f => (v[f]||[]).some(r => !r.reviewed && isGenericResourceUrl(r.url, v.word)));
 }
+function deleteResourceLink(vocabId, field, linkId) {
+  const v = DB.vocab.find(x=>x.id===vocabId);
+  if (!v || !v[field]) return;
+  v[field] = v[field].filter(r=>r.id!==linkId);
+  save(); renderVocab();
+}
+
+// ── QUICK-REMOVE A CARD COMPONENT ───────────────────────────────────────────────
+// Clears one field on a word so it's easy to fix a bad AI answer without
+// deleting the whole entry — it'll simply show back up as "missing" the next
+// time you build an AI Research prompt.
+function clearVocabField(id, field) {
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v) return;
+  if (field==='confirmedSignLink') v.confirmedSignLink = null;
+  else v[field] = '';
+  v.status = computeVocabStatus(v);
+  save(); renderVocab();
+  toast('Removed — it\'ll show up as missing in your next AI Research prompt');
+}
 
 // ── DUPLICATE / MERGE (single word, at add-time) ───────────────────────────────
 function openVocabMergeModal(existingId, incoming) {
@@ -2804,6 +2905,7 @@ function openVocabMergeModal(existingId, incoming) {
     ['Class', existing.classId?clsName(existing.classId):'—', incoming.classId?clsName(incoming.classId):'—'],
     ['Definition', existing.definition||'—', incoming.definition||'—'],
     ['Simple Term', existing.nomenclature||'—', incoming.nomenclature||'—'],
+    ['Word Breakdown', (existing.wordBreakdown&&existing.wordBreakdown!=='NONE')?existing.wordBreakdown:'—', incoming.wordBreakdown||'—'],
     ['Mnemonic', existing.mnemonic||'—', incoming.mnemonic||'—'],
     ['Sign Parameters', existing.params||'—', incoming.params||'—'],
     ['Link', existing.link||'—', incoming.link||'—']
@@ -2822,7 +2924,7 @@ function confirmVocabMerge(mode) {
   const incoming = pendingMergeData;
   if (!existing || !incoming) { closeModal('modal-vocab-merge'); return; }
   if (mode==='merge') {
-    ['category','classId','studentId','definition','nomenclature','mnemonic','params','source','link'].forEach(f=>{
+    ['category','classId','studentId','definition','nomenclature','wordBreakdown','mnemonic','params','source','link'].forEach(f=>{
       if (!existing[f] && incoming[f]) existing[f]=incoming[f];
     });
     existing.status = computeVocabStatus(existing);
@@ -2832,7 +2934,7 @@ function confirmVocabMerge(mode) {
     const nv = {
       id:uid(), word: incoming.word||existing.word,
       category: incoming.category||'', signType: incoming.signType||'', classId: incoming.classId||'', studentId: incoming.studentId||'all',
-      definition: incoming.definition||'', nomenclature: incoming.nomenclature||'', mnemonic: incoming.mnemonic||'',
+      definition: incoming.definition||'', nomenclature: incoming.nomenclature||'', wordBreakdown: incoming.wordBreakdown||'', mnemonic: incoming.mnemonic||'',
       params: incoming.params||'', mastery:1, source: incoming.source||'', link: incoming.link||'',
       status:'needs-both', verified:false, confirmedSignLink:null,
       deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
@@ -2893,7 +2995,7 @@ function mergeDupCluster(idsStr) {
   const keep = entries[0];
   for (let i=1;i<entries.length;i++) {
     const other = entries[i];
-    ['category','classId','studentId','definition','nomenclature','mnemonic','params','source','link'].forEach(f=>{
+    ['category','classId','studentId','definition','nomenclature','wordBreakdown','mnemonic','params','source','link'].forEach(f=>{
       if (!keep[f] && other[f]) keep[f]=other[f];
     });
     if (!keep.confirmedSignLink && other.confirmedSignLink) keep.confirmedSignLink = other.confirmedSignLink;
@@ -2968,11 +3070,12 @@ function buildAIResearchPrompt(entries) {
 
 1. DEFINITION — a plain-English explanation of what the word/concept means (2–4 sentences, no jargon).
 2. NOMENCLATURE — a short, simple everyday synonym or plain-language term for the word (a few words, not a full sentence) — e.g. for "photosynthesis" something like "how plants make food from sunlight."
-3. MNEMONIC — a memory tip or mental trick to help remember the sign or the meaning.
-4. DEAF_LINKS — at least 2–3 trustworthy links written or created BY DEAF PEOPLE that specifically explain or define THIS word — not just a Deaf-run organization's homepage or "about us" page. A specific blog post, glossary entry, or article about this exact term counts; a general homepage does not. Double-check that each source is actually Deaf-led before including it.
-5. ASL_VIDEOS — a video/page showing THIS SPECIFIC SIGN, made BY DEAF ASL users/creators — e.g. a dictionary entry page for the word, not a channel homepage or a general dictionary search page. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools. If a site like Lifeprint, Handspeak, or similar has a page for this exact word, link that exact page — never the site's homepage.
-6. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
-7. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
+3. WORD_BREAKDOWN — if the word has clear parts (prefixes, suffixes, root words), break it down piece by piece and say what each piece contributes to the meaning — e.g. "photosynthesis" = "photo-" (light) + "synthesis" (putting together) = "putting together [food] using light." If the word genuinely doesn't break down into meaningful parts, just write NONE.
+4. MNEMONIC — a genuinely clever, memorable trick for remembering the sign or the meaning: wordplay, a vivid or funny mental image, or a link to something the word already looks/sounds like. Not just a restatement of the definition — it should be something that would actually stick in memory.
+5. DEAF_LINKS — at least 2–3 trustworthy links written or created BY DEAF PEOPLE that specifically explain or define THIS word — not just a Deaf-run organization's homepage or "about us" page. A specific blog post, glossary entry, or article about this exact term counts; a general homepage does not. Double-check that each source is actually Deaf-led before including it.
+6. ASL_VIDEOS — a video/page showing THIS SPECIFIC SIGN, made BY DEAF ASL users/creators — e.g. a dictionary entry page for the word, not a channel homepage or a general dictionary search page. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools. If a site like Lifeprint, Handspeak, or similar has a page for this exact word, link that exact page — never the site's homepage.
+7. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
+8. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
 Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — I'd rather know it doesn't exist than get a link that doesn't actually show the word.
 
@@ -2985,7 +3088,8 @@ Format your answer EXACTLY like this, repeated for every word, so I can paste it
 WORD: [word]
 DEFINITION: [plain-English explanation, only if missing]
 NOMENCLATURE: [simple synonym or everyday term, only if missing]
-MNEMONIC: [memory tip, only if missing]
+WORD_BREAKDOWN: [piece-by-piece breakdown, or NONE — only if missing]
+MNEMONIC: [clever memory trick, only if missing]
 DEAF_LINKS:
 [Title] — [URL]
 [Title] — [URL]
@@ -3038,7 +3142,7 @@ function copyAIResearchPrompt() {
   }
 }
 
-const AI_RES_LABELS = ['DEFINITION','NOMENCLATURE','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
+const AI_RES_LABELS = ['DEFINITION','NOMENCLATURE','WORD_BREAKDOWN','MNEMONIC','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
 // Matches a WORD: line whether or not markdown leftovers (###, **, -, numbering) are still attached —
 // copying a rendered AI reply out of a chat window strips markdown inconsistently depending on the site.
 const WORD_LINE_RE = /^[\s>*_#\-\d.]{0,8}WORD:\s*(.+?)[\s*]*$/im;
@@ -3061,10 +3165,16 @@ function parseAIResearchResponse(text) {
   return parts.map(block=>{
     const headerMatch = block.match(WORD_LINE_RE);
     const word = headerMatch ? headerMatch[1].replace(/[\[\]*]/g,'').trim() : '';
+    // WORD_BREAKDOWN: a literal "NONE" is a meaningful answer (the AI checked and
+    // there isn't one) — keep that as a NONE sentinel so it counts as "done"
+    // rather than showing up as still-missing in future prompts.
+    let breakdown = extractAISection(block,'WORD_BREAKDOWN');
+    if (/^none$/i.test(breakdown)) breakdown = 'NONE';
     return {
       word,
       definition: extractAISection(block,'DEFINITION'),
       nomenclature: extractAISection(block,'NOMENCLATURE'),
+      wordBreakdown: breakdown,
       mnemonic: extractAISection(block,'MNEMONIC'),
       deafLinks: extractAILinks(extractAISection(block,'DEAF_LINKS')),
       aslVideos: extractAILinks(extractAISection(block,'ASL_VIDEOS')),
@@ -3109,6 +3219,7 @@ function applyResultToVocab(v, r, overwriteMode) {
   const setText = (field, val) => { if (val && (overwriteMode || !v[field])) v[field] = val; };
   setText('definition', r.definition);
   setText('nomenclature', r.nomenclature);
+  setText('wordBreakdown', r.wordBreakdown);
   setText('mnemonic', r.mnemonic);
   [['deafLinks','deafResources'],['aslVideos','aslVideos'],['conceptVideos','conceptVideos'],['youthExplainers','youthExplainers'],['textResources','textResources']].forEach(([rKey,vField])=>{
     if (!r[rKey]) return;
@@ -3137,7 +3248,7 @@ function applyAIResearchResults() {
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
       v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId:'', studentId:'all',
-        definition:'', params:'', mastery:1, source:'AI Research', link:'', status:'needs-both',
+        definition:'', params:'', wordBreakdown:'', mastery:1, source:'AI Research', link:'', status:'needs-both',
         verified:false, confirmedSignLink:null,
         deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
         createdAt:Date.now() };
@@ -3149,6 +3260,301 @@ function applyAIResearchResults() {
   vocabSelection.clear(); updateSelectionBar();
   closeModal('modal-ai-research');
   toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''} — tap 🧏 on a word to review`);
+}
+
+// ── CLASS NOTES / DOCUMENTS ─────────────────────────────────────────────────────
+// Documents don't store their own copy of vocab info — each highlighted word just
+// stores a vocabId pointing back into DB.vocab, so editing a word anywhere (card
+// or document) is instantly reflected everywhere else. One source of truth.
+
+function populateDocClassSelect() {
+  const el = document.getElementById('doc-class');
+  if (!el) return;
+  el.innerHTML = '<option value="">— General —</option>';
+  sortedClasses().forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=classLabel(c); el.appendChild(o); });
+}
+
+function openDocBuilder() {
+  document.getElementById('doc-title').value='';
+  document.getElementById('doc-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('doc-source-text').value='';
+  document.getElementById('doc-file-preview').innerHTML='';
+  document.getElementById('doc-file-input').value='';
+  document.getElementById('doc-prompt-text').value='';
+  document.getElementById('doc-response-text').value='';
+  document.getElementById('doc-builder-step1').style.display='block';
+  document.getElementById('doc-builder-step2').style.display='none';
+  document.getElementById('doc-save-btn').style.display='none';
+  populateDocClassSelect();
+  openModal('modal-doc-builder');
+}
+
+// pdf.js is only needed if/when a PDF is uploaded — load it lazily rather than
+// on every page load, and cache the loading promise so repeat uploads don't
+// re-fetch it.
+let pdfJsLoadPromise = null;
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (pdfJsLoadPromise) return pdfJsLoadPromise;
+  pdfJsLoadPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = () => reject(new Error('pdf-load-failed'));
+    document.head.appendChild(s);
+  });
+  return pdfJsLoadPromise;
+}
+async function extractPdfText(arrayBuffer) {
+  const pdfjsLib = await loadPdfJs();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = '';
+  for (let i=1; i<=pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it=>it.str).join(' ') + '\n\n';
+  }
+  return text.trim();
+}
+
+function handleDocFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) readDocFile(file);
+}
+function handleDocDrop(event) {
+  event.preventDefault();
+  document.getElementById('doc-drop-zone').classList.remove('dragover');
+  const file = event.dataTransfer.files[0];
+  if (file) readDocFile(file);
+}
+async function readDocFile(file) {
+  if (file.size > 15*1024*1024) { toast('File too large (max 15MB)','warn'); return; }
+  const ext = (file.name.split('.').pop()||'').toLowerCase();
+  const preview = document.getElementById('doc-file-preview');
+  preview.innerHTML = `<div class="file-item"><span class="file-ext">${esc(ext.toUpperCase())}</span>${esc(file.name)} <span style="color:var(--ink3);font-size:10px;font-family:'DM Mono',monospace">(reading…)</span></div>`;
+  try {
+    let text = '';
+    if (ext==='txt') text = await file.text();
+    else if (ext==='pdf') text = await extractPdfText(await file.arrayBuffer());
+    else { toast('Only .txt and .pdf are supported — paste the text below instead','warn'); preview.innerHTML=''; return; }
+    if (!text.trim()) { toast('Nothing readable came out of that file — try pasting the text instead','warn'); preview.innerHTML=''; return; }
+    document.getElementById('doc-source-text').value = text;
+    preview.innerHTML = `<div class="file-item"><span class="file-ext">${esc(ext.toUpperCase())}</span>${esc(file.name)} <span style="color:var(--sage-d);font-size:10px;font-family:'DM Mono',monospace">(${text.length.toLocaleString()} characters extracted)</span>
+      <button class="btn gh sm" style="margin-left:auto;font-size:10px;color:var(--clay)" onclick="document.getElementById('doc-file-preview').innerHTML='';document.getElementById('doc-file-input').value=''">✕</button></div>`;
+    if (!document.getElementById('doc-title').value.trim()) document.getElementById('doc-title').value = file.name.replace(/\.[^.]+$/,'');
+  } catch(e) {
+    toast(e?.message==='pdf-load-failed' ? 'Could not load the PDF reader — check your internet connection' : 'Could not read that file — try pasting the text instead', 'warn');
+    preview.innerHTML='';
+  }
+}
+
+function buildDocPrompt() {
+  const src = document.getElementById('doc-source-text').value.trim();
+  if (!src) { toast('Upload a file or paste some text first','warn'); return; }
+  if (!document.getElementById('doc-title').value.trim()) {
+    const dv = document.getElementById('doc-date').value;
+    document.getElementById('doc-title').value = 'Class Notes — ' + (dv ? new Date(dv+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : new Date().toLocaleDateString());
+  }
+  const prompt = `I'm a K-12 ASL interpreter prepping to interpret the material below for my Deaf/DHH student(s). Please do two things:
+
+PART 1 — REORGANIZED TEXT: Reproduce the text below preserving the original wording and order as closely as possible (you may lightly clean up paragraph breaks/formatting if the source is messy, like OCR text or a scanned handout, but don't rewrite, summarize, or shorten the actual content). Wrap every key vocabulary or concept term I'll need to interpret in double asterisks the FIRST time it appears, like **photosynthesis**. Plain text only, no markdown headers or bullets.
+
+PART 2 — VOCAB DETAILS: For every term you wrapped in double asterisks in Part 1, give me the same research I use for my vocabulary dictionary, in this exact format (repeated for each word):
+
+WORD: [word]
+DEFINITION: [plain-English explanation, 2–4 sentences]
+NOMENCLATURE: [short everyday synonym]
+WORD_BREAKDOWN: [if the word has clear parts/roots — prefixes, suffixes, root words — break it down piece by piece and explain what each piece contributes to the meaning; if it doesn't break down meaningfully, write NONE]
+MNEMONIC: [a genuinely clever, memorable trick — wordplay, a vivid mental image, or a link to something the word already looks/sounds like — not just a restatement of the definition]
+DEAF_LINKS:
+[Title] — [URL]
+ASL_VIDEOS:
+[Title] — [URL]
+CONCEPT_VIDEOS:
+[Title] — [URL]
+YOUTH_EXPLAINERS:
+[Title] — [URL]
+---
+
+For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — not a homepage or channel page. If you can't find one, write "NONE FOUND" for that field instead of linking a homepage.
+
+Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
+
+===TEXT===
+[Part 1 content here]
+===VOCAB===
+[Part 2 blocks here]
+
+Here's the source material:
+
+${src}`;
+  document.getElementById('doc-prompt-text').value = prompt;
+  document.getElementById('doc-builder-step1').style.display='none';
+  document.getElementById('doc-builder-step2').style.display='block';
+  document.getElementById('doc-save-btn').style.display='inline-flex';
+}
+
+function copyDocPrompt() {
+  const ta = document.getElementById('doc-prompt-text');
+  ta.select(); ta.setSelectionRange(0,999999);
+  const done = () => toast('Prompt copied! Paste it into Claude, ChatGPT, or your AI of choice.');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done).catch(()=>{ try{document.execCommand('copy');done();}catch(e){toast('Copy failed — text is selected, copy manually','warn');} });
+  } else { try{document.execCommand('copy');done();}catch(e){toast('Copy failed — text is selected, copy manually','warn');} }
+}
+function fixDocPastedSpacing() {
+  const ta = document.getElementById('doc-response-text');
+  const before = ta.value;
+  const after = cleanPercentEncoding(before);
+  if (after===before) { toast('Nothing to fix — text looks clean'); return; }
+  ta.value = after;
+  toast('Fixed — spaces/punctuation were showing as %-codes','gold');
+}
+
+function applyDocBuilderResults() {
+  let raw = document.getElementById('doc-response-text').value.trim();
+  if (!raw) { toast('Paste the AI response first','warn'); return; }
+  const cleaned = cleanPercentEncoding(raw);
+  if (cleaned !== raw) { raw = cleaned; document.getElementById('doc-response-text').value = raw; }
+
+  const textMatch = raw.match(/===\s*TEXT\s*===([\s\S]*?)(?:===\s*VOCAB\s*===|$)/i);
+  const vocabMatch = raw.match(/===\s*VOCAB\s*===([\s\S]*)$/i);
+  if (!textMatch) { toast('Couldn\'t find the ===TEXT=== section — make sure the AI kept the exact ===TEXT===/===VOCAB=== markers from the prompt','warn'); return; }
+  const textPart = textMatch[1].trim();
+  const vocabPart = vocabMatch ? vocabMatch[1].trim() : '';
+
+  const results = vocabPart ? parseAIResearchResponse(vocabPart) : [];
+  let created=0, updated=0, linksAdded=0;
+  const classId = document.getElementById('doc-class').value;
+  const title = document.getElementById('doc-title').value.trim() || 'Untitled Document';
+  results.forEach(r=>{
+    let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
+    if (!v) {
+      v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
+        definition:'', params:'', mastery:1, source:`Class Notes — ${title}`, link:'', status:'needs-both',
+        verified:false, confirmedSignLink:null, wordBreakdown:'',
+        deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+        createdAt:Date.now() };
+      DB.vocab.push(v); created++;
+    } else updated++;
+    linksAdded += applyResultToVocab(v, r, false);
+  });
+
+  // Map built AFTER create/update so brand-new words are linkable too.
+  const wordIdMap = new Map(DB.vocab.map(v=>[v.word.toLowerCase().trim(), v.id]));
+  const segments = [];
+  let lastIdx = 0;
+  const re = /\*\*(.+?)\*\*/g;
+  let m;
+  while ((m = re.exec(textPart))) {
+    if (m.index>lastIdx) segments.push({ type:'text', text: textPart.slice(lastIdx, m.index) });
+    const word = m[1].trim();
+    segments.push({ type:'word', word, vocabId: wordIdMap.get(word.toLowerCase())||null });
+    lastIdx = re.lastIndex;
+  }
+  if (lastIdx < textPart.length) segments.push({ type:'text', text: textPart.slice(lastIdx) });
+  if (!segments.length) segments.push({ type:'text', text: textPart });
+
+  const doc = {
+    id: uid(), title, classId: classId||'',
+    date: document.getElementById('doc-date').value || new Date().toISOString().split('T')[0],
+    createdAt: Date.now(), segments,
+    rawSourceText: document.getElementById('doc-source-text').value
+  };
+  DB.classDocs.unshift(doc);
+  save(); renderVocab(); renderClassDocs(); populateClassSelectors(); renderDashboard();
+  closeModal('modal-doc-builder');
+  toast(`Document saved — ${created+updated} vocab word${created+updated===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}`);
+}
+
+function renderClassDocs() {
+  const box = document.getElementById('doc-list');
+  if (!box) return;
+  if (!DB.classDocs.length) { box.innerHTML = '<div class="tbl-empty">No class notes documents yet — tap "New Document" to build one.</div>'; return; }
+  const groups = {};
+  DB.classDocs.forEach(d=>{
+    const cls = DB.classes.find(c=>c.id===d.classId);
+    const clsName = cls ? classLabel(cls) : 'General / No Class';
+    (groups[clsName] = groups[clsName]||[]).push(d);
+  });
+  const names = Object.keys(groups).sort((a,b)=> a==='General / No Class' ? 1 : b==='General / No Class' ? -1 : a.localeCompare(b));
+  box.innerHTML = names.map(clsName=>{
+    const docs = groups[clsName].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+    return `<div class="doc-group-hdr">${esc(clsName)}</div>${docs.map(renderDocCard).join('')}`;
+  }).join('');
+}
+function renderDocCard(d) {
+  const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+  const wordCount = d.segments.filter(s=>s.type==='word').length;
+  return `<div class="doc-card">
+    <div class="doc-card-hdr" onclick="toggleDocBody('${d.id}')">
+      <div>
+        <div class="doc-title">${esc(d.title)}</div>
+        <div class="doc-meta-line">${dateFmt} · ${wordCount} vocab word${wordCount===1?'':'s'} linked</div>
+      </div>
+      <div class="vc-actions" onclick="event.stopPropagation()">
+        <input type="date" value="${esc(d.date||'')}" onchange="updateDocDate('${d.id}', this.value)" style="font-size:10px;padding:3px 5px;border-radius:6px;border:1px solid var(--brk)">
+        <button class="btn gh sm" style="padding:3px 7px;font-size:10px" onclick="printClassDoc('${d.id}')">🖨️ PDF</button>
+        <button class="btn gh sm" style="padding:3px 7px;font-size:10px;color:var(--clay)" onclick="deleteClassDoc('${d.id}')">✕</button>
+      </div>
+    </div>
+    <div class="doc-body" id="doc-body-${d.id}">${renderDocSegments(d)}</div>
+  </div>`;
+}
+function renderDocSegments(d) {
+  return d.segments.map(s=>{
+    if (s.type==='text') return esc(s.text);
+    if (s.vocabId) return `<span class="doc-word" onclick="event.stopPropagation();toggleDocWordPop('${d.id}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${d.id}-${s.vocabId}"></span>`;
+    return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
+  }).join('');
+}
+function toggleDocBody(id) {
+  document.getElementById('doc-body-'+id)?.classList.toggle('open');
+}
+function toggleDocWordPop(docId, vocabId) {
+  const pop = document.getElementById(`doc-pop-${docId}-${vocabId}`);
+  if (!pop) return;
+  if (pop.classList.contains('open')) { pop.classList.remove('open'); return; }
+  document.querySelectorAll(`#doc-body-${docId} .doc-word-pop.open`).forEach(p=>p.classList.remove('open'));
+  const v = DB.vocab.find(x=>x.id===vocabId);
+  pop.innerHTML = !v ? 'Word no longer in dictionary.' : `<b>${esc(v.word)}</b>${v.verified?' ✅':''}<br>
+    ${v.definition?esc(v.definition):'<i style="color:var(--ink3)">No definition yet</i>'}
+    ${v.mnemonic?`<br>💡 ${esc(v.mnemonic)}`:''}
+    <br><a href="#" onclick="event.preventDefault();jumpToVocabWord(${JSON.stringify(v.word)})">Open in Dictionary →</a>`;
+  pop.classList.add('open');
+}
+function jumpToVocabWord(word) {
+  document.querySelector('.sbi[data-page="vocab"]')?.click();
+  const firstTab = document.querySelector('#page-vocab .tb-bar .tab');
+  if (firstTab) switchTab(firstTab, 'vocab-dictionary');
+  const search = document.getElementById('vocab-search');
+  if (search) { search.value = word; renderVocab(); }
+}
+function updateDocDate(id, val) {
+  const d = DB.classDocs.find(x=>x.id===id);
+  if (!d) return;
+  d.date = val; save(); renderClassDocs();
+}
+function deleteClassDoc(id) {
+  if (!confirm('Delete this document? (Linked vocab words stay in your dictionary.)')) return;
+  DB.classDocs = DB.classDocs.filter(d=>d.id!==id);
+  save(); renderClassDocs(); toast('Document deleted');
+}
+function printClassDoc(id) {
+  const d = DB.classDocs.find(x=>x.id===id);
+  if (!d) return;
+  const cls = DB.classes.find(c=>c.id===d.classId);
+  const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
+  const bodyHtml = d.segments.map(s=> s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
+  const vocabWords = d.segments.filter(s=>s.type==='word' && s.vocabId).map(s=>DB.vocab.find(v=>v.id===s.vocabId)).filter(Boolean);
+  const vocabListHtml = vocabWords.length ? `<div class="print-vocab-list"><h3 style="font-family:'Lora',serif">Vocabulary</h3>${vocabWords.map(v=>`<div class="print-vocab-item"><b>${esc(v.word)}</b>${v.definition?` — ${esc(v.definition)}`:''}${v.mnemonic?`<br><i>💡 ${esc(v.mnemonic)}</i>`:''}</div>`).join('')}</div>` : '';
+  document.getElementById('doc-print-area').innerHTML = `<h1>${esc(d.title)}</h1><div class="print-meta">${cls?esc(classLabel(cls))+' · ':''}${dateFmt}</div><div class="print-body">${bodyHtml}</div>${vocabListHtml}`;
+  document.body.classList.add('printing-doc');
+  window.onafterprint = () => { document.body.classList.remove('printing-doc'); window.onafterprint=null; };
+  setTimeout(()=>window.print(), 50);
 }
 
 // ── DEFINITION LOOKUP ────────────────────────────────────────────────────────
@@ -3314,14 +3720,16 @@ function renderVocab() {
           </div>
         </div>
       </div>
-      ${v.definition?`<div class="vc-def">${esc(v.definition)}</div>`:'<div class="vc-def" style="color:var(--ink3);font-style:italic">No definition yet</div>'}
-      ${v.nomenclature?`<div class="vc-nomen">🔤 ${esc(v.nomenclature)}</div>`:''}
-      ${v.mnemonic?`<div class="vc-mnem">💡 ${esc(v.mnemonic)}</div>`:''}
+      ${v.definition?`<div class="vc-def" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start"><span>${esc(v.definition)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="clearVocabField('${v.id}','definition')" title="Remove definition">✕</button></div>`:'<div class="vc-def" style="color:var(--ink3);font-style:italic">No definition yet</div>'}
+      ${v.nomenclature?`<div class="vc-nomen" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start"><span>🔤 ${esc(v.nomenclature)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="clearVocabField('${v.id}','nomenclature')" title="Remove">✕</button></div>`:''}
+      ${(v.wordBreakdown && v.wordBreakdown!=='NONE')?`<div class="vc-nomen" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start"><span>🧩 ${esc(v.wordBreakdown)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="clearVocabField('${v.id}','wordBreakdown')" title="Remove">✕</button></div>`:''}
+      ${v.mnemonic?`<div class="vc-mnem" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start"><span>💡 ${esc(v.mnemonic)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="clearVocabField('${v.id}','mnemonic')" title="Remove mnemonic">✕</button></div>`:''}
       ${v.confirmedSignLink
-        ? `<div class="vc-confirmed-sign">🤟 Confirmed sign: <a href="${esc(v.confirmedSignLink.url)}" target="_blank" rel="noopener">${esc(v.confirmedSignLink.title||v.confirmedSignLink.url)}</a><button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')">unlink</button></div>`
-        : (v.params?`<div class="vc-params">🤟 ${esc(v.params)}</div>`:'<div class="vc-params" style="color:var(--clay)">No sign info yet — type parameters below, or pick a video from ASL Videos once researched</div>')}
+        ? `<div class="vc-confirmed-sign">🤟 Confirmed sign: <a href="${esc(v.confirmedSignLink.url)}" target="_blank" rel="noopener">${esc(v.confirmedSignLink.title||v.confirmedSignLink.url)}</a><button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')">✕ remove</button></div>`
+        : (v.params?`<div class="vc-params" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start"><span>🤟 ${esc(v.params)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="clearVocabField('${v.id}','params')" title="Remove">✕</button></div>`:'<div class="vc-params" style="color:var(--clay)">No sign info yet — type parameters below, or pick a video from ASL Videos once researched</div>')}
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
       ${cls?`<div class="vc-params">Class: ${esc(classLabel(cls))}</div>`:''}
+      ${v.createdAt?`<div class="vc-params" style="color:var(--ink3)">🕓 Added ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} at ${new Date(v.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>`:''}
       ${missing.length?`<div class="vc-missing">Still needed for research: ${missing.join(', ')}</div>`:''}
       ${renderAIResearchBlock(v)}
     </div>`;
@@ -3349,7 +3757,8 @@ function renderResourceLinesArray(arr, vocabId, field, word) {
     const linkHtml = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : esc(r.title);
     const flagHtml = flagged ? `<span class="res-flag">⚠️ Generic — verify</span><button class="res-mini-btn" onclick="markResourceReviewed('${vocabId}','${field}','${r.id}')">Mark reviewed</button>` : '';
     const signBtn = (field==='aslVideos' && r.url) ? `<button class="res-mini-btn sign" onclick="useAsConfirmedSign('${vocabId}','${r.id}')">🤟 Use as sign</button>` : '';
-    return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}</div>`;
+    const delBtn = `<button class="res-mini-btn" style="color:var(--clay)" onclick="deleteResourceLink('${vocabId}','${field}','${r.id}')" title="Remove this link">✕</button>`;
+    return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}${delBtn}</div>`;
   }).join('');
 }
 
@@ -4487,10 +4896,10 @@ function doImport(e){
 
 function exportVocabCSV(){
   if(!DB.vocab.length){toast('No vocabulary to export','warn');return;}
-  const headers=['Word','Category','Definition','Simple Term/Synonym','ASL Parameters','Confirmed Sign Video','Mastery','Source','Student','Link','Mnemonic','Verified','Deaf-Led Resources','ASL Videos','Video Explainers','Explained for Students','Concept Explainers (legacy)'];
+  const headers=['Word','Category','Definition','Simple Term/Synonym','Word Breakdown','ASL Parameters','Confirmed Sign Video','Mastery','Source','Student','Link','Mnemonic','Verified','Date Added','Deaf-Led Resources','ASL Videos','Video Explainers','Explained for Students','Concept Explainers (legacy)'];
   const rows=DB.vocab.map(v=>{
     const student=DB.students.find(s=>s.id===v.studentId);
-    return [v.word,v.category||'',v.definition||'',v.nomenclature||'',v.params||'',v.confirmedSignLink?`${v.confirmedSignLink.title||''} — ${v.confirmedSignLink.url||''}`:'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.verified?'Yes':'No',resourceArrayToText(v.deafResources),resourceArrayToText(v.aslVideos),resourceArrayToText(v.conceptVideos),resourceArrayToText(v.youthExplainers),resourceArrayToText(v.textResources)].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
+    return [v.word,v.category||'',v.definition||'',v.nomenclature||'',(v.wordBreakdown&&v.wordBreakdown!=='NONE')?v.wordBreakdown:'',v.params||'',v.confirmedSignLink?`${v.confirmedSignLink.title||''} — ${v.confirmedSignLink.url||''}`:'',masteryLabel(v.mastery)||'',v.source||'',student?.label||'',v.link||'',v.mnemonic||'',v.verified?'Yes':'No',v.createdAt?new Date(v.createdAt).toLocaleString():'',resourceArrayToText(v.deafResources),resourceArrayToText(v.aslVideos),resourceArrayToText(v.conceptVideos),resourceArrayToText(v.youthExplainers),resourceArrayToText(v.textResources)].map(f=>`"${String(f).replace(/"/g,'""')}"`).join(',');
   });
   const csv=[headers.join(','),...rows].join('\n');
   const a=document.createElement('a');
