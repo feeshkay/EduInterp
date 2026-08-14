@@ -2034,6 +2034,28 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
   </div>
 </div>
 
+<!-- Purge Generic Links (scope confirmation) -->
+<div class="ov" id="modal-purge-generic">
+  <div class="mod" style="max-width:480px">
+    <div class="mh"><h2>🧹 Purge Generic Links</h2><button class="mod-close" onclick="closeModal('modal-purge-generic')">✕</button></div>
+    <div class="mb">
+      <div style="font-size:13px;margin-bottom:6px">By default, only removes unverified bare-homepage links from the three known repeat offenders — <strong>Handspeak</strong>, <strong>Lifeprint</strong>, and <strong>ASL Nook</strong> (<span id="pg-known-count">0</span> link<span id="pg-known-plural">s</span>).</div>
+      <div id="pg-breakdown" style="font-size:11px;color:var(--muted,#888);margin-bottom:10px"></div>
+      <div id="pg-other-row" style="display:none;border-top:1px solid var(--br);padding-top:10px;margin-top:4px">
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="pg-include-other" style="margin-top:3px">
+          <span>Also remove flagged generic links from <strong>other</strong> sites (<span id="pg-other-count">0</span>) — unchecked by default so those are left for you to review individually.</span>
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--muted,#888);margin-top:10px">Links you've already marked reviewed are always kept. This can't be undone.</div>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-purge-generic')">Cancel</button>
+      <button class="btn pri sm" onclick="confirmPurgeGenericLinks()">Purge</button>
+    </div>
+  </div>
+</div>
+
 <!-- Class Notes / Document Builder -->
 <div class="ov" id="modal-doc-builder">
   <div class="mod" style="max-width:640px">
@@ -2957,16 +2979,60 @@ function formatGenericLinkBreakdown(counts) {
   if (counts.other>0) parts.push(`other: ${counts.other}`);
   return parts.join(' · ');
 }
+// Whether a flagged link should count toward the purge given the current
+// scope: 'known' = Handspeak/Lifeprint/ASL Nook only, 'all' = those plus
+// every other flagged "other" site.
+function linkMatchesPurgeScope(url, scope) {
+  const isKnown = !!getKnownOffenderLabel(url);
+  return scope==='all' ? true : isKnown;
+}
+function countGenericLinksInScope(scope) {
+  let n = 0;
+  DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => (v[f]||[]).forEach(r => {
+    if (!r.reviewed && isGenericResourceUrl(r.url, v.word) && linkMatchesPurgeScope(r.url, scope)) n++;
+  })));
+  return n;
+}
+// Opens a confirmation modal (instead of a plain window.confirm) so the user
+// can choose whether "other" sites' generic links get swept up too, or only
+// the three known repeat offenders (Handspeak/Lifeprint/ASL Nook). Default is
+// known-offenders-only — "other" links are left alone unless opted in.
 function purgeGenericLinks() {
-  const n = countUnreviewedGenericLinks();
-  if (!n) { toast('No unverified generic links found — clean!'); return; }
-  const breakdown = formatGenericLinkBreakdown(getGenericLinkBreakdown());
-  if (!confirm(`Remove all ${n} unverified generic link${n===1?'':'s'} across your whole dictionary?${breakdown?`\n(${breakdown})`:''}\nLinks you've already marked reviewed are kept. This can't be undone.`)) return;
+  const total = countUnreviewedGenericLinks();
+  if (!total) { toast('No unverified generic links found — clean!'); return; }
+  const counts = getGenericLinkBreakdown();
+  const breakdown = formatGenericLinkBreakdown(counts);
+  const knownCount = counts.Handspeak + counts.Lifeprint + counts['ASL Nook'];
+  document.getElementById('pg-breakdown').textContent = breakdown ? `(${breakdown})` : '';
+  document.getElementById('pg-known-count').textContent = knownCount;
+  const otherRow = document.getElementById('pg-other-row');
+  const otherCb = document.getElementById('pg-include-other');
+  otherCb.checked = false;
+  if (counts.other>0) {
+    otherRow.style.display = '';
+    document.getElementById('pg-other-count').textContent = counts.other;
+  } else {
+    otherRow.style.display = 'none';
+  }
+  openModal('modal-purge-generic');
+}
+function confirmPurgeGenericLinks() {
+  const scope = document.getElementById('pg-include-other').checked ? 'all' : 'known';
+  const n = countGenericLinksInScope(scope);
+  closeModal('modal-purge-generic');
+  if (!n) { toast('Nothing to remove in that scope'); return; }
+  const counts = { Handspeak:0, Lifeprint:0, 'ASL Nook':0, other:0 };
   DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => {
     if (!v[f]) return;
-    v[f] = v[f].filter(r => r.reviewed || !isGenericResourceUrl(r.url, v.word));
+    v[f] = v[f].filter(r => {
+      if (r.reviewed || !isGenericResourceUrl(r.url, v.word) || !linkMatchesPurgeScope(r.url, scope)) return true;
+      const label = getKnownOffenderLabel(r.url);
+      counts[label || 'other']++;
+      return false;
+    });
   }));
   save(); renderVocab();
+  const breakdown = formatGenericLinkBreakdown(counts);
   toast(`Removed ${n} generic link${n===1?'':'s'}${breakdown?` (${breakdown})`:''}`);
 }
 function deleteResourceLink(vocabId, field, linkId) {
