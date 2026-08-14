@@ -648,6 +648,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="btn sm gold" onclick="autoDefineAll()" title="Look up plain-English definitions for every word missing one">🔍 Auto-Define All</button>
               <button class="btn sm" onclick="openDupFinder()" title="Scan for words entered more than once">🔗 Find Duplicate Words</button>
+              <button class="btn sm" onclick="purgeGenericLinks()" title="Remove every unverified generic link across the whole dictionary">🧹 Purge Generic Links</button>
               <button class="btn sm pri" onclick="openAIResearchModal()" title="Build a prompt for an AI to find Deaf-led resources, ASL videos, and memory tips">🧏 AI Research Prep</button>
             </div>
           </div>
@@ -2715,13 +2716,14 @@ function computeVocabStatus(v) {
 // already-complete words in the prompt and to tell the AI exactly what's left.
 function getMissingResearchFields(v) {
   const missing = [];
+  if (!v.category || v.category==='Uncategorized') missing.push('CATEGORY');
   if (!v.definition) missing.push('DEFINITION');
   if (!v.nomenclature) missing.push('NOMENCLATURE');
   if (!v.wordBreakdown) missing.push('WORD_BREAKDOWN');
   if (!v.mnemonic) missing.push('MNEMONIC');
-  if (!hasSignInfo(v)) missing.push('a confirmed sign (parameters or video)');
-  if (!hasGoodLinks(v.deafResources, v.word)) missing.push('DEAF_LINKS');
-  if (!hasGoodLinks(v.aslVideos, v.word)) missing.push('ASL_VIDEOS');
+  if (!hasSignInfo(v)) missing.push('a confirmed sign (parameters, description, or video)');
+  if (!hasGoodLinks(v.deafResources, v.word)) missing.push(v.deafResources?.length?'DEAF_LINKS (existing ones are too generic — replace)':'DEAF_LINKS');
+  if (!hasGoodLinks(v.aslVideos, v.word)) missing.push(v.aslVideos?.length?'ASL_VIDEOS (existing ones are too generic — replace)':'ASL_VIDEOS');
   return missing;
 }
 
@@ -2912,6 +2914,24 @@ function markResourceReviewed(vocabId, field, linkId) {
 // homepage rather than a page for the specific sign/word.
 function hasUnreviewedGenericLinks(v) {
   return VOCAB_RESOURCE_FIELDS.some(f => (v[f]||[]).some(r => !r.reviewed && isGenericResourceUrl(r.url, v.word)));
+}
+// One-tap cleanup for everything flagged generic-and-unreviewed across the whole
+// dictionary — links you've already tapped "Mark reviewed" on are left alone.
+function countUnreviewedGenericLinks() {
+  let n = 0;
+  DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => (v[f]||[]).forEach(r => { if (!r.reviewed && isGenericResourceUrl(r.url, v.word)) n++; })));
+  return n;
+}
+function purgeGenericLinks() {
+  const n = countUnreviewedGenericLinks();
+  if (!n) { toast('No unverified generic links found — clean!'); return; }
+  if (!confirm(`Remove all ${n} unverified generic link${n===1?'':'s'} across your whole dictionary? Links you've already marked reviewed are kept. This can't be undone.`)) return;
+  DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => {
+    if (!v[f]) return;
+    v[f] = v[f].filter(r => r.reviewed || !isGenericResourceUrl(r.url, v.word));
+  }));
+  save(); renderVocab();
+  toast(`Removed ${n} generic link${n===1?'':'s'}`);
 }
 function deleteResourceLink(vocabId, field, linkId) {
   const v = DB.vocab.find(x=>x.id===vocabId);
@@ -3107,19 +3127,25 @@ function buildAIResearchPrompt(entries) {
   const groupedList = sortedGroups.map(g=>
     `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>`- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`).join('\n')}`
   ).join('\n\n');
+  const existingCats = getAllCategories();
+  const catNote = existingCats.length
+    ? `Categories I already use: ${existingCats.join(', ')}. Reuse one of these if it genuinely fits the word; otherwise invent a short, sensible new category (subject area or unit name) rather than forcing a bad fit — I'll adjust it myself if needed, so don't overthink it.`
+    : `Suggest a short, sensible category for each word (subject area or unit name) — I'll adjust it myself if needed.`;
 
   return `I'm a K-12 educational ASL interpreter prepping to interpret the vocabulary/concepts below for my Deaf/DHH students. For EACH word or phrase, please research and provide only the fields listed as "missing" for that word — I already have everything else, so don't redo it:
 
-1. DEFINITION — a plain-English explanation of what the word/concept means (2–4 sentences, no jargon).
-2. NOMENCLATURE — a short, simple everyday synonym or plain-language term for the word (a few words, not a full sentence) — e.g. for "photosynthesis" something like "how plants make food from sunlight."
-3. WORD_BREAKDOWN — if the word has clear parts (prefixes, suffixes, root words), break it down piece by piece and say what each piece contributes to the meaning — e.g. "photosynthesis" = "photo-" (light) + "synthesis" (putting together) = "putting together [food] using light." If the word genuinely doesn't break down into meaningful parts, just write NONE.
-4. MNEMONIC — a genuinely clever, memorable trick for remembering the sign or the meaning: wordplay, a vivid or funny mental image, or a link to something the word already looks/sounds like. Not just a restatement of the definition — it should be something that would actually stick in memory.
-5. DEAF_LINKS — at least 2–3 trustworthy links written or created BY DEAF PEOPLE that specifically explain or define THIS word — not just a Deaf-run organization's homepage or "about us" page. A specific blog post, glossary entry, or article about this exact term counts; a general homepage does not. Double-check that each source is actually Deaf-led before including it.
-6. ASL_VIDEOS — a video/page showing THIS SPECIFIC SIGN, made BY DEAF ASL users/creators — e.g. a dictionary entry page for the word, not a channel homepage or a general dictionary search page. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools. If a site like Lifeprint, Handspeak, or similar has a page for this exact word, link that exact page — never the site's homepage.
-7. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
-8. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
+1. CATEGORY — a short subject/category label for the word. ${catNote}
+2. DEFINITION — a plain-English explanation of what the word/concept means (2–4 sentences, no jargon).
+3. NOMENCLATURE — a short, simple everyday synonym or plain-language term for the word (a few words, not a full sentence) — e.g. for "photosynthesis" something like "how plants make food from sunlight."
+4. WORD_BREAKDOWN — if the word has clear parts (prefixes, suffixes, root words), break it down piece by piece and say what each piece contributes to the meaning — e.g. "photosynthesis" = "photo-" (light) + "synthesis" (putting together) = "putting together [food] using light." If the word genuinely doesn't break down into meaningful parts, just write NONE.
+5. MNEMONIC — a genuinely clever, memorable trick for remembering the sign or the meaning: wordplay, a vivid or funny mental image, or a link to something the word already looks/sounds like. Not just a restatement of the definition — it should be something that would actually stick in memory.
+6. SIGN_DESCRIPTION — if you can find a description of how the ASL sign is actually performed (handshape, location, movement, palm orientation), include it in plain language so I can double-check it myself. If you can't find one, write NONE.
+7. DEAF_LINKS — at least 2–3 trustworthy links written or created BY DEAF PEOPLE that specifically explain or define THIS word — not just a Deaf-run organization's homepage or "about us" page. A specific blog post, glossary entry, or article about this exact term counts; a general homepage does not. Double-check that each source is actually Deaf-led before including it.
+8. ASL_VIDEOS — a video/page showing THIS SPECIFIC SIGN, made BY DEAF ASL users/creators — e.g. a dictionary entry page for the word, not a channel homepage or a general dictionary search page. Avoid hearing signers, interpreter-made videos, or auto-translate/avatar tools. If a site like Lifeprint, Handspeak, or similar has a page for this exact word, link that exact page — never the site's homepage.
+9. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
+10. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
-Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — I'd rather know it doesn't exist than get a link that doesn't actually show the word.
+Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
 
 The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
@@ -3128,10 +3154,12 @@ IMPORTANT — formatting: reply in PLAIN TEXT only, no markdown. Do not use #, #
 Format your answer EXACTLY like this, repeated for every word, so I can paste it back into my app:
 
 WORD: [word]
+CATEGORY: [subject/category, only if missing]
 DEFINITION: [plain-English explanation, only if missing]
 NOMENCLATURE: [simple synonym or everyday term, only if missing]
 WORD_BREAKDOWN: [piece-by-piece breakdown, or NONE — only if missing]
 MNEMONIC: [clever memory trick, only if missing]
+SIGN_DESCRIPTION: [plain-language description of the sign, or NONE — only if missing]
 DEAF_LINKS:
 [Title] — [URL]
 [Title] — [URL]
@@ -3184,7 +3212,7 @@ function copyAIResearchPrompt() {
   }
 }
 
-const AI_RES_LABELS = ['DEFINITION','NOMENCLATURE','WORD_BREAKDOWN','MNEMONIC','SIGN_DESCRIPTION','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
+const AI_RES_LABELS = ['CATEGORY','DEFINITION','NOMENCLATURE','WORD_BREAKDOWN','MNEMONIC','SIGN_DESCRIPTION','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
 // Matches a WORD: line whether or not markdown leftovers (###, **, -, numbering) are still attached —
 // copying a rendered AI reply out of a chat window strips markdown inconsistently depending on the site.
 const WORD_LINE_RE = /^[\s>*_#\-\d.]{0,8}WORD:\s*(.+?)[\s*]*$/im;
@@ -3214,6 +3242,7 @@ function parseAIResearchResponse(text) {
     if (/^none$/i.test(breakdown)) breakdown = 'NONE';
     return {
       word,
+      category: extractAISection(block,'CATEGORY'),
       definition: extractAISection(block,'DEFINITION'),
       nomenclature: extractAISection(block,'NOMENCLATURE'),
       wordBreakdown: breakdown,
@@ -3270,6 +3299,9 @@ function isSignDictionaryUrl(url) {
 function applyResultToVocab(v, r, overwriteMode) {
   let linksAdded = 0, genericSkipped = 0;
   const setText = (field, val) => { if (val && (overwriteMode || !v[field])) v[field] = val; };
+  // Category counts as "blank" if it's empty OR still the default Uncategorized —
+  // so an AI-suggested category can fill it in without needing overwrite mode.
+  if (r.category && (overwriteMode || !v.category || v.category==='Uncategorized')) v.category = r.category;
   setText('definition', r.definition);
   setText('nomenclature', r.nomenclature);
   setText('wordBreakdown', r.wordBreakdown);
@@ -3493,17 +3525,36 @@ function buildDocPrompt() {
     const dv = document.getElementById('doc-date').value;
     document.getElementById('doc-title').value = 'Class Notes — ' + (dv ? new Date(dv+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : new Date().toLocaleDateString());
   }
-  const prompt = `I'm a K-12 ASL interpreter prepping to interpret the material below for my Deaf/DHH student(s). Please do two things:
+  const docType = document.getElementById('doc-type')?.value || 'reading';
+  const docTypeLabels = { reading:'a reading/textbook excerpt', worksheet:'a worksheet', presentation:'a slide presentation', handout:'a handout', notes:'notes', other:'a document' };
+  const docTypeNote = docType==='presentation'
+    ? `This came from a slide presentation, so the extracted text may have stray slide numbers or repeated headers/footers from the export — ignore those, they're not part of the actual content.`
+    : docType==='worksheet'
+    ? `This is a worksheet — if it has numbered questions or blanks, keep that numbering/structure since it's meaningful, not decorative.`
+    : '';
+  const existingCats = getAllCategories();
+  const catNote = existingCats.length
+    ? `Categories already in use: ${existingCats.join(', ')}. Reuse one of these if it genuinely fits; otherwise invent a short, sensible new one (e.g. subject area or unit name) rather than forcing a bad fit.`
+    : `Suggest a short, sensible category for each word (e.g. subject area or unit name).`;
 
-PART 1 — REORGANIZED TEXT: Reproduce the text below preserving the original wording and order as closely as possible (you may lightly clean up paragraph breaks/formatting if the source is messy, like OCR text or a scanned handout, but don't rewrite, summarize, or shorten the actual content). Wrap every key vocabulary or concept term I'll need to interpret in double asterisks the FIRST time it appears, like **photosynthesis**. Plain text only, no markdown headers or bullets.
+  const prompt = `I'm a K-12 ASL interpreter prepping to interpret ${docTypeLabels[docType]||'this material'} for my Deaf/DHH student(s). Please do two things:
+
+PART 1 — REORGANIZED TEXT: Reproduce the text below preserving the original wording and order as closely as possible (you may lightly clean up paragraph breaks/formatting if the source is messy, like OCR text or a scanned handout, but don't rewrite, summarize, or shorten the actual content). ${docTypeNote}
+
+Formatting rules for Part 1 — these are the ONLY markdown you should use, nothing else (no #, no bullets, no other bold):
+- Wrap every key vocabulary or concept term I'll need to interpret in double asterisks the FIRST time it appears, like **photosynthesis**. Put the asterisks directly around the word only — no trailing periods/commas inside them (write **photosynthesis**, not **photosynthesis.**). The word inside the asterisks must be spelled exactly the way you write it in the matching WORD: line in Part 2.
+- Also highlight general academic/functional vocabulary that could come up in interpreting even if it's not subject-specific — words like "success," "criteria," "objective," "evaluate," "requirement" — anything a student might need explained or signed consistently, not just technical terms.
+- If the source material genuinely has clear sections, you can mark a section heading by starting that line with "## " (e.g. "## Introduction") — use this sparingly, only for real section breaks.
 
 PART 2 — VOCAB DETAILS: For every term you wrapped in double asterisks in Part 1, give me the same research I use for my vocabulary dictionary, in this exact format (repeated for each word):
 
-WORD: [word]
-DEFINITION: [plain-English explanation, 2–4 sentences]
+WORD: [word — must exactly match what's wrapped in Part 1]
+CATEGORY: [short subject/category name — ${catNote}]
+DEFINITION: [if this exact term is already defined somewhere in the source text itself — a glossary entry, an in-text definition, a callout box — use THAT definition (plain-English reworded if needed) instead of writing a new one from general knowledge. Otherwise write a plain-English explanation, 2–4 sentences.]
 NOMENCLATURE: [short everyday synonym]
 WORD_BREAKDOWN: [if the word has clear parts/roots — prefixes, suffixes, root words — break it down piece by piece and explain what each piece contributes to the meaning; if it doesn't break down meaningfully, write NONE]
 MNEMONIC: [a genuinely clever, memorable trick — wordplay, a vivid mental image, or a link to something the word already looks/sounds like — not just a restatement of the definition]
+SIGN_DESCRIPTION: [if you can find a description of how the ASL sign is actually performed — handshape, location, movement, palm orientation — include it here in plain language, so I can double check it against what I already know. If you can't find one, write NONE.]
 DEAF_LINKS:
 [Title] — [URL]
 ASL_VIDEOS:
@@ -3514,7 +3565,7 @@ YOUTH_EXPLAINERS:
 [Title] — [URL]
 ---
 
-For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — not a homepage or channel page. If you can't find one, write "NONE FOUND" for that field instead of linking a homepage.
+For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
 
 Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
 
@@ -3549,6 +3600,58 @@ function fixDocPastedSpacing() {
   toast('Fixed — spaces/punctuation were showing as %-codes','gold');
 }
 
+// Turns raw marked-up text ("## Heading" lines + "**word**" wraps) into a
+// segments array. Every wrapped word is guaranteed to end up linked to a real
+// vocab entry — if it doesn't match one already researched in Part 2 (different
+// spelling/formatting the AI used), a bare entry is auto-created on the spot
+// rather than leaving the word unlinked. wordIdMap is mutated as we go so
+// repeated occurrences of a newly-created word reuse the same entry.
+function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
+  const segments = [];
+  const processParagraph = (paraText) => {
+    const re = /\*{1,2}([^*\n]+?)\*{1,2}/g;
+    let lastIdx = 0, m;
+    while ((m = re.exec(paraText))) {
+      if (m.index>lastIdx) segments.push({ type:'text', text: paraText.slice(lastIdx, m.index) });
+      let captured = m[1].trim();
+      const trailMatch = captured.match(/^(.*?)([.,;:!?]+)$/);
+      let word = captured, trail = '';
+      if (trailMatch && trailMatch[1].trim()) { word = trailMatch[1].trim(); trail = trailMatch[2]; }
+      if (word) {
+        const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
+        let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
+        if (!vocabId) {
+          const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
+            definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
+            verified:false, confirmedSignLink:null,
+            deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+            createdAt:Date.now() };
+          DB.vocab.push(nv);
+          vocabId = nv.id;
+          wordIdMap.set(norm, vocabId);
+        }
+        segments.push({ type:'word', word, vocabId });
+      }
+      if (trail) segments.push({ type:'text', text: trail });
+      lastIdx = re.lastIndex;
+    }
+    if (lastIdx < paraText.length) segments.push({ type:'text', text: paraText.slice(lastIdx) });
+  };
+  let paraBuffer = [];
+  const flush = () => { if (paraBuffer.length) { processParagraph(paraBuffer.join('\n')); paraBuffer = []; } };
+  textPart.split('\n').forEach(line=>{
+    const headingMatch = line.match(/^##\s+(.+)$/);
+    if (headingMatch) { flush(); segments.push({ type:'heading', text: headingMatch[1].trim() }); }
+    else paraBuffer.push(line);
+  });
+  flush();
+  if (!segments.length) segments.push({ type:'text', text: textPart });
+  return segments;
+}
+function docMarkedTextFromSegments(segments) {
+  return segments.map(s => s.type==='heading' ? `## ${s.text}\n` : s.type==='word' ? `**${s.word}**` : s.text).join('');
+}
+
 function applyDocBuilderResults() {
   let raw = document.getElementById('doc-response-text').value.trim();
   if (!raw) { toast('Paste the AI response first','warn'); return; }
@@ -3562,7 +3665,7 @@ function applyDocBuilderResults() {
   const vocabPart = vocabMatch ? vocabMatch[1].trim() : '';
 
   const results = vocabPart ? parseAIResearchResponse(vocabPart) : [];
-  let created=0, updated=0, linksAdded=0;
+  let created=0, updated=0, linksAdded=0, genericSkipped=0;
   const classId = document.getElementById('doc-class').value;
   const title = document.getElementById('doc-title').value.trim() || 'Untitled Document';
   results.forEach(r=>{
@@ -3575,34 +3678,60 @@ function applyDocBuilderResults() {
         createdAt:Date.now() };
       DB.vocab.push(v); created++;
     } else updated++;
-    linksAdded += applyResultToVocab(v, r, false);
+    const res = applyResultToVocab(v, r, false);
+    linksAdded += res.linksAdded; genericSkipped += res.genericSkipped;
   });
 
-  // Map built AFTER create/update so brand-new words are linkable too.
+  // Map built AFTER create/update so every researched word (including brand-new
+  // ones) is linkable; buildDocSegments auto-creates a bare entry for anything
+  // still unmatched (e.g. wrapped in Part 1 but missing its Part 2 block).
   const wordIdMap = new Map(DB.vocab.map(v=>[v.word.toLowerCase().trim(), v.id]));
-  const segments = [];
-  let lastIdx = 0;
-  const re = /\*\*(.+?)\*\*/g;
-  let m;
-  while ((m = re.exec(textPart))) {
-    if (m.index>lastIdx) segments.push({ type:'text', text: textPart.slice(lastIdx, m.index) });
-    const word = m[1].trim();
-    segments.push({ type:'word', word, vocabId: wordIdMap.get(word.toLowerCase())||null });
-    lastIdx = re.lastIndex;
-  }
-  if (lastIdx < textPart.length) segments.push({ type:'text', text: textPart.slice(lastIdx) });
-  if (!segments.length) segments.push({ type:'text', text: textPart });
+  const segments = buildDocSegments(textPart, classId, title, wordIdMap);
 
   const doc = {
     id: uid(), title, classId: classId||'',
     date: document.getElementById('doc-date').value || new Date().toISOString().split('T')[0],
     createdAt: Date.now(), segments,
-    rawSourceText: document.getElementById('doc-source-text').value
+    rawSourceText: document.getElementById('doc-source-text').value,
+    attachment: pendingDocAttachment || null
   };
   DB.classDocs.unshift(doc);
+  pendingDocAttachment = null;
   save(); renderVocab(); renderClassDocs(); populateClassSelectors(); renderDashboard();
   closeModal('modal-doc-builder');
-  toast(`Document saved — ${created+updated} vocab word${created+updated===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}`);
+  const linkedWords = new Set(segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
+  toast(`Document saved — ${linkedWords} vocab word${linkedWords===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}${genericSkipped?`, skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'}`:''}`);
+}
+
+// ── EDITING A SAVED DOCUMENT ─────────────────────────────────────────────────────
+function openDocEditMode(id) {
+  const d = DB.classDocs.find(x=>x.id===id);
+  if (!d) return;
+  pendingEditDocId = id;
+  document.getElementById('doc-builder-title').textContent = '✏️ Edit Document';
+  document.getElementById('doc-builder-step1').style.display='none';
+  document.getElementById('doc-builder-step2').style.display='none';
+  document.getElementById('doc-builder-editmode').style.display='block';
+  document.getElementById('doc-save-btn').style.display='none';
+  document.getElementById('doc-edit-save-btn').style.display='inline-flex';
+  document.getElementById('doc-edit-title').value = d.title;
+  const clsSel = document.getElementById('doc-edit-class');
+  clsSel.innerHTML = '<option value="">— General —</option>' + sortedClasses().map(c=>`<option value="${c.id}" ${c.id===d.classId?'selected':''}>${esc(classLabel(c))}</option>`).join('');
+  document.getElementById('doc-edit-body').value = docMarkedTextFromSegments(d.segments);
+  openModal('modal-doc-builder');
+}
+function saveDocEdits() {
+  const d = DB.classDocs.find(x=>x.id===pendingEditDocId);
+  if (!d) { closeModal('modal-doc-builder'); return; }
+  d.title = document.getElementById('doc-edit-title').value.trim() || d.title;
+  d.classId = document.getElementById('doc-edit-class').value;
+  const bodyText = document.getElementById('doc-edit-body').value;
+  const wordIdMap = new Map(DB.vocab.map(v=>[v.word.toLowerCase().trim(), v.id]));
+  d.segments = buildDocSegments(bodyText, d.classId, d.title, wordIdMap);
+  save(); renderVocab(); renderClassDocs(); populateClassSelectors();
+  closeModal('modal-doc-builder');
+  pendingEditDocId = null;
+  toast('Document updated');
 }
 
 function renderClassDocs() {
@@ -3623,28 +3752,44 @@ function renderClassDocs() {
 }
 function renderDocCard(d) {
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
-  const wordCount = d.segments.filter(s=>s.type==='word').length;
+  const wordCount = new Set(d.segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
+  const attachHtml = d.attachment ? `<a href="${d.attachment.dataUrl}" download="${esc(d.attachment.name)}" class="doc-attach-chip" onclick="event.stopPropagation()">📎 ${esc(d.attachment.name)}</a>` : '';
   return `<div class="doc-card">
     <div class="doc-card-hdr" onclick="toggleDocBody('${d.id}')">
       <div>
         <div class="doc-title">${esc(d.title)}</div>
         <div class="doc-meta-line">${dateFmt} · ${wordCount} vocab word${wordCount===1?'':'s'} linked</div>
+        ${attachHtml}
       </div>
       <div class="vc-actions" onclick="event.stopPropagation()">
         <input type="date" value="${esc(d.date||'')}" onchange="updateDocDate('${d.id}', this.value)" style="font-size:10px;padding:3px 5px;border-radius:6px;border:1px solid var(--brk)">
+        <button class="btn gh sm" style="padding:3px 7px;font-size:10px" onclick="openDocEditMode('${d.id}')">✏️ Edit</button>
         <button class="btn gh sm" style="padding:3px 7px;font-size:10px" onclick="printClassDoc('${d.id}')">🖨️ PDF</button>
         <button class="btn gh sm" style="padding:3px 7px;font-size:10px;color:var(--clay)" onclick="deleteClassDoc('${d.id}')">✕</button>
       </div>
     </div>
-    <div class="doc-body" id="doc-body-${d.id}">${renderDocSegments(d)}</div>
+    <div class="doc-body" id="doc-body-${d.id}">${renderDocSegments(d)}${renderDocVocabList(d)}</div>
   </div>`;
 }
 function renderDocSegments(d) {
   return d.segments.map(s=>{
+    if (s.type==='heading') return `<div class="doc-heading">${esc(s.text)}</div>`;
     if (s.type==='text') return esc(s.text);
     if (s.vocabId) return `<span class="doc-word" onclick="event.stopPropagation();toggleDocWordPop('${d.id}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${d.id}-${s.vocabId}"></span>`;
     return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
   }).join('');
+}
+// Consolidated list of every unique word linked in this document, pulled live
+// from DB.vocab — since it's a live lookup (not a stored copy), editing a word's
+// definition anywhere always shows up here immediately, and vice versa.
+function renderDocVocabList(d) {
+  const seen = new Map();
+  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
+  const words = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
+  if (!words.length) return '';
+  return `<div class="doc-vocab-list"><div class="doc-vocab-list-hdr">📋 Vocabulary in This Document (${words.length})</div>
+    ${words.map(v=>`<div class="doc-vocab-item"><b onclick="jumpToVocabWord(${JSON.stringify(v.word)})">${esc(v.word)}</b>${v.verified?' ✅':''}${v.definition?` — ${esc(v.definition)}`:' — <i style="color:var(--ink3)">no definition yet</i>'}</div>`).join('')}
+  </div>`;
 }
 function toggleDocBody(id) {
   document.getElementById('doc-body-'+id)?.classList.toggle('open');
@@ -3683,8 +3828,10 @@ function printClassDoc(id) {
   if (!d) return;
   const cls = DB.classes.find(c=>c.id===d.classId);
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
-  const bodyHtml = d.segments.map(s=> s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
-  const vocabWords = d.segments.filter(s=>s.type==='word' && s.vocabId).map(s=>DB.vocab.find(v=>v.id===s.vocabId)).filter(Boolean);
+  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
+  const seen = new Map();
+  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
+  const vocabWords = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
   const vocabListHtml = vocabWords.length ? `<div class="print-vocab-list"><h3 style="font-family:'Lora',serif">Vocabulary</h3>${vocabWords.map(v=>`<div class="print-vocab-item"><b>${esc(v.word)}</b>${v.definition?` — ${esc(v.definition)}`:''}${v.mnemonic?`<br><i>💡 ${esc(v.mnemonic)}</i>`:''}</div>`).join('')}</div>` : '';
   document.getElementById('doc-print-area').innerHTML = `<h1>${esc(d.title)}</h1><div class="print-meta">${cls?esc(classLabel(cls))+' · ':''}${dateFmt}</div><div class="print-body">${bodyHtml}</div>${vocabListHtml}`;
   document.body.classList.add('printing-doc');
