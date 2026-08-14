@@ -2683,6 +2683,21 @@ function mergeResourceArrays(existingArr, incomingArr) {
   });
   return { merged: existing, addedCount: added.length };
 }
+// Sites that keep coming back as bare-homepage links more than any others —
+// Handspeak, Lifeprint, and ASL Nook. For these three specifically we apply a
+// stricter "is this really a word-specific page" check (up to 2 path segments
+// counts as rootish, not just 1), and flag/purge summaries name them by name
+// instead of a generic label, since seeing "Handspeak homepage" at a glance is
+// more useful than "Generic" when these three are the repeat offenders.
+const KNOWN_OFFENDER_HOSTS = { 'handspeak.com':'Handspeak', 'lifeprint.com':'Lifeprint', 'aslnook.com':'ASL Nook' };
+function getKnownOffenderLabel(url) {
+  if (!url) return null;
+  try {
+    const h = new URL(url).hostname.replace(/^www\./,'');
+    for (const host in KNOWN_OFFENDER_HOSTS) { if (h===host || h.endsWith('.'+host)) return KNOWN_OFFENDER_HOSTS[host]; }
+  } catch(e) {}
+  return null;
+}
 // Best-effort guess at whether a link is a specific-sign/word page vs. a bare
 // homepage or channel page — flags it for a manual double-check rather than
 // silently trusting it.
@@ -2695,7 +2710,10 @@ function isGenericResourceUrl(url, word) {
   const hayLc = (path+' '+u.search).toLowerCase().replace(/[^a-z0-9]/g,'');
   const hasWord = wordLc.length>1 && hayLc.includes(wordLc);
   const segs = path.split('/').filter(Boolean);
-  const isRootish = segs.length===0 || (segs.length===1 && /^(index\.html?|home|en|search|dictionary)$/i.test(segs[0]));
+  const isKnownOffender = !!getKnownOffenderLabel(url);
+  const isRootish = segs.length===0
+    || (segs.length===1 && /^(index\.html?|home|en|search|dictionary)$/i.test(segs[0]))
+    || (isKnownOffender && segs.length<=2); // Handspeak/Lifeprint/ASL Nook: be stricter — a real word page on these sites almost always has the word in the URL, so a same-word-free 2-segment path (category/topic/browse pages) is still treated as generic.
   const looksLikeChannelHome = /\/(channel|c|user|@)[^/]*$/i.test(path) && !/watch|shorts/i.test(path);
   return (isRootish || looksLikeChannelHome) && !hasWord;
 }
@@ -2922,16 +2940,34 @@ function countUnreviewedGenericLinks() {
   DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => (v[f]||[]).forEach(r => { if (!r.reviewed && isGenericResourceUrl(r.url, v.word)) n++; })));
   return n;
 }
+// Breaks the about-to-be-purged links down by known repeat-offender site
+// (Handspeak / Lifeprint / ASL Nook) plus an "other" bucket, so the purge
+// confirmation and result are specific instead of just a bare count.
+function getGenericLinkBreakdown() {
+  const counts = { Handspeak:0, Lifeprint:0, 'ASL Nook':0, other:0 };
+  DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => (v[f]||[]).forEach(r => {
+    if (r.reviewed || !isGenericResourceUrl(r.url, v.word)) return;
+    const label = getKnownOffenderLabel(r.url);
+    counts[label || 'other']++;
+  })));
+  return counts;
+}
+function formatGenericLinkBreakdown(counts) {
+  const parts = ['Handspeak','Lifeprint','ASL Nook'].filter(k=>counts[k]>0).map(k=>`${k}: ${counts[k]}`);
+  if (counts.other>0) parts.push(`other: ${counts.other}`);
+  return parts.join(' · ');
+}
 function purgeGenericLinks() {
   const n = countUnreviewedGenericLinks();
   if (!n) { toast('No unverified generic links found — clean!'); return; }
-  if (!confirm(`Remove all ${n} unverified generic link${n===1?'':'s'} across your whole dictionary? Links you've already marked reviewed are kept. This can't be undone.`)) return;
+  const breakdown = formatGenericLinkBreakdown(getGenericLinkBreakdown());
+  if (!confirm(`Remove all ${n} unverified generic link${n===1?'':'s'} across your whole dictionary?${breakdown?`\n(${breakdown})`:''}\nLinks you've already marked reviewed are kept. This can't be undone.`)) return;
   DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => {
     if (!v[f]) return;
     v[f] = v[f].filter(r => r.reviewed || !isGenericResourceUrl(r.url, v.word));
   }));
   save(); renderVocab();
-  toast(`Removed ${n} generic link${n===1?'':'s'}`);
+  toast(`Removed ${n} generic link${n===1?'':'s'}${breakdown?` (${breakdown})`:''}`);
 }
 function deleteResourceLink(vocabId, field, linkId) {
   const v = DB.vocab.find(x=>x.id===vocabId);
@@ -3145,7 +3181,7 @@ function buildAIResearchPrompt(entries) {
 9. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
 10. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
-Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
+Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
 
 The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
@@ -3289,7 +3325,7 @@ function fixPastedSpacing() {
 // ASL sign-dictionary sites — if the AI files one of these under DEAF_LINKS,
 // it almost always belongs under ASL_VIDEOS instead (it's showing the sign,
 // not explaining the word), so we move it automatically.
-const SIGN_DICTIONARY_HOSTS = ['lifeprint.com','handspeak.com','signingsavvy.com','aslpro.com','spreadthesign.com','atomichands.com','aslcore.org','babysignlanguage.com','asluniversity.com','signasl.org'];
+const SIGN_DICTIONARY_HOSTS = ['lifeprint.com','handspeak.com','signingsavvy.com','aslpro.com','spreadthesign.com','atomichands.com','aslcore.org','babysignlanguage.com','asluniversity.com','signasl.org','aslnook.com'];
 function isSignDictionaryUrl(url) {
   if (!url) return false;
   try { const h = new URL(url).hostname.replace(/^www\./,''); return SIGN_DICTIONARY_HOSTS.some(host=>h===host||h.endsWith('.'+host)); }
@@ -3565,7 +3601,7 @@ YOUTH_EXPLAINERS:
 [Title] — [URL]
 ---
 
-For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
+For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
 
 Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
 
@@ -4101,8 +4137,9 @@ function renderResourceLinesArray(arr, vocabId, field, word) {
   return (arr||[]).map(r=>{
     const generic = isGenericResourceUrl(r.url, word);
     const flagged = generic && !r.reviewed;
+    const offenderLabel = flagged ? getKnownOffenderLabel(r.url) : null;
     const linkHtml = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : esc(r.title);
-    const flagHtml = flagged ? `<span class="res-flag">⚠️ Generic — verify</span><button class="res-mini-btn" onclick="markResourceReviewed('${vocabId}','${field}','${r.id}')">Mark reviewed</button>` : '';
+    const flagHtml = flagged ? `<span class="res-flag">⚠️ ${offenderLabel?offenderLabel+' homepage':'Generic'} — verify</span><button class="res-mini-btn" onclick="markResourceReviewed('${vocabId}','${field}','${r.id}')">Mark reviewed</button>` : '';
     const signBtn = (field==='aslVideos' && r.url) ? `<button class="res-mini-btn sign" onclick="useAsConfirmedSign('${vocabId}','${r.id}')">🤟 Use as sign</button>` : '';
     const delBtn = `<button class="res-mini-btn" style="color:var(--clay)" onclick="deleteResourceLink('${vocabId}','${field}','${r.id}')" title="Remove this link">✕</button>`;
     return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}${delBtn}</div>`;
