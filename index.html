@@ -2796,6 +2796,7 @@ function saveVocab() {
     status: document.getElementById('v-status').value||'needs-both',
     verified: existing?.verified||false,
     confirmedSignLink: existing?.confirmedSignLink||null,
+    rejectedLinks: existing?.rejectedLinks||[],
     deafResources: existing?.deafResources||[],
     aslVideos: existing?.aslVideos||[],
     conceptVideos: existing?.conceptVideos||[],
@@ -2844,7 +2845,7 @@ function quickAddVocabModal() {
   }
   DB.vocab.unshift({ id:uid(), word, category:classObj?.name||'', signType:'', classId, studentId,
     definition:'', params:'', wordBreakdown:'', mastery:1, source:'', link:'', status:'needs-both',
-    verified:false, confirmedSignLink:null,
+    verified:false, confirmedSignLink:null, rejectedLinks:[],
     deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
     createdAt:Date.now() });
   save(); renderVocab(); populateClassSelectors();
@@ -3028,6 +3029,7 @@ function confirmPurgeGenericLinks() {
       if (r.reviewed || !isGenericResourceUrl(r.url, v.word) || !linkMatchesPurgeScope(r.url, scope)) return true;
       const label = getKnownOffenderLabel(r.url);
       counts[label || 'other']++;
+      recordRejectedLink(v, r.url);
       return false;
     });
   }));
@@ -3035,9 +3037,22 @@ function confirmPurgeGenericLinks() {
   const breakdown = formatGenericLinkBreakdown(counts);
   toast(`Removed ${n} generic link${n===1?'':'s'}${breakdown?` (${breakdown})`:''}`);
 }
+// Remembers a URL as "already tried and rejected" for this word so future AI
+// Research / Document-builder prompts know not to suggest it again. Deduped
+// case-insensitively; capped so one word's list can't grow unbounded.
+function recordRejectedLink(v, url) {
+  if (!url) return;
+  if (!v.rejectedLinks) v.rejectedLinks = [];
+  const key = url.trim().toLowerCase();
+  if (!key || v.rejectedLinks.some(u=>u.toLowerCase()===key)) return;
+  v.rejectedLinks.push(url.trim());
+  if (v.rejectedLinks.length>25) v.rejectedLinks = v.rejectedLinks.slice(-25);
+}
 function deleteResourceLink(vocabId, field, linkId) {
   const v = DB.vocab.find(x=>x.id===vocabId);
   if (!v || !v[field]) return;
+  const link = v[field].find(r=>r.id===linkId);
+  if (link) recordRejectedLink(v, link.url);
   v[field] = v[field].filter(r=>r.id!==linkId);
   save(); renderVocab();
 }
@@ -3099,7 +3114,7 @@ function confirmVocabMerge(mode) {
       category: incoming.category||'', signType: incoming.signType||'', classId: incoming.classId||'', studentId: incoming.studentId||'all',
       definition: incoming.definition||'', nomenclature: incoming.nomenclature||'', wordBreakdown: incoming.wordBreakdown||'', mnemonic: incoming.mnemonic||'',
       params: incoming.params||'', mastery:1, source: incoming.source||'', link: incoming.link||'',
-      status:'needs-both', verified:false, confirmedSignLink:null,
+      status:'needs-both', verified:false, confirmedSignLink:null, rejectedLinks:[],
       deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
       createdAt: Date.now()
     };
@@ -3221,13 +3236,17 @@ function buildAIResearchPrompt(entries) {
     const key = clsName+'|'+dateKey;
     if (!groups[key]) groups[key] = { clsName, dateKey, ts, words: [] };
     const missing = getMissingResearchFields(v);
-    groups[key].words.push({ word:v.word, missing });
+    groups[key].words.push({ word:v.word, missing, rejected:(v.rejectedLinks||[]) });
     if (ts > groups[key].ts) groups[key].ts = ts;
   });
   const dateFmt = d => d==='Unknown date' ? d : new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   const sortedGroups = Object.values(groups).sort((a,b)=> b.ts-a.ts || a.clsName.localeCompare(b.clsName));
   const groupedList = sortedGroups.map(g=>
-    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>`- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`).join('\n')}`
+    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>{
+      let line = `- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`;
+      if (w.rejected.length) line += `\n  ALREADY TRIED & REJECTED for this word — do not suggest these exact URLs again: ${w.rejected.join(', ')}`;
+      return line;
+    }).join('\n')}`
   ).join('\n\n');
   const existingCats = getAllCategories();
   const catNote = existingCats.length
@@ -3248,6 +3267,8 @@ function buildAIResearchPrompt(entries) {
 10. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
 Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
+
+Some words below have a line marked "ALREADY TRIED & REJECTED" listing exact URLs I removed after checking them myself — those didn't work out (wrong page, dead link, actually a homepage, etc.). Never suggest any of those exact URLs again for that word, even if it otherwise looks like a good fit; find a different link instead.
 
 The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
@@ -3466,7 +3487,7 @@ function applyAIResearchResults() {
     if (!v) {
       v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId:'', studentId:'all',
         definition:'', params:'', wordBreakdown:'', mastery:1, source:'AI Research', link:'', status:'needs-both',
-        verified:false, confirmedSignLink:null,
+        verified:false, confirmedSignLink:null, rejectedLinks:[],
         deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
         createdAt:Date.now() };
       DB.vocab.push(v); created++;
@@ -3638,6 +3659,14 @@ function buildDocPrompt() {
   const catNote = existingCats.length
     ? `Categories already in use: ${existingCats.join(', ')}. Reuse one of these if it genuinely fits; otherwise invent a short, sensible new one (e.g. subject area or unit name) rather than forcing a bad fit.`
     : `Suggest a short, sensible category for each word (e.g. subject area or unit name).`;
+  // Words already in the dictionary may carry links I already tried and
+  // rejected (bad/dead/homepage links I deleted). Since we don't know yet
+  // which existing words will show up in this new document, pass the whole
+  // rejected-link list so the AI can avoid re-suggesting any of them by URL.
+  const rejectedEntries = DB.vocab.filter(v=>(v.rejectedLinks||[]).length);
+  const rejectedNote = rejectedEntries.length
+    ? `\n\nFor these specific words, I've already tried and rejected the exact URLs listed (bad link, dead link, turned out to be a homepage, etc.) — if any of these words show up in this material, do not suggest these exact URLs again, even if they otherwise look correct:\n${rejectedEntries.map(v=>`${v.word}: ${v.rejectedLinks.join(', ')}`).join('\n')}`
+    : '';
 
   const prompt = `I'm a K-12 ASL interpreter prepping to interpret ${docTypeLabels[docType]||'this material'} for my Deaf/DHH student(s). Please do two things:
 
@@ -3667,7 +3696,7 @@ YOUTH_EXPLAINERS:
 [Title] — [URL]
 ---
 
-For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
+For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.${rejectedNote}
 
 Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
 
@@ -3725,7 +3754,7 @@ function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
         if (!vocabId) {
           const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
             definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
-            verified:false, confirmedSignLink:null,
+            verified:false, confirmedSignLink:null, rejectedLinks:[],
             deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
             createdAt:Date.now() };
           DB.vocab.push(nv);
@@ -3748,7 +3777,35 @@ function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
   });
   flush();
   if (!segments.length) segments.push({ type:'text', text: textPart });
-  return segments;
+  return autoLinkExistingVocabWords(segments, wordIdMap);
+}
+function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+// Second pass over the plain-text segments: links any word that's ALREADY in
+// the dictionary (per wordIdMap) but that the AI didn't wrap in ** ** this
+// time, so an existing vocab word doesn't get missed in a new document just
+// because it wasn't bolded. Only matches whole words already in the map —
+// never invents new vocab entries. Segments the AI already bolded are left
+// alone (they're 'word' type, not 'text', so this pass skips them).
+function autoLinkExistingVocabWords(segments, wordIdMap) {
+  const words = [...wordIdMap.keys()].filter(w=>w && w.length>=3).sort((a,b)=>b.length-a.length);
+  if (!words.length) return segments;
+  const pattern = new RegExp('\\b(' + words.map(escapeRegExp).join('|') + ')\\b', 'gi');
+  const out = [];
+  segments.forEach(seg=>{
+    if (seg.type!=='text') { out.push(seg); return; }
+    const text = seg.text;
+    let lastIdx = 0, m;
+    pattern.lastIndex = 0;
+    while ((m = pattern.exec(text))) {
+      if (m.index>lastIdx) out.push({ type:'text', text: text.slice(lastIdx, m.index) });
+      const matched = m[0];
+      const vocabId = wordIdMap.get(matched.toLowerCase());
+      out.push(vocabId ? { type:'word', word: matched, vocabId } : { type:'text', text: matched });
+      lastIdx = pattern.lastIndex;
+    }
+    if (lastIdx<text.length) out.push({ type:'text', text: text.slice(lastIdx) });
+  });
+  return out;
 }
 function docMarkedTextFromSegments(segments) {
   return segments.map(s => s.type==='heading' ? `## ${s.text}\n` : s.type==='word' ? `**${s.word}**` : s.text).join('');
@@ -3775,7 +3832,7 @@ function applyDocBuilderResults() {
     if (!v) {
       v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
         definition:'', params:'', mastery:1, source:`Class Notes — ${title}`, link:'', status:'needs-both',
-        verified:false, confirmedSignLink:null, wordBreakdown:'',
+        verified:false, confirmedSignLink:null, wordBreakdown:'', rejectedLinks:[],
         deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
         createdAt:Date.now() };
       DB.vocab.push(v); created++;
@@ -6170,6 +6227,7 @@ if(!DB.eipaGoals) DB.eipaGoals=[];
 if(!DB.scheduleBlocks) DB.scheduleBlocks=[];
 if(!DB.noSchoolDays) DB.noSchoolDays=[];
 if(!DB.skippedClasses) DB.skippedClasses=[];
+(DB.vocab||[]).forEach(v=>{ if(!v.rejectedLinks) v.rejectedLinks=[]; });
 
 // Populate student selectors before init
 ['global-student','mc-student','mp-student','iep-filter-student'].forEach(id=>{
