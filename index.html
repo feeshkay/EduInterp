@@ -3653,6 +3653,7 @@ Formatting rules for Part 1 — these are the ONLY markdown you should use, noth
 - Wrap every key vocabulary or concept term I'll need to interpret in double asterisks the FIRST time it appears, like **photosynthesis**. Put the asterisks directly around the word only — no trailing periods/commas inside them (write **photosynthesis**, not **photosynthesis.**). The word inside the asterisks must be spelled exactly the way you write it in the matching WORD: line in Part 2.
 - Also highlight general academic/functional vocabulary that could come up in interpreting even if it's not subject-specific — words like "success," "criteria," "objective," "evaluate," "requirement" — anything a student might need explained or signed consistently, not just technical terms.
 - If the source material genuinely has clear sections, you can mark a section heading by starting that line with "## " (e.g. "## Introduction") — use this sparingly, only for real section breaks.
+- If (and only if) part of the source is naturally tabular or comparative — a schedule, a list of steps with associated details, a comparison of options, a data table, a vocabulary-style list of terms with short definitions — reformat JUST that part as a standard markdown table (a header row, then a "|---|---|" separator row, then data rows, pipe-delimited). This becomes a real rendered table in my app, so it's genuinely worth doing for anything that's naturally rows-and-columns, but don't force ordinary prose paragraphs into a table just to use one. You can still bold vocabulary terms inside table cells the same way as elsewhere.
 
 PART 2 — VOCAB DETAILS: For every term you wrapped in double asterisks in Part 1, give me the same research I use for my vocabulary dictionary, in this exact format (repeated for each word):
 
@@ -3714,50 +3715,101 @@ function fixDocPastedSpacing() {
 // spelling/formatting the AI used), a bare entry is auto-created on the spot
 // rather than leaving the word unlinked. wordIdMap is mutated as we go so
 // repeated occurrences of a newly-created word reuse the same entry.
+// Parses inline "**word**" bold-wraps out of a plain string into a segments
+// array (text/word pieces) — shared by paragraph text and individual table
+// cells. Any wrapped word not already in the dictionary gets a bare entry
+// auto-created on the spot (wordIdMap is mutated so repeats reuse it).
+function parseInlineSegments(text, classId, docTitle, wordIdMap) {
+  const segs = [];
+  const re = /\*{1,2}([^*\n]+?)\*{1,2}/g;
+  let lastIdx = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index>lastIdx) segs.push({ type:'text', text: text.slice(lastIdx, m.index) });
+    let captured = m[1].trim();
+    const trailMatch = captured.match(/^(.*?)([.,;:!?]+)$/);
+    let word = captured, trail = '';
+    if (trailMatch && trailMatch[1].trim()) { word = trailMatch[1].trim(); trail = trailMatch[2]; }
+    if (word) {
+      const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
+      let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
+      if (!vocabId) {
+        const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
+          definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
+          verified:false, confirmedSignLink:null,
+          deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+          createdAt:Date.now() };
+        DB.vocab.push(nv);
+        vocabId = nv.id;
+        wordIdMap.set(norm, vocabId);
+      }
+      segs.push({ type:'word', word, vocabId });
+    }
+    if (trail) segs.push({ type:'text', text: trail });
+    lastIdx = re.lastIndex;
+  }
+  if (lastIdx < text.length) segs.push({ type:'text', text: text.slice(lastIdx) });
+  return segs;
+}
+function isTableRowLine(l) { return /^\s*\|.*\|\s*$/.test(l); }
+function isTableSepLine(l) { return isTableRowLine(l) && /^[\s|:-]+$/.test(l) && /-{2,}/.test(l); }
+function splitTableRow(line) {
+  let t = line.trim();
+  if (t.startsWith('|')) t = t.slice(1);
+  if (t.endsWith('|')) t = t.slice(0,-1);
+  return t.split('|').map(c=>c.trim());
+}
+// Turns raw marked-up text ("## Heading" lines, "**word**" wraps, and standard
+// markdown pipe tables) into a segments array. Every wrapped word — including
+// ones inside table cells — is guaranteed to end up linked to a real vocab
+// entry, auto-creating a bare one if needed so nothing is left unlinked.
 function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
   const segments = [];
-  const processParagraph = (paraText) => {
-    const re = /\*{1,2}([^*\n]+?)\*{1,2}/g;
-    let lastIdx = 0, m;
-    while ((m = re.exec(paraText))) {
-      if (m.index>lastIdx) segments.push({ type:'text', text: paraText.slice(lastIdx, m.index) });
-      let captured = m[1].trim();
-      const trailMatch = captured.match(/^(.*?)([.,;:!?]+)$/);
-      let word = captured, trail = '';
-      if (trailMatch && trailMatch[1].trim()) { word = trailMatch[1].trim(); trail = trailMatch[2]; }
-      if (word) {
-        const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
-        let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
-        if (!vocabId) {
-          const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
-            definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
-            verified:false, confirmedSignLink:null,
-            deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-            createdAt:Date.now() };
-          DB.vocab.push(nv);
-          vocabId = nv.id;
-          wordIdMap.set(norm, vocabId);
-        }
-        segments.push({ type:'word', word, vocabId });
-      }
-      if (trail) segments.push({ type:'text', text: trail });
-      lastIdx = re.lastIndex;
-    }
-    if (lastIdx < paraText.length) segments.push({ type:'text', text: paraText.slice(lastIdx) });
-  };
+  const processParagraph = (paraText) => { segments.push(...parseInlineSegments(paraText, classId, docTitle, wordIdMap)); };
   let paraBuffer = [];
   const flush = () => { if (paraBuffer.length) { processParagraph(paraBuffer.join('\n')); paraBuffer = []; } };
-  textPart.split('\n').forEach(line=>{
+  const lines = textPart.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
     const headingMatch = line.match(/^##\s+(.+)$/);
-    if (headingMatch) { flush(); segments.push({ type:'heading', text: headingMatch[1].trim() }); }
-    else paraBuffer.push(line);
-  });
+    if (headingMatch) { flush(); segments.push({ type:'heading', text: headingMatch[1].trim() }); i++; continue; }
+    if (isTableRowLine(line) && lines[i+1]!==undefined && isTableSepLine(lines[i+1])) {
+      flush();
+      const headers = splitTableRow(line).map(h=>h.replace(/\*{1,2}([^*]+)\*{1,2}/g,'$1'));
+      let j = i+2;
+      const rows = [];
+      while (j < lines.length && isTableRowLine(lines[j])) {
+        const cells = splitTableRow(lines[j]);
+        rows.push(headers.map((h,ci)=>parseInlineSegments(cells[ci]||'', classId, docTitle, wordIdMap)));
+        j++;
+      }
+      segments.push({ type:'table', headers, rows });
+      i = j;
+      continue;
+    }
+    paraBuffer.push(line);
+    i++;
+  }
   flush();
   if (!segments.length) segments.push({ type:'text', text: textPart });
   return segments;
 }
+function inlineSegsToText(segs) {
+  return (segs||[]).map(s => s.type==='word' ? `**${s.word}**` : s.text).join('');
+}
+function tableSegmentToMarkdown(s) {
+  const headerRow = `| ${s.headers.join(' | ')} |`;
+  const sepRow = `| ${s.headers.map(()=>'---').join(' | ')} |`;
+  const bodyRows = s.rows.map(r=>`| ${s.headers.map((h,i)=>inlineSegsToText(r[i])).join(' | ')} |`);
+  return `\n${headerRow}\n${sepRow}\n${bodyRows.join('\n')}\n`;
+}
 function docMarkedTextFromSegments(segments) {
-  return segments.map(s => s.type==='heading' ? `## ${s.text}\n` : s.type==='word' ? `**${s.word}**` : s.text).join('');
+  return segments.map(s => {
+    if (s.type==='heading') return `## ${s.text}\n`;
+    if (s.type==='word') return `**${s.word}**`;
+    if (s.type==='table') return tableSegmentToMarkdown(s);
+    return s.text;
+  }).join('');
 }
 
 function applyDocBuilderResults() {
@@ -3807,7 +3859,7 @@ function applyDocBuilderResults() {
   pendingDocAttachment = null;
   save(); renderVocab(); renderClassDocs(); populateClassSelectors(); renderDashboard();
   closeModal('modal-doc-builder');
-  const linkedWords = new Set(segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
+  const linkedWords = new Set(allDocWordOccurrences(doc).map(o=>o.vocabId)).size;
   toast(`Document saved — ${linkedWords} vocab word${linkedWords===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}${genericSkipped?`, skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'}`:''}`);
 }
 
@@ -3854,7 +3906,8 @@ function renderClassDocs() {
     docs = docs.filter(d => {
       if (d.title.toLowerCase().includes(search)) return true;
       return d.segments.some(s => (s.type==='text'||s.type==='heading') && s.text.toLowerCase().includes(search)
-        || (s.type==='word' && s.word.toLowerCase().includes(search)));
+        || (s.type==='word' && s.word.toLowerCase().includes(search))
+        || (s.type==='table' && (s.headers.some(h=>h.toLowerCase().includes(search)) || s.rows.some(r=>r.some(cell=>inlineSegsToText(cell).toLowerCase().includes(search))))));
     });
   }
   if (!docs.length) { box.innerHTML = '<div class="tbl-empty">No documents match your search.</div>'; return; }
@@ -3888,20 +3941,40 @@ function renderClassDocs() {
   }).join('');
 }
 // Plain-text teaser for the card face — pulled from the first couple text
-// segments, tags/tables/headings stripped, truncated to roughly one line.
+// segments (including table cells), tags/headings stripped, truncated to
+// roughly one line.
 function docTeaserText(d) {
   let t = '';
   for (const s of d.segments) {
     if (s.type==='text') t += s.text;
     else if (s.type==='word') t += s.word;
+    else if (s.type==='table') s.rows.forEach(r=>r.forEach(cell=>{ t += ' ' + inlineSegsToText(cell); }));
     if (t.length > 160) break;
   }
   t = t.replace(/\s+/g,' ').trim();
   return t.length > 150 ? t.slice(0,150)+'…' : t;
 }
+// Every linked-vocab word occurrence across a document, including inside
+// table cells — each tagged with a unique "key" matching the element-id
+// scheme used when rendering (top-level segment index, or a composite
+// table/row/col/word key), so callers can jump to and highlight the exact spot.
+function allDocWordOccurrences(d) {
+  const out = [];
+  d.segments.forEach((s, idx) => {
+    if (s.type==='word' && s.vocabId) out.push({ vocabId:s.vocabId, word:s.word, key:String(idx) });
+    else if (s.type==='table') {
+      s.rows.forEach((row, ri) => row.forEach((cell, ci) => {
+        (cell||[]).forEach((cs, wi) => {
+          if (cs.type==='word' && cs.vocabId) out.push({ vocabId:cs.vocabId, word:cs.word, key:`t${idx}r${ri}c${ci}w${wi}`, header:s.headers[ci] });
+        });
+      }));
+    }
+  });
+  return out;
+}
 function renderDocCard(d) {
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
-  const wordCount = new Set(d.segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
+  const wordCount = new Set(allDocWordOccurrences(d).map(o=>o.vocabId)).size;
   const attachHtml = d.attachment ? `<a href="${d.attachment.dataUrl}" download="${esc(d.attachment.name)}" class="doc-attach-chip" onclick="event.stopPropagation()">📎 ${esc(d.attachment.name)}</a>` : '';
   const teaser = docTeaserText(d);
   return `<div class="doc-card">
@@ -3948,26 +4021,38 @@ function openDocReader(id, focusVocabId, focusSegIndex) {
     }, 80);
   }
 }
-function renderDocSegments(d) {
-  return d.segments.map((s,idx)=>{
-    if (s.type==='heading') return `<div class="doc-heading">${esc(s.text)}</div>`;
-    if (s.type==='table') return renderDocTable(s);
+// Renders one inline word/text segment array (used for both top-level
+// paragraph content and individual table cells) into clickable spans. `key`
+// is the unique id prefix for this run of segments — plain string/number for
+// top-level, or a composite table/row/col key for cells.
+function renderInlineSegs(segs, keyBase) {
+  return (segs||[]).map((s,i)=>{
     if (s.type==='text') return esc(s.text);
-    if (s.vocabId) return `<span class="doc-word" id="docseg-${idx}" onclick="event.stopPropagation();toggleDocWordPop(${idx},'${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${idx}"></span>`;
+    const key = keyBase.endsWith('w') ? `${keyBase}${i}` : keyBase;
+    if (s.vocabId) return `<span class="doc-word" id="docseg-${key}" onclick="event.stopPropagation();toggleDocWordPop('${key}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${key}"></span>`;
     return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
   }).join('');
 }
-function renderDocTable(s) {
+function renderDocSegments(d) {
+  return d.segments.map((s,idx)=>{
+    if (s.type==='heading') return `<div class="doc-heading">${esc(s.text)}</div>`;
+    if (s.type==='table') return renderDocTable(s, idx);
+    if (s.type==='text') return esc(s.text);
+    return renderInlineSegs([s], String(idx));
+  }).join('');
+}
+function renderDocTable(s, tIdx) {
   return `<table class="doc-table"><thead><tr>${s.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${
-    s.rows.map(r=>`<tr>${s.headers.map((h,i)=>`<td>${esc(r[i]||'')}</td>`).join('')}</tr>`).join('')
+    s.rows.map((r,ri)=>`<tr>${s.headers.map((h,ci)=>`<td>${renderInlineSegs(r[ci], `t${tIdx}r${ri}c${ci}w`)}</td>`).join('')}</tr>`).join('')
   }</tbody></table>`;
 }
-// Consolidated list of every unique word linked in this document, pulled live
-// from DB.vocab — since it's a live lookup (not a stored copy), editing a word's
-// definition anywhere always shows up here immediately, and vice versa.
+// Consolidated list of every unique word linked in this document (including
+// inside tables), pulled live from DB.vocab — since it's a live lookup (not a
+// stored copy), editing a word's definition anywhere always shows up here
+// immediately, and vice versa.
 function renderDocVocabList(d) {
   const seen = new Map();
-  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
+  allDocWordOccurrences(d).forEach(o=>{ if (!seen.has(o.vocabId)) { const v=DB.vocab.find(x=>x.id===o.vocabId); if (v) seen.set(o.vocabId, v); } });
   const words = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
   if (!words.length) return '';
   return `<div class="doc-vocab-list"><div class="doc-vocab-list-hdr">📋 Vocabulary in This Document (${words.length})</div>
@@ -4021,9 +4106,10 @@ function jumpToVocabWord(word) {
   const search = document.getElementById('vocab-search');
   if (search) { search.value = word; renderVocab(); }
 }
-// Every place a given vocab word appears across all documents, with a short
-// text snippet built live from that document's current segments (not a frozen
-// copy) — editing the document text updates the snippet automatically next render.
+// Every place a given vocab word appears across all documents (including
+// inside tables), with a short text snippet built live from that document's
+// current segments (not a frozen copy) — editing the document text updates
+// the snippet automatically next render.
 function findVocabDocAppearances(vocabId) {
   const out = [];
   DB.classDocs.forEach(d=>{
@@ -4042,7 +4128,15 @@ function findVocabDocAppearances(vocabId) {
           else if (seg.type==='word') after += ' '+seg.word;
           else break;
         }
-        out.push({ docId:d.id, docTitle:d.title, segIndex:idx, before:before.trim(), after:after.trim() });
+        out.push({ docId:d.id, docTitle:d.title, segKey:String(idx), before:before.trim(), after:after.trim() });
+      } else if (s.type==='table') {
+        s.rows.forEach((row,ri)=>row.forEach((cell,ci)=>{
+          (cell||[]).forEach((cs,wi)=>{
+            if (cs.type==='word' && cs.vocabId===vocabId) {
+              out.push({ docId:d.id, docTitle:d.title, segKey:`t${idx}r${ri}c${ci}w${wi}`, before:`${s.headers[ci]||'—'}:`, after: inlineSegsToText(cell.filter((c,ii)=>ii!==wi)).trim() });
+            }
+          });
+        }));
       }
     });
   });
@@ -4054,7 +4148,7 @@ function renderDocBacklinks(v) {
   const apps = findVocabDocAppearances(v.id);
   if (!apps.length) return '';
   return `<div class="doc-backlinks"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:4px">📄 Appears in ${apps.length} place${apps.length===1?'':'s'} in your documents:</div>
-    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}',${a.segIndex})">
+    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}','${a.segKey}')">
       <div class="doc-backlink-title">${esc(a.docTitle)}</div>
       <div class="doc-backlink-snip">${esc(a.before)} <b>${esc(v.word)}</b> ${esc(a.after)}</div>
     </div>`).join('')}
@@ -4071,14 +4165,19 @@ function deleteClassDoc(id) {
   if (docReaderCurrentId===id) closeModal('modal-doc-reader');
   save(); renderClassDocs(); toast('Document deleted');
 }
+function renderDocTablePrint(s) {
+  return `<table class="doc-table"><thead><tr>${s.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${
+    s.rows.map(r=>`<tr>${s.headers.map((h,i)=>`<td>${(r[i]||[]).map(cs=>cs.type==='word'?`<span class="print-word">${esc(cs.word)}</span>`:esc(cs.text)).join('')}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>`;
+}
 function printClassDoc(id) {
   const d = DB.classDocs.find(x=>x.id===id);
   if (!d) return;
   const cls = DB.classes.find(c=>c.id===d.classId);
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
-  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='table' ? renderDocTable(s) : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
+  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='table' ? renderDocTablePrint(s) : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
   const seen = new Map();
-  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
+  allDocWordOccurrences(d).forEach(o=>{ if (!seen.has(o.vocabId)) { const v=DB.vocab.find(x=>x.id===o.vocabId); if (v) seen.set(o.vocabId, v); } });
   const vocabWords = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
   const vocabListHtml = vocabWords.length ? `<div class="print-vocab-list"><h3 style="font-family:'Lora',serif">Vocabulary</h3>${vocabWords.map(v=>`<div class="print-vocab-item"><b>${esc(v.word)}</b>${v.definition?` — ${esc(v.definition)}`:''}${v.mnemonic?`<br><i>💡 ${esc(v.mnemonic)}</i>`:''}</div>`).join('')}</div>` : '';
   document.getElementById('doc-print-area').innerHTML = `<h1>${esc(d.title)}</h1><div class="print-meta">${cls?esc(classLabel(cls))+' · ':''}${dateFmt}</div><div class="print-body">${bodyHtml}</div>${vocabListHtml}`;
@@ -4274,6 +4373,7 @@ function renderVocab() {
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
       ${v.createdAt?`<div class="vc-params" style="color:var(--ink3)">🕓 Added ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} at ${new Date(v.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>`:''}
       ${missing.length?`<div class="vc-missing">Still needed for research: ${missing.join(', ')}</div>`:''}
+      ${renderDocBacklinks(v)}
       ${renderAIResearchBlock(v)}
     </div>`;
   }).join('');
