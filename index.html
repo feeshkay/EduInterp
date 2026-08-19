@@ -140,6 +140,8 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center;overflow-y:auto}
 .ov.open{display:flex}
 .mod{background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:600px;box-shadow:0 -8px 40px rgba(0,0,0,.18);margin-top:auto;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.mod-full{border-radius:0;max-width:100%;max-height:100dvh;height:100dvh;margin-top:0}
+.mod-full::before{display:none}
 .mh{padding:14px 16px 10px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surf);z-index:1}
 .mh h2{font-family:'Lora',serif;font-size:15px}
 .mb{padding:14px 16px}
@@ -323,6 +325,19 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .doc-vocab-item b{cursor:pointer;color:var(--ink)}
 .doc-vocab-item b:hover{color:var(--sage-d)}
 .doc-attach-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;background:var(--s2);color:var(--ink2);padding:3px 8px;border-radius:6px;margin-top:6px}
+.doc-card-teaser{font-size:11.5px;color:var(--ink3);margin-top:6px;line-height:1.5;max-height:2.8em;overflow:hidden}
+.doc-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;white-space:normal}
+.doc-table th,.doc-table td{border:1px solid var(--br);padding:6px 8px;text-align:left;vertical-align:top}
+.doc-table th{background:var(--s2);font-family:'Lora',serif;font-weight:600}
+.doc-table tr:nth-child(even) td{background:var(--s1)}
+.doc-highlight{animation:docFlash 1.8s ease}
+@keyframes docFlash{0%{background:var(--gold-m);color:#fff}100%{background:transparent}}
+.doc-toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.doc-backlinks{margin-top:8px;padding-top:8px;border-top:1px dashed var(--brk)}
+.doc-backlink-item{font-size:11px;margin-bottom:6px;padding:6px 8px;background:var(--s1);border-radius:7px;cursor:pointer}
+.doc-backlink-item:hover{background:var(--s2)}
+.doc-backlink-title{font-weight:600;color:var(--sage-d)}
+.doc-backlink-snip{color:var(--ink3);margin-top:2px;line-height:1.4}
 
 /* ── VOCAB SELECTION BAR ── */
 #vocab-selection-bar{display:none;align-items:center;gap:8px;background:var(--sage-l);border:1px solid var(--sage-m);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--sage-d);font-weight:500}
@@ -677,7 +692,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             </select>
             <select id="vocab-filter-generic" onchange="renderVocab()" class="filter-sel">
               <option value="">All Links</option>
-              <option value="yes">⚠️ Has unverified generic link</option>
+              <option value="yes">⚠️ Has link needing verification</option>
             </select>
             <select id="vocab-sort" onchange="renderVocab()" class="filter-sel">
               <option value="alpha">Sort: A–Z</option>
@@ -710,6 +725,14 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
           <div class="notice n-ok" style="margin-bottom:10px">
             <span>ℹ️</span>
             <div style="font-size:11px">Upload a handout or paste text, get it back from the AI with key vocabulary highlighted and linked to your Dictionary — editing a word anywhere keeps everything else in sync automatically.</div>
+          </div>
+          <div class="doc-toolbar">
+            <input class="search-input" type="text" placeholder="Search documents..." oninput="renderClassDocs()" id="doc-search" style="flex:1;min-width:140px">
+            <select id="doc-view-mode" onchange="renderClassDocs()" class="filter-sel">
+              <option value="class">Group: By Class</option>
+              <option value="recent">Group: Recently Added</option>
+              <option value="date">Group: By Date</option>
+            </select>
           </div>
           <div id="doc-list"></div>
         </div>
@@ -1996,8 +2019,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         <div style="font-size:11px">Once the AI replies, paste its full answer below and tap "Parse &amp; Save." It'll fill in definitions, mnemonics, and resource links for each matching word — and add any new ones it doesn't find. <strong>Tip:</strong> use the AI's own Copy button under its reply rather than manually selecting the text. If ChatGPT's copy pastes spaces as <code>%20</code>, don't worry — "Parse &amp; Save" fixes that automatically, or tap "Fix Spacing" below to clean it up first.</div>
       </div>
       <textarea id="ai-response-text" placeholder="Paste the AI's full response here..." style="min-height:150px;font-size:11px"></textarea>
-      <div style="margin-top:6px">
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <button class="btn gh sm" onclick="fixPastedSpacing()">🧹 Fix Spacing (%20 → space)</button>
+      </div>
+      <div class="notice n-info" style="margin-top:8px;margin-bottom:0">
+        <span>🔗</span>
+        <div style="font-size:11px">If a word already has links in a field: <label style="display:inline-flex;align-items:center;gap:3px;margin-left:2px"><input type="radio" name="ai-link-mode" value="add" checked> Add new ones alongside</label> &nbsp; <label style="display:inline-flex;align-items:center;gap:3px"><input type="radio" name="ai-link-mode" value="replace"> Replace with the new ones</label></div>
       </div>
     </div>
     <div class="mf">
@@ -2031,28 +2058,6 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       <div id="dup-finder-list"></div>
     </div>
     <div class="mf"><button class="btn gh sm" onclick="closeModal('modal-dup-finder')">Close</button></div>
-  </div>
-</div>
-
-<!-- Purge Generic Links (scope confirmation) -->
-<div class="ov" id="modal-purge-generic">
-  <div class="mod" style="max-width:480px">
-    <div class="mh"><h2>🧹 Purge Generic Links</h2><button class="mod-close" onclick="closeModal('modal-purge-generic')">✕</button></div>
-    <div class="mb">
-      <div style="font-size:13px;margin-bottom:6px">By default, only removes unverified bare-homepage links from the three known repeat offenders — <strong>Handspeak</strong>, <strong>Lifeprint</strong>, and <strong>ASL Nook</strong> (<span id="pg-known-count">0</span> link<span id="pg-known-plural">s</span>).</div>
-      <div id="pg-breakdown" style="font-size:11px;color:var(--muted,#888);margin-bottom:10px"></div>
-      <div id="pg-other-row" style="display:none;border-top:1px solid var(--br);padding-top:10px;margin-top:4px">
-        <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer">
-          <input type="checkbox" id="pg-include-other" style="margin-top:3px">
-          <span>Also remove flagged generic links from <strong>other</strong> sites (<span id="pg-other-count">0</span>) — unchecked by default so those are left for you to review individually.</span>
-        </label>
-      </div>
-      <div style="font-size:11px;color:var(--muted,#888);margin-top:10px">Links you've already marked reviewed are always kept. This can't be undone.</div>
-    </div>
-    <div class="mf">
-      <button class="btn gh sm" onclick="closeModal('modal-purge-generic')">Cancel</button>
-      <button class="btn pri sm" onclick="confirmPurgeGenericLinks()">Purge</button>
-    </div>
   </div>
 </div>
 
@@ -2101,6 +2106,10 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         <div class="notice n-ok" style="margin-bottom:10px"><span>2️⃣</span><div style="font-size:11px">Paste the AI's full reply below, then tap "Save Document." Highlighted words are added to your Dictionary automatically.</div></div>
         <textarea id="doc-response-text" placeholder="Paste the AI's full response here..." style="min-height:150px;font-size:11px"></textarea>
         <div style="margin-top:6px"><button class="btn gh sm" onclick="fixDocPastedSpacing()">🧹 Fix Spacing (%20 → space)</button></div>
+        <div class="notice n-info" style="margin-top:8px;margin-bottom:0">
+          <span>🔗</span>
+          <div style="font-size:11px">If a word already has links in a field: <label style="display:inline-flex;align-items:center;gap:3px;margin-left:2px"><input type="radio" name="doc-link-mode" value="add" checked> Add new ones alongside</label> &nbsp; <label style="display:inline-flex;align-items:center;gap:3px"><input type="radio" name="doc-link-mode" value="replace"> Replace with the new ones</label></div>
+        </div>
       </div>
       <div id="doc-builder-editmode" style="display:none">
         <div class="fr fr2" style="margin-bottom:8px">
@@ -2116,6 +2125,24 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       <button class="btn pri" id="doc-save-btn" style="display:none" onclick="applyDocBuilderResults()">✅ Save Document</button>
       <button class="btn pri" id="doc-edit-save-btn" style="display:none" onclick="saveDocEdits()">✅ Save Changes</button>
     </div>
+  </div>
+</div>
+
+<!-- Document Reader — full-screen view of one document -->
+<div class="ov" id="modal-doc-reader">
+  <div class="mod mod-full">
+    <div class="mh">
+      <div>
+        <h2 id="doc-reader-title" style="margin-bottom:1px">Document</h2>
+        <div class="doc-meta-line" id="doc-reader-meta"></div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="btn gh sm" style="padding:5px 8px;font-size:10px" id="doc-reader-edit-btn">✏️ Edit</button>
+        <button class="btn gh sm" style="padding:5px 8px;font-size:10px" id="doc-reader-pdf-btn">🖨️ PDF</button>
+        <button class="mod-close" onclick="closeModal('modal-doc-reader')">✕</button>
+      </div>
+    </div>
+    <div class="mb" id="doc-reader-body" style="font-size:14px;line-height:1.9"></div>
   </div>
 </div>
 
@@ -2705,6 +2732,17 @@ function mergeResourceArrays(existingArr, incomingArr) {
   });
   return { merged: existing, addedCount: added.length };
 }
+// Default behavior unions new links onto whatever's already there (safe, never
+// loses data). When replaceLinks is on (an explicit opt-in with its own
+// confirmation before the batch runs), a field with new incoming links wholesale
+// replaces the old array instead of merging into it.
+function mergeOrReplace(existingArr, incomingArr, replaceLinks) {
+  if (replaceLinks && incomingArr.length) {
+    return { merged: incomingArr, addedCount: incomingArr.length, replaced: (existingArr||[]).length>0 };
+  }
+  const r = mergeResourceArrays(existingArr||[], incomingArr);
+  return { merged: r.merged, addedCount: r.addedCount, replaced:false };
+}
 // Sites that keep coming back as bare-homepage links more than any others —
 // Handspeak, Lifeprint, and ASL Nook. For these three specifically we apply a
 // stricter "is this really a word-specific page" check (up to 2 path segments
@@ -2742,7 +2780,16 @@ function isGenericResourceUrl(url, word) {
 function hasGoodLinks(arr, word) {
   const list = arr||[];
   if (!list.length) return false;
-  return list.some(r => r.reviewed || !isGenericResourceUrl(r.url, word));
+  return list.some(r => r.url && (r.reviewed || !isGenericResourceUrl(r.url, word)));
+}
+// Combines the two reasons a resource line needs a human look: no URL at all
+// (common when copy-pasting a rendered AI reply drops the hyperlink and leaves
+// just the visible title text behind), or a URL that looks like a generic
+// homepage rather than the specific word's page. Returns null when it's fine.
+function resourceFlagLabel(r, word) {
+  if (!r.url) return 'No link';
+  if (isGenericResourceUrl(r.url, word)) { const o = getKnownOffenderLabel(r.url); return o ? o+' homepage' : 'Generic'; }
+  return null;
 }
 function hasSignInfo(v) { return !!(v.params || v.confirmedSignLink); }
 function computeVocabStatus(v) {
@@ -2762,8 +2809,8 @@ function getMissingResearchFields(v) {
   if (!v.wordBreakdown) missing.push('WORD_BREAKDOWN');
   if (!v.mnemonic) missing.push('MNEMONIC');
   if (!hasSignInfo(v)) missing.push('a confirmed sign (parameters, description, or video)');
-  if (!hasGoodLinks(v.deafResources, v.word)) missing.push(v.deafResources?.length?'DEAF_LINKS (existing ones are too generic — replace)':'DEAF_LINKS');
-  if (!hasGoodLinks(v.aslVideos, v.word)) missing.push(v.aslVideos?.length?'ASL_VIDEOS (existing ones are too generic — replace)':'ASL_VIDEOS');
+  if (!hasGoodLinks(v.deafResources, v.word)) missing.push(v.deafResources?.length?'DEAF_LINKS (existing ones are missing a URL or too generic — replace)':'DEAF_LINKS');
+  if (!hasGoodLinks(v.aslVideos, v.word)) missing.push(v.aslVideos?.length?'ASL_VIDEOS (existing ones are missing a URL or too generic — replace)':'ASL_VIDEOS');
   return missing;
 }
 
@@ -2796,7 +2843,6 @@ function saveVocab() {
     status: document.getElementById('v-status').value||'needs-both',
     verified: existing?.verified||false,
     confirmedSignLink: existing?.confirmedSignLink||null,
-    rejectedLinks: existing?.rejectedLinks||[],
     deafResources: existing?.deafResources||[],
     aslVideos: existing?.aslVideos||[],
     conceptVideos: existing?.conceptVideos||[],
@@ -2845,7 +2891,7 @@ function quickAddVocabModal() {
   }
   DB.vocab.unshift({ id:uid(), word, category:classObj?.name||'', signType:'', classId, studentId,
     definition:'', params:'', wordBreakdown:'', mastery:1, source:'', link:'', status:'needs-both',
-    verified:false, confirmedSignLink:null, rejectedLinks:[],
+    verified:false, confirmedSignLink:null,
     deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
     createdAt:Date.now() });
   save(); renderVocab(); populateClassSelectors();
@@ -2951,10 +2997,11 @@ function markResourceReviewed(vocabId, field, linkId) {
   if (link) link.reviewed = true;
   save(); renderVocab();
 }
-// True if this word has at least one unreviewed link that looks like a generic
-// homepage rather than a page for the specific sign/word.
+// True if this word has at least one unreviewed link that either has no URL at
+// all, or looks like a generic homepage rather than a page for the specific
+// sign/word.
 function hasUnreviewedGenericLinks(v) {
-  return VOCAB_RESOURCE_FIELDS.some(f => (v[f]||[]).some(r => !r.reviewed && isGenericResourceUrl(r.url, v.word)));
+  return VOCAB_RESOURCE_FIELDS.some(f => (v[f]||[]).some(r => !r.reviewed && (!r.url || isGenericResourceUrl(r.url, v.word))));
 }
 // One-tap cleanup for everything flagged generic-and-unreviewed across the whole
 // dictionary — links you've already tapped "Mark reviewed" on are left alone.
@@ -2980,79 +3027,21 @@ function formatGenericLinkBreakdown(counts) {
   if (counts.other>0) parts.push(`other: ${counts.other}`);
   return parts.join(' · ');
 }
-// Whether a flagged link should count toward the purge given the current
-// scope: 'known' = Handspeak/Lifeprint/ASL Nook only, 'all' = those plus
-// every other flagged "other" site.
-function linkMatchesPurgeScope(url, scope) {
-  const isKnown = !!getKnownOffenderLabel(url);
-  return scope==='all' ? true : isKnown;
-}
-function countGenericLinksInScope(scope) {
-  let n = 0;
-  DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => (v[f]||[]).forEach(r => {
-    if (!r.reviewed && isGenericResourceUrl(r.url, v.word) && linkMatchesPurgeScope(r.url, scope)) n++;
-  })));
-  return n;
-}
-// Opens a confirmation modal (instead of a plain window.confirm) so the user
-// can choose whether "other" sites' generic links get swept up too, or only
-// the three known repeat offenders (Handspeak/Lifeprint/ASL Nook). Default is
-// known-offenders-only — "other" links are left alone unless opted in.
 function purgeGenericLinks() {
-  const total = countUnreviewedGenericLinks();
-  if (!total) { toast('No unverified generic links found — clean!'); return; }
-  const counts = getGenericLinkBreakdown();
-  const breakdown = formatGenericLinkBreakdown(counts);
-  const knownCount = counts.Handspeak + counts.Lifeprint + counts['ASL Nook'];
-  document.getElementById('pg-breakdown').textContent = breakdown ? `(${breakdown})` : '';
-  document.getElementById('pg-known-count').textContent = knownCount;
-  const otherRow = document.getElementById('pg-other-row');
-  const otherCb = document.getElementById('pg-include-other');
-  otherCb.checked = false;
-  if (counts.other>0) {
-    otherRow.style.display = '';
-    document.getElementById('pg-other-count').textContent = counts.other;
-  } else {
-    otherRow.style.display = 'none';
-  }
-  openModal('modal-purge-generic');
-}
-function confirmPurgeGenericLinks() {
-  const scope = document.getElementById('pg-include-other').checked ? 'all' : 'known';
-  const n = countGenericLinksInScope(scope);
-  closeModal('modal-purge-generic');
-  if (!n) { toast('Nothing to remove in that scope'); return; }
-  const counts = { Handspeak:0, Lifeprint:0, 'ASL Nook':0, other:0 };
+  const n = countUnreviewedGenericLinks();
+  if (!n) { toast('No unverified generic links found — clean!'); return; }
+  const breakdown = formatGenericLinkBreakdown(getGenericLinkBreakdown());
+  if (!confirm(`Remove all ${n} unverified generic link${n===1?'':'s'} across your whole dictionary?${breakdown?`\n(${breakdown})`:''}\nLinks you've already marked reviewed are kept. This can't be undone.`)) return;
   DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => {
     if (!v[f]) return;
-    v[f] = v[f].filter(r => {
-      if (r.reviewed || !isGenericResourceUrl(r.url, v.word) || !linkMatchesPurgeScope(r.url, scope)) return true;
-      const label = getKnownOffenderLabel(r.url);
-      counts[label || 'other']++;
-      recordRejectedLink(v, r.url);
-      return false;
-    });
+    v[f] = v[f].filter(r => r.reviewed || !isGenericResourceUrl(r.url, v.word));
   }));
   save(); renderVocab();
-  const breakdown = formatGenericLinkBreakdown(counts);
   toast(`Removed ${n} generic link${n===1?'':'s'}${breakdown?` (${breakdown})`:''}`);
-}
-// Remembers a URL as "already tried and rejected" for this word so future AI
-// Research / Document-builder prompts know not to suggest it again. Deduped
-// case-insensitively; capped so one word's list can't grow unbounded.
-function recordRejectedLink(v, url) {
-  if (!url) return;
-  if (!v.rejectedLinks) v.rejectedLinks = [];
-  const key = url.trim().toLowerCase();
-  if (!key || v.rejectedLinks.some(u=>u.toLowerCase()===key)) return;
-  v.rejectedLinks.push(url.trim());
-  if (v.rejectedLinks.length>25) v.rejectedLinks = v.rejectedLinks.slice(-25);
 }
 function deleteResourceLink(vocabId, field, linkId) {
   const v = DB.vocab.find(x=>x.id===vocabId);
   if (!v || !v[field]) return;
-  const link = v[field].find(r=>r.id===linkId);
-  if (link) recordRejectedLink(v, link.url);
   v[field] = v[field].filter(r=>r.id!==linkId);
   save(); renderVocab();
 }
@@ -3114,7 +3103,7 @@ function confirmVocabMerge(mode) {
       category: incoming.category||'', signType: incoming.signType||'', classId: incoming.classId||'', studentId: incoming.studentId||'all',
       definition: incoming.definition||'', nomenclature: incoming.nomenclature||'', wordBreakdown: incoming.wordBreakdown||'', mnemonic: incoming.mnemonic||'',
       params: incoming.params||'', mastery:1, source: incoming.source||'', link: incoming.link||'',
-      status:'needs-both', verified:false, confirmedSignLink:null, rejectedLinks:[],
+      status:'needs-both', verified:false, confirmedSignLink:null,
       deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
       createdAt: Date.now()
     };
@@ -3236,17 +3225,13 @@ function buildAIResearchPrompt(entries) {
     const key = clsName+'|'+dateKey;
     if (!groups[key]) groups[key] = { clsName, dateKey, ts, words: [] };
     const missing = getMissingResearchFields(v);
-    groups[key].words.push({ word:v.word, missing, rejected:(v.rejectedLinks||[]) });
+    groups[key].words.push({ word:v.word, missing });
     if (ts > groups[key].ts) groups[key].ts = ts;
   });
   const dateFmt = d => d==='Unknown date' ? d : new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   const sortedGroups = Object.values(groups).sort((a,b)=> b.ts-a.ts || a.clsName.localeCompare(b.clsName));
   const groupedList = sortedGroups.map(g=>
-    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>{
-      let line = `- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`;
-      if (w.rejected.length) line += `\n  ALREADY TRIED & REJECTED for this word — do not suggest these exact URLs again: ${w.rejected.join(', ')}`;
-      return line;
-    }).join('\n')}`
+    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>`- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`).join('\n')}`
   ).join('\n\n');
   const existingCats = getAllCategories();
   const catNote = existingCats.length
@@ -3268,11 +3253,9 @@ function buildAIResearchPrompt(entries) {
 
 Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
 
-Some words below have a line marked "ALREADY TRIED & REJECTED" listing exact URLs I removed after checking them myself — those didn't work out (wrong page, dead link, actually a homepage, etc.). Never suggest any of those exact URLs again for that word, even if it otherwise looks like a good fit; find a different link instead.
-
 The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
-IMPORTANT — formatting: reply in PLAIN TEXT only, no markdown. Do not use #, ##, ###, **, or numbered/bulleted list markers on the label lines below — just the bare labels exactly as written, each on its own line. (Plain text survives copy-paste better than markdown headers, which sometimes get stripped when copying out of a chat window.) Links can be plain URLs. For any word where a field ISN'T in its "missing" list, just skip that label entirely for that word (don't write it at all) — that field is already done.
+IMPORTANT — formatting: reply in PLAIN TEXT only, no markdown. Do not use #, ##, ###, **, or numbered/bulleted list markers on the label lines below — just the bare labels exactly as written, each on its own line. (Plain text survives copy-paste better than markdown headers, which sometimes get stripped when copying out of a chat window.) For every link, write out the FULL raw URL as plain visible text (starting with https://) rather than a clickable-looking citation or a shortened domain name — when I copy your reply out of the chat window, only the visible text survives, so if the URL itself isn't visible, the link is lost. For any word where a field ISN'T in its "missing" list, just skip that label entirely for that word (don't write it at all) — that field is already done.
 
 Format your answer EXACTLY like this, repeated for every word, so I can paste it back into my app:
 
@@ -3419,8 +3402,8 @@ function isSignDictionaryUrl(url) {
   catch(e) { return false; }
 }
 
-function applyResultToVocab(v, r, overwriteMode) {
-  let linksAdded = 0, genericSkipped = 0;
+function applyResultToVocab(v, r, overwriteMode, replaceLinks) {
+  let linksAdded = 0, genericSkipped = 0, fieldsReplaced = 0;
   const setText = (field, val) => { if (val && (overwriteMode || !v[field])) v[field] = val; };
   // Category counts as "blank" if it's empty OR still the default Uncategorized —
   // so an AI-suggested category can fill it in without needing overwrite mode.
@@ -3440,21 +3423,21 @@ function applyResultToVocab(v, r, overwriteMode) {
     const toDeafLinks = incoming.filter(link=>!isSignDictionaryUrl(link.url));
     const goodDeaf = toDeafLinks.filter(link=>!isGenericResourceUrl(link.url, v.word));
     genericSkipped += toDeafLinks.length - goodDeaf.length;
-    const rd = mergeResourceArrays(v.deafResources||[], goodDeaf);
-    v.deafResources = rd.merged; linksAdded += rd.addedCount;
+    const rd = mergeOrReplace(v.deafResources||[], goodDeaf, replaceLinks);
+    v.deafResources = rd.merged; linksAdded += rd.addedCount; if (rd.replaced) fieldsReplaced++;
     if (toAslVideos.length) {
       const goodAsl = toAslVideos.filter(link=>!isGenericResourceUrl(link.url, v.word));
       genericSkipped += toAslVideos.length - goodAsl.length;
-      const ra = mergeResourceArrays(v.aslVideos||[], goodAsl);
-      v.aslVideos = ra.merged; linksAdded += ra.addedCount;
+      const ra = mergeOrReplace(v.aslVideos||[], goodAsl, replaceLinks);
+      v.aslVideos = ra.merged; linksAdded += ra.addedCount; if (ra.replaced) fieldsReplaced++;
     }
   }
   if (r.aslVideos) {
     const incoming = parseResourceLinesToArray(r.aslVideos);
     const good = incoming.filter(link=>!isGenericResourceUrl(link.url, v.word));
     genericSkipped += incoming.length - good.length;
-    const ra = mergeResourceArrays(v.aslVideos||[], good);
-    v.aslVideos = ra.merged; linksAdded += ra.addedCount;
+    const ra = mergeOrReplace(v.aslVideos||[], good, replaceLinks);
+    v.aslVideos = ra.merged; linksAdded += ra.addedCount; if (ra.replaced) fieldsReplaced++;
   }
   // Concept videos / youth explainers / general text resources aren't required to
   // be word-specific (a Khan Academy overview page is a fine, legitimate link) —
@@ -3463,17 +3446,19 @@ function applyResultToVocab(v, r, overwriteMode) {
     if (!r[rKey]) return;
     const incoming = parseResourceLinesToArray(r[rKey]);
     if (!incoming.length) return;
-    const { merged, addedCount } = mergeResourceArrays(v[vField]||[], incoming);
-    v[vField] = merged;
-    linksAdded += addedCount;
+    const rr = mergeOrReplace(v[vField]||[], incoming, replaceLinks);
+    v[vField] = rr.merged;
+    linksAdded += rr.addedCount; if (rr.replaced) fieldsReplaced++;
   });
   v.status = computeVocabStatus(v);
-  return { linksAdded, genericSkipped };
+  return { linksAdded, genericSkipped, fieldsReplaced };
 }
 
 function applyAIResearchResults() {
   let raw = document.getElementById('ai-response-text').value.trim();
   if (!raw) { toast('Paste the AI response first','warn'); return; }
+  const replaceLinks = document.querySelector('input[name="ai-link-mode"]:checked')?.value === 'replace';
+  if (replaceLinks && !confirm('Replace mode is on: for any word where you already have links AND the AI gave new ones for that same field, the old links will be replaced, not merged. Words/fields with no new links from the AI are untouched. Continue?')) return;
   const cleaned = cleanPercentEncoding(raw);
   if (cleaned !== raw) {
     raw = cleaned;
@@ -3481,24 +3466,24 @@ function applyAIResearchResults() {
   }
   const results = parseAIResearchResponse(raw);
   if (!results.length) { toast('No "WORD:" lines found — copy the AI\'s reply using its own Copy button (not manual select), or ask it to resend in plain text','warn'); return; }
-  let updated=0, created=0, linksAdded=0, genericSkipped=0;
+  let updated=0, created=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0;
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
       v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId:'', studentId:'all',
         definition:'', params:'', wordBreakdown:'', mastery:1, source:'AI Research', link:'', status:'needs-both',
-        verified:false, confirmedSignLink:null, rejectedLinks:[],
+        verified:false, confirmedSignLink:null,
         deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
         createdAt:Date.now() };
       DB.vocab.push(v); created++;
     } else updated++;
-    const res = applyResultToVocab(v, r, aiResearchOverwriteMode);
-    linksAdded += res.linksAdded; genericSkipped += res.genericSkipped;
+    const res = applyResultToVocab(v, r, aiResearchOverwriteMode, replaceLinks);
+    linksAdded += res.linksAdded; genericSkipped += res.genericSkipped; fieldsReplaced += res.fieldsReplaced;
   });
   save(); renderVocab(); populateClassSelectors(); renderDashboard();
   vocabSelection.clear(); updateSelectionBar();
   closeModal('modal-ai-research');
-  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''}${genericSkipped?` — skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'} (not word-specific)`:''}`);
+  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''}${fieldsReplaced?`, ${fieldsReplaced} field${fieldsReplaced===1?'':'s'} replaced`:''}${genericSkipped?` — skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'} (not word-specific)`:''}`);
 }
 
 // ── CLASS NOTES / DOCUMENTS ─────────────────────────────────────────────────────
@@ -3659,14 +3644,6 @@ function buildDocPrompt() {
   const catNote = existingCats.length
     ? `Categories already in use: ${existingCats.join(', ')}. Reuse one of these if it genuinely fits; otherwise invent a short, sensible new one (e.g. subject area or unit name) rather than forcing a bad fit.`
     : `Suggest a short, sensible category for each word (e.g. subject area or unit name).`;
-  // Words already in the dictionary may carry links I already tried and
-  // rejected (bad/dead/homepage links I deleted). Since we don't know yet
-  // which existing words will show up in this new document, pass the whole
-  // rejected-link list so the AI can avoid re-suggesting any of them by URL.
-  const rejectedEntries = DB.vocab.filter(v=>(v.rejectedLinks||[]).length);
-  const rejectedNote = rejectedEntries.length
-    ? `\n\nFor these specific words, I've already tried and rejected the exact URLs listed (bad link, dead link, turned out to be a homepage, etc.) — if any of these words show up in this material, do not suggest these exact URLs again, even if they otherwise look correct:\n${rejectedEntries.map(v=>`${v.word}: ${v.rejectedLinks.join(', ')}`).join('\n')}`
-    : '';
 
   const prompt = `I'm a K-12 ASL interpreter prepping to interpret ${docTypeLabels[docType]||'this material'} for my Deaf/DHH student(s). Please do two things:
 
@@ -3696,7 +3673,7 @@ YOUTH_EXPLAINERS:
 [Title] — [URL]
 ---
 
-For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.${rejectedNote}
+For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
 
 Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
 
@@ -3754,7 +3731,7 @@ function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
         if (!vocabId) {
           const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
             definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
-            verified:false, confirmedSignLink:null, rejectedLinks:[],
+            verified:false, confirmedSignLink:null,
             deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
             createdAt:Date.now() };
           DB.vocab.push(nv);
@@ -3777,35 +3754,7 @@ function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
   });
   flush();
   if (!segments.length) segments.push({ type:'text', text: textPart });
-  return autoLinkExistingVocabWords(segments, wordIdMap);
-}
-function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-// Second pass over the plain-text segments: links any word that's ALREADY in
-// the dictionary (per wordIdMap) but that the AI didn't wrap in ** ** this
-// time, so an existing vocab word doesn't get missed in a new document just
-// because it wasn't bolded. Only matches whole words already in the map —
-// never invents new vocab entries. Segments the AI already bolded are left
-// alone (they're 'word' type, not 'text', so this pass skips them).
-function autoLinkExistingVocabWords(segments, wordIdMap) {
-  const words = [...wordIdMap.keys()].filter(w=>w && w.length>=3).sort((a,b)=>b.length-a.length);
-  if (!words.length) return segments;
-  const pattern = new RegExp('\\b(' + words.map(escapeRegExp).join('|') + ')\\b', 'gi');
-  const out = [];
-  segments.forEach(seg=>{
-    if (seg.type!=='text') { out.push(seg); return; }
-    const text = seg.text;
-    let lastIdx = 0, m;
-    pattern.lastIndex = 0;
-    while ((m = pattern.exec(text))) {
-      if (m.index>lastIdx) out.push({ type:'text', text: text.slice(lastIdx, m.index) });
-      const matched = m[0];
-      const vocabId = wordIdMap.get(matched.toLowerCase());
-      out.push(vocabId ? { type:'word', word: matched, vocabId } : { type:'text', text: matched });
-      lastIdx = pattern.lastIndex;
-    }
-    if (lastIdx<text.length) out.push({ type:'text', text: text.slice(lastIdx) });
-  });
-  return out;
+  return segments;
 }
 function docMarkedTextFromSegments(segments) {
   return segments.map(s => s.type==='heading' ? `## ${s.text}\n` : s.type==='word' ? `**${s.word}**` : s.text).join('');
@@ -3832,7 +3781,7 @@ function applyDocBuilderResults() {
     if (!v) {
       v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
         definition:'', params:'', mastery:1, source:`Class Notes — ${title}`, link:'', status:'needs-both',
-        verified:false, confirmedSignLink:null, wordBreakdown:'', rejectedLinks:[],
+        verified:false, confirmedSignLink:null, wordBreakdown:'',
         deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
         createdAt:Date.now() };
       DB.vocab.push(v); created++;
@@ -3893,31 +3842,74 @@ function saveDocEdits() {
   toast('Document updated');
 }
 
+let docReaderCurrentId = null;
 function renderClassDocs() {
   const box = document.getElementById('doc-list');
   if (!box) return;
   if (!DB.classDocs.length) { box.innerHTML = '<div class="tbl-empty">No class notes documents yet — tap "New Document" to build one.</div>'; return; }
+  const search = (document.getElementById('doc-search')?.value||'').toLowerCase();
+  const viewMode = document.getElementById('doc-view-mode')?.value || 'class';
+  let docs = [...DB.classDocs];
+  if (search) {
+    docs = docs.filter(d => {
+      if (d.title.toLowerCase().includes(search)) return true;
+      return d.segments.some(s => (s.type==='text'||s.type==='heading') && s.text.toLowerCase().includes(search)
+        || (s.type==='word' && s.word.toLowerCase().includes(search)));
+    });
+  }
+  if (!docs.length) { box.innerHTML = '<div class="tbl-empty">No documents match your search.</div>'; return; }
+
+  if (viewMode==='recent') {
+    const sorted = docs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    box.innerHTML = sorted.map(renderDocCard).join('');
+    return;
+  }
+  if (viewMode==='date') {
+    const groups = {};
+    docs.forEach(d=>{ const key = d.date || 'No date'; (groups[key]=groups[key]||[]).push(d); });
+    const keys = Object.keys(groups).sort((a,b)=> a==='No date' ? 1 : b==='No date' ? -1 : b.localeCompare(a));
+    box.innerHTML = keys.map(key=>{
+      const label = key==='No date' ? key : new Date(key+'T00:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
+      return `<div class="doc-group-hdr">${esc(label)}</div>${groups[key].map(renderDocCard).join('')}`;
+    }).join('');
+    return;
+  }
+  // Default: group by class
   const groups = {};
-  DB.classDocs.forEach(d=>{
+  docs.forEach(d=>{
     const cls = DB.classes.find(c=>c.id===d.classId);
     const clsName = cls ? classLabel(cls) : 'General / No Class';
     (groups[clsName] = groups[clsName]||[]).push(d);
   });
   const names = Object.keys(groups).sort((a,b)=> a==='General / No Class' ? 1 : b==='General / No Class' ? -1 : a.localeCompare(b));
   box.innerHTML = names.map(clsName=>{
-    const docs = groups[clsName].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
-    return `<div class="doc-group-hdr">${esc(clsName)}</div>${docs.map(renderDocCard).join('')}`;
+    const ds = groups[clsName].sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+    return `<div class="doc-group-hdr">${esc(clsName)}</div>${ds.map(renderDocCard).join('')}`;
   }).join('');
+}
+// Plain-text teaser for the card face — pulled from the first couple text
+// segments, tags/tables/headings stripped, truncated to roughly one line.
+function docTeaserText(d) {
+  let t = '';
+  for (const s of d.segments) {
+    if (s.type==='text') t += s.text;
+    else if (s.type==='word') t += s.word;
+    if (t.length > 160) break;
+  }
+  t = t.replace(/\s+/g,' ').trim();
+  return t.length > 150 ? t.slice(0,150)+'…' : t;
 }
 function renderDocCard(d) {
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
   const wordCount = new Set(d.segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
   const attachHtml = d.attachment ? `<a href="${d.attachment.dataUrl}" download="${esc(d.attachment.name)}" class="doc-attach-chip" onclick="event.stopPropagation()">📎 ${esc(d.attachment.name)}</a>` : '';
+  const teaser = docTeaserText(d);
   return `<div class="doc-card">
-    <div class="doc-card-hdr" onclick="toggleDocBody('${d.id}')">
+    <div class="doc-card-hdr" onclick="openDocReader('${d.id}')">
       <div>
         <div class="doc-title">${esc(d.title)}</div>
         <div class="doc-meta-line">${dateFmt} · ${wordCount} vocab word${wordCount===1?'':'s'} linked</div>
+        ${teaser?`<div class="doc-card-teaser">${esc(teaser)}</div>`:''}
         ${attachHtml}
       </div>
       <div class="vc-actions" onclick="event.stopPropagation()">
@@ -3927,16 +3919,48 @@ function renderDocCard(d) {
         <button class="btn gh sm" style="padding:3px 7px;font-size:10px;color:var(--clay)" onclick="deleteClassDoc('${d.id}')">✕</button>
       </div>
     </div>
-    <div class="doc-body" id="doc-body-${d.id}">${renderDocSegments(d)}${renderDocVocabList(d)}</div>
   </div>`;
 }
+// Opens the full-screen Document Reader for one document. If focusVocabId +
+// focusSegIndex are given (from a vocab card's "appears in documents" backlink),
+// scrolls to and briefly highlights that exact occurrence, and opens its popover.
+function openDocReader(id, focusVocabId, focusSegIndex) {
+  const d = DB.classDocs.find(x=>x.id===id);
+  if (!d) return;
+  docReaderCurrentId = id;
+  const cls = DB.classes.find(c=>c.id===d.classId);
+  const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '—';
+  document.getElementById('doc-reader-title').textContent = d.title;
+  document.getElementById('doc-reader-meta').textContent = `${cls?classLabel(cls)+' · ':''}${dateFmt}`;
+  document.getElementById('doc-reader-body').innerHTML = renderDocSegments(d) + renderDocVocabList(d);
+  document.getElementById('doc-reader-edit-btn').onclick = () => openDocEditMode(d.id);
+  document.getElementById('doc-reader-pdf-btn').onclick = () => printClassDoc(d.id);
+  openModal('modal-doc-reader');
+  if (focusVocabId!=null && focusSegIndex!=null) {
+    setTimeout(()=>{
+      const el = document.getElementById(`docseg-${focusSegIndex}`);
+      if (el) {
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        el.classList.add('doc-highlight');
+        setTimeout(()=>el.classList.remove('doc-highlight'), 1900);
+        toggleDocWordPop(focusSegIndex, focusVocabId);
+      }
+    }, 80);
+  }
+}
 function renderDocSegments(d) {
-  return d.segments.map(s=>{
+  return d.segments.map((s,idx)=>{
     if (s.type==='heading') return `<div class="doc-heading">${esc(s.text)}</div>`;
+    if (s.type==='table') return renderDocTable(s);
     if (s.type==='text') return esc(s.text);
-    if (s.vocabId) return `<span class="doc-word" onclick="event.stopPropagation();toggleDocWordPop('${d.id}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${d.id}-${s.vocabId}"></span>`;
+    if (s.vocabId) return `<span class="doc-word" id="docseg-${idx}" onclick="event.stopPropagation();toggleDocWordPop(${idx},'${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${idx}"></span>`;
     return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
   }).join('');
+}
+function renderDocTable(s) {
+  return `<table class="doc-table"><thead><tr>${s.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${
+    s.rows.map(r=>`<tr>${s.headers.map((h,i)=>`<td>${esc(r[i]||'')}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>`;
 }
 // Consolidated list of every unique word linked in this document, pulled live
 // from DB.vocab — since it's a live lookup (not a stored copy), editing a word's
@@ -3950,27 +3974,91 @@ function renderDocVocabList(d) {
     ${words.map(v=>`<div class="doc-vocab-item"><b onclick="jumpToVocabWord(${JSON.stringify(v.word)})">${esc(v.word)}</b>${v.verified?' ✅':''}${v.definition?` — ${esc(v.definition)}`:' — <i style="color:var(--ink3)">no definition yet</i>'}</div>`).join('')}
   </div>`;
 }
-function toggleDocBody(id) {
-  document.getElementById('doc-body-'+id)?.classList.toggle('open');
-}
-function toggleDocWordPop(docId, vocabId) {
-  const pop = document.getElementById(`doc-pop-${docId}-${vocabId}`);
-  if (!pop) return;
-  if (pop.classList.contains('open')) { pop.classList.remove('open'); return; }
-  document.querySelectorAll(`#doc-body-${docId} .doc-word-pop.open`).forEach(p=>p.classList.remove('open'));
+// Full resource-links-and-verify card shown when a word is tapped in the reader —
+// same info and actions as the Dictionary tab, so links can be checked and
+// verified without leaving the document.
+function buildDocWordPopContent(vocabId, idx) {
   const v = DB.vocab.find(x=>x.id===vocabId);
-  pop.innerHTML = !v ? 'Word no longer in dictionary.' : `<b>${esc(v.word)}</b>${v.verified?' ✅':''}<br>
+  if (!v) return 'Word no longer in dictionary.';
+  const labelMap = {deafResources:'✋ Deaf Creators', aslVideos:'🎥 ASL Videos', conceptVideos:'🎬 Video Explainers', youthExplainers:'🧒 For Students', textResources:'📚 Concept Explainers'};
+  const resHtml = VOCAB_RESOURCE_FIELDS.map(f=>{
+    const arr = v[f]||[];
+    if (!arr.length) return '';
+    return `<div style="margin-top:6px"><div style="font-weight:600;font-size:10.5px">${labelMap[f]}</div>${renderResourceLinesArray(arr, v.id, f, v.word)}</div>`;
+  }).join('');
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+      <b>${esc(v.word)}</b>
+      <button class="btn ${v.verified?'gold':'gh'} sm" style="padding:2px 6px;font-size:9px;flex-shrink:0" onclick="event.stopPropagation();toggleVerified('${v.id}')" title="${v.verified?'Marked verified — tap to unverify':'Mark verified by you'}">${v.verified?'✅ Verified':'☑️ Verify'}</button>
+    </div>
     ${v.definition?esc(v.definition):'<i style="color:var(--ink3)">No definition yet</i>'}
     ${v.mnemonic?`<br>💡 ${esc(v.mnemonic)}`:''}
-    <br><a href="#" onclick="event.preventDefault();jumpToVocabWord(${JSON.stringify(v.word)})">Open in Dictionary →</a>`;
+    ${resHtml}
+    <div style="margin-top:6px"><a href="#" onclick="event.preventDefault();jumpToVocabWord(${JSON.stringify(v.word)})">Open full entry in Dictionary →</a></div>`;
+}
+function toggleDocWordPop(idx, vocabId) {
+  const pop = document.getElementById(`doc-pop-${idx}`);
+  if (!pop) return;
+  if (pop.classList.contains('open')) { pop.classList.remove('open'); return; }
+  document.querySelectorAll(`#doc-reader-body .doc-word-pop.open`).forEach(p=>p.classList.remove('open'));
+  pop.dataset.vocabId = vocabId;
+  pop.innerHTML = buildDocWordPopContent(vocabId, idx);
   pop.classList.add('open');
 }
+// Called from renderVocab() so any resource/verify action taken inside an open
+// document popover (mark reviewed, delete link, verify, etc.) is reflected
+// immediately, without needing to close and reopen the popover.
+function refreshOpenDocPopover() {
+  const openPop = document.querySelector('#doc-reader-body .doc-word-pop.open');
+  if (!openPop || !openPop.dataset.vocabId) return;
+  const idx = openPop.id.replace('doc-pop-','');
+  openPop.innerHTML = buildDocWordPopContent(openPop.dataset.vocabId, idx);
+}
 function jumpToVocabWord(word) {
+  closeModal('modal-doc-reader');
   document.querySelector('.sbi[data-page="vocab"]')?.click();
   const firstTab = document.querySelector('#page-vocab .tb-bar .tab');
   if (firstTab) switchTab(firstTab, 'vocab-dictionary');
   const search = document.getElementById('vocab-search');
   if (search) { search.value = word; renderVocab(); }
+}
+// Every place a given vocab word appears across all documents, with a short
+// text snippet built live from that document's current segments (not a frozen
+// copy) — editing the document text updates the snippet automatically next render.
+function findVocabDocAppearances(vocabId) {
+  const out = [];
+  DB.classDocs.forEach(d=>{
+    d.segments.forEach((s,idx)=>{
+      if (s.type==='word' && s.vocabId===vocabId) {
+        let before='', after='';
+        for (let k=idx-1;k>=0 && before.length<60;k--) {
+          const seg=d.segments[k];
+          if (seg.type==='text') before = seg.text.slice(-60)+before;
+          else if (seg.type==='word') before = seg.word+' '+before;
+          else break;
+        }
+        for (let k=idx+1;k<d.segments.length && after.length<60;k++) {
+          const seg=d.segments[k];
+          if (seg.type==='text') after += seg.text.slice(0,60);
+          else if (seg.type==='word') after += ' '+seg.word;
+          else break;
+        }
+        out.push({ docId:d.id, docTitle:d.title, segIndex:idx, before:before.trim(), after:after.trim() });
+      }
+    });
+  });
+  return out;
+}
+// Rendered on the vocab card — click a result to jump straight to that spot in
+// the document, scrolled to and briefly highlighted.
+function renderDocBacklinks(v) {
+  const apps = findVocabDocAppearances(v.id);
+  if (!apps.length) return '';
+  return `<div class="doc-backlinks"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:4px">📄 Appears in ${apps.length} place${apps.length===1?'':'s'} in your documents:</div>
+    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}',${a.segIndex})">
+      <div class="doc-backlink-title">${esc(a.docTitle)}</div>
+      <div class="doc-backlink-snip">${esc(a.before)} <b>${esc(v.word)}</b> ${esc(a.after)}</div>
+    </div>`).join('')}
+  </div>`;
 }
 function updateDocDate(id, val) {
   const d = DB.classDocs.find(x=>x.id===id);
@@ -3980,6 +4068,7 @@ function updateDocDate(id, val) {
 function deleteClassDoc(id) {
   if (!confirm('Delete this document? (Linked vocab words stay in your dictionary.)')) return;
   DB.classDocs = DB.classDocs.filter(d=>d.id!==id);
+  if (docReaderCurrentId===id) closeModal('modal-doc-reader');
   save(); renderClassDocs(); toast('Document deleted');
 }
 function printClassDoc(id) {
@@ -3987,7 +4076,7 @@ function printClassDoc(id) {
   if (!d) return;
   const cls = DB.classes.find(c=>c.id===d.classId);
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
-  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
+  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='table' ? renderDocTable(s) : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
   const seen = new Map();
   d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
   const vocabWords = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
@@ -4156,7 +4245,7 @@ function renderVocab() {
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">
               ${statusBadge[st]||''}
               ${v.verified?'<span class="vbadge vb-verified">✅ Verified</span>':''}
-              ${hasUnreviewedGenericLinks(v)?'<span class="vbadge vb-generic-flag">⚠️ Generic link</span>':''}
+              ${hasUnreviewedGenericLinks(v)?'<span class="vbadge vb-generic-flag">⚠️ Link needs check</span>':''}
             </div>
           </div>
         </div>
@@ -4258,15 +4347,30 @@ function renderAIResearchBlock(v) {
 
 function renderResourceLinesArray(arr, vocabId, field, word) {
   return (arr||[]).map(r=>{
-    const generic = isGenericResourceUrl(r.url, word);
-    const flagged = generic && !r.reviewed;
-    const offenderLabel = flagged ? getKnownOffenderLabel(r.url) : null;
-    const linkHtml = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : esc(r.title);
-    const flagHtml = flagged ? `<span class="res-flag">⚠️ ${offenderLabel?offenderLabel+' homepage':'Generic'} — verify</span><button class="res-mini-btn" onclick="markResourceReviewed('${vocabId}','${field}','${r.id}')">Mark reviewed</button>` : '';
+    const label = r.reviewed ? null : resourceFlagLabel(r, word);
+    const flagged = !!label;
+    const linkHtml = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : `<span style="color:var(--clay)">${esc(r.title||'(untitled — no link)')}</span>`;
+    const flagHtml = flagged ? `<span class="res-flag">⚠️ ${label} — verify</span><button class="res-mini-btn" onclick="markResourceReviewed('${vocabId}','${field}','${r.id}')">Mark reviewed</button>` : '';
     const signBtn = (field==='aslVideos' && r.url) ? `<button class="res-mini-btn sign" onclick="useAsConfirmedSign('${vocabId}','${r.id}')">🤟 Use as sign</button>` : '';
     const delBtn = `<button class="res-mini-btn" style="color:var(--clay)" onclick="deleteResourceLink('${vocabId}','${field}','${r.id}')" title="Remove this link">✕</button>`;
-    return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}${delBtn}</div>`;
+    const addLinkRow = !r.url ? `<div style="display:flex;gap:5px;margin-top:3px">
+      <input type="text" id="addlink-${vocabId}-${r.id}" placeholder="Paste the URL here…" style="flex:1;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
+      <button class="res-mini-btn" onclick="setResourceUrl('${vocabId}','${field}','${r.id}',document.getElementById('addlink-${vocabId}-${r.id}').value)">Save link</button>
+    </div>` : '';
+    return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}${delBtn}${addLinkRow}</div>`;
   }).join('');
+}
+function setResourceUrl(vocabId, field, resId, url) {
+  url = (url||'').trim();
+  if (!url) { toast('Paste a URL first','warn'); return; }
+  const v = DB.vocab.find(x=>x.id===vocabId);
+  if (!v || !v[field]) return;
+  const r = v[field].find(x=>x.id===resId);
+  if (!r) return;
+  r.url = url; r.reviewed = false;
+  v.status = computeVocabStatus(v);
+  save(); renderVocab();
+  toast('Link added — double check it opens the right page');
 }
 
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
@@ -6227,7 +6331,6 @@ if(!DB.eipaGoals) DB.eipaGoals=[];
 if(!DB.scheduleBlocks) DB.scheduleBlocks=[];
 if(!DB.noSchoolDays) DB.noSchoolDays=[];
 if(!DB.skippedClasses) DB.skippedClasses=[];
-(DB.vocab||[]).forEach(v=>{ if(!v.rejectedLinks) v.rejectedLinks=[]; });
 
 // Populate student selectors before init
 ['global-student','mc-student','mp-student','iep-filter-student'].forEach(id=>{
