@@ -708,6 +708,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <select id="bulk-cat-select" class="pill-select" onchange="bulkSetCategory(this.value)"></select>
             <select id="bulk-class-select" class="pill-select" onchange="bulkSetClass(this.value)"></select>
             <button class="btn sm pri" onclick="openAIResearchModal()">🧏 Research Selected</button>
+            <button class="btn sm" onclick="bulkMarkReviewed()">✅ Mark Reviewed</button>
             <button class="btn sm" style="color:var(--clay)" onclick="bulkDeleteSelected()">🗑️ Delete Selected</button>
             <button class="btn gh sm" onclick="clearVocabSelection()">Clear</button>
           </div>
@@ -2064,6 +2065,52 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
   </div>
 </div>
 
+<!-- Shared styled replacement for native confirm() — one modal, reused everywhere via confirmAction() -->
+<div class="ov" id="modal-confirm">
+  <div class="mod" style="max-width:420px">
+    <div class="mh"><h2 id="confirm-title">Please confirm</h2><button class="mod-close" onclick="closeModal('modal-confirm')">✕</button></div>
+    <div class="mb"><div id="confirm-body" style="font-size:13px;white-space:pre-line;line-height:1.5"></div></div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-confirm')">Cancel</button>
+      <button class="btn sm" id="confirm-ok-btn" onclick="runConfirmAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shared styled replacement for native prompt() — one modal, reused everywhere via promptText() -->
+<div class="ov" id="modal-text-prompt">
+  <div class="mod" style="max-width:380px">
+    <div class="mh"><h2 id="text-prompt-title">Name it</h2><button class="mod-close" onclick="closeModal('modal-text-prompt')">✕</button></div>
+    <div class="mb"><input type="text" id="text-prompt-input" style="width:100%" onkeydown="if(event.key==='Enter'){event.preventDefault();runTextPromptAction();}"></div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-text-prompt')">Cancel</button>
+      <button class="btn pri sm" id="text-prompt-ok-btn" onclick="runTextPromptAction()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Purge Generic Links (scope confirmation) -->
+<div class="ov" id="modal-purge-generic">
+  <div class="mod" style="max-width:480px">
+    <div class="mh"><h2>🧹 Purge Generic Links</h2><button class="mod-close" onclick="closeModal('modal-purge-generic')">✕</button></div>
+    <div class="mb">
+      <div style="font-size:13px;margin-bottom:6px">By default, only removes unverified bare-homepage links from the three known repeat offenders — <strong>Handspeak</strong>, <strong>Lifeprint</strong>, and <strong>ASL Nook</strong> (<span id="pg-known-count">0</span> link<span id="pg-known-plural">s</span>).</div>
+      <div id="pg-breakdown" style="font-size:11px;color:var(--muted,#888);margin-bottom:10px"></div>
+      <div id="pg-other-row" style="display:none;border-top:1px solid var(--br);padding-top:10px;margin-top:4px">
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="pg-include-other" style="margin-top:3px">
+          <span>Also remove flagged generic links from <strong>other</strong> sites (<span id="pg-other-count">0</span>) — unchecked by default so those are left for you to review individually.</span>
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--muted,#888);margin-top:10px">Links you've already marked reviewed are always kept. This can't be undone.</div>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-purge-generic')">Cancel</button>
+      <button class="btn pri sm" onclick="confirmPurgeGenericLinks()">Purge</button>
+    </div>
+  </div>
+</div>
+
 <!-- Class Notes / Document Builder -->
 <div class="ov" id="modal-doc-builder">
   <div class="mod" style="max-width:640px">
@@ -2263,6 +2310,21 @@ function migrateVocabResourceFields() {
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+// Canonical shape for a brand-new vocab entry. Every place that creates one —
+// quick log, manual add, AI research, document builder — should build off
+// this instead of writing its own field list, so no path can silently end up
+// missing fields the rest of the app expects (resource arrays, verified,
+// confirmedSignLink, etc.). Pass only the fields that differ from the blank
+// defaults.
+function makeBlankVocabEntry(overrides={}) {
+  return Object.assign({
+    id: uid(), word:'', category:'', signType:'', classId:'', studentId:'all',
+    definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:'', link:'', status:'needs-both',
+    verified:false, confirmedSignLink:null, rejectedLinks:[],
+    deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+    createdAt: Date.now()
+  }, overrides);
+}
 
 // Words currently checked in the Vocabulary dictionary, for AI research prompts
 let vocabSelection = new Set();
@@ -2407,6 +2469,48 @@ document.querySelectorAll('.ov').forEach(ov => ov.addEventListener('click', e =>
   if(e.target===ov) { ov.classList.remove('open'); document.body.style.overflow=''; }
 }));
 
+// Styled drop-in replacement for native confirm(): same call shape (message,
+// then a callback to run if confirmed) so every call site below just swaps
+// `if (confirm(msg)) { ... }` for `confirmAction(msg, () => { ... })`.
+// opts: {title, okLabel, danger (default true — red button; pass false for a
+// neutral sage button on non-destructive confirmations)}.
+let _confirmActionFn = null;
+function confirmAction(message, onConfirm, opts={}) {
+  document.getElementById('confirm-title').textContent = opts.title || 'Please confirm';
+  document.getElementById('confirm-body').textContent = message;
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.textContent = opts.okLabel || 'Confirm';
+  okBtn.className = 'btn sm ' + (opts.danger===false ? 'pri' : 'warn');
+  _confirmActionFn = onConfirm;
+  openModal('modal-confirm');
+}
+function runConfirmAction() {
+  const fn = _confirmActionFn;
+  _confirmActionFn = null;
+  closeModal('modal-confirm');
+  if (fn) fn();
+}
+// Styled drop-in replacement for native prompt(): calls back with the
+// trimmed text, or an empty string if cancelled/left blank.
+let _textPromptFn = null;
+function promptText(title, placeholder, onSubmit, okLabel) {
+  document.getElementById('text-prompt-title').textContent = title;
+  const inp = document.getElementById('text-prompt-input');
+  inp.value = '';
+  inp.placeholder = placeholder || '';
+  document.getElementById('text-prompt-ok-btn').textContent = okLabel || 'Create';
+  _textPromptFn = onSubmit;
+  openModal('modal-text-prompt');
+  setTimeout(()=>inp.focus(), 60);
+}
+function runTextPromptAction() {
+  const val = document.getElementById('text-prompt-input').value.trim();
+  const fn = _textPromptFn;
+  _textPromptFn = null;
+  closeModal('modal-text-prompt');
+  if (fn) fn(val);
+}
+
 // ── TOAST ─────────────────────────────────────────────────────────────────────
 let toastTimer;
 function toast(msg, type='ok') {
@@ -2467,9 +2571,10 @@ function saveStudent() {
 }
 
 function deleteStudent(id) {
-  if (!confirm('Delete this student entry? Logs and vocab referencing them will remain.')) return;
-  DB.students = DB.students.filter(s=>s.id!==id);
-  save(); populateStudentSelectors(); renderSchedule(); toast('Deleted');
+  confirmAction('Delete this student entry? Logs and vocab referencing them will remain.', () => {
+    DB.students = DB.students.filter(s=>s.id!==id);
+    save(); populateStudentSelectors(); renderSchedule(); toast('Deleted');
+  });
 }
 
 // ── CLASSES ────────────────────────────────────────────────────────────────────
@@ -2592,9 +2697,10 @@ function clearClassModal() {
 }
 
 function deleteClass(id) {
-  if (!confirm('Delete this class?')) return;
-  DB.classes = DB.classes.filter(c=>c.id!==id);
-  save(); populateClassSelectors(); renderSchedule(); toast('Deleted');
+  confirmAction('Delete this class?', () => {
+    DB.classes = DB.classes.filter(c=>c.id!==id);
+    save(); populateClassSelectors(); renderSchedule(); toast('Deleted');
+  });
 }
 
 // ── LOGS ───────────────────────────────────────────────────────────────────────
@@ -2617,8 +2723,7 @@ function quickLog() {
   DB.logs.unshift(entry);
   entry.vocab.forEach(w => {
     if (w && !DB.vocab.find(v=>v.word.toLowerCase()===w.toLowerCase())) {
-      DB.vocab.push({ id:uid(), word:w, category:classObj?.name||'', signType:'', classId, studentId,
-        definition:'', params:'', mastery:1, source:'Daily Log', link:'', status:'needs-both', createdAt:Date.now() });
+      DB.vocab.push(makeBlankVocabEntry({ word:w, category:classObj?.name||'', classId, studentId, source:'Daily Log' }));
     }
   });
   save();
@@ -2652,8 +2757,7 @@ function saveLog() {
   DB.logs.unshift(entry);
   entry.vocab.forEach(w => {
     if (w && !DB.vocab.find(v=>v.word.toLowerCase()===w.toLowerCase())) {
-      DB.vocab.push({ id:uid(), word:w, category:classObj?.name||'', signType:'', classId, studentId,
-        definition:'', params:'', mastery:1, source:'Daily Log', link:'', status:'needs-both', createdAt:Date.now() });
+      DB.vocab.push(makeBlankVocabEntry({ word:w, category:classObj?.name||'', classId, studentId, source:'Daily Log' }));
     }
   });
   save();
@@ -2701,9 +2805,10 @@ function renderLogs() {
 }
 
 function deleteLog(id) {
-  if (!confirm('Delete this log entry?')) return;
-  DB.logs = DB.logs.filter(l=>l.id!==id);
-  save(); renderLogs(); renderDashboard(); toast('Deleted');
+  confirmAction('Delete this log entry?', () => {
+    DB.logs = DB.logs.filter(l=>l.id!==id);
+    save(); renderLogs(); renderDashboard(); toast('Deleted');
+  });
 }
 
 // ── VOCAB ──────────────────────────────────────────────────────────────────────
@@ -2869,6 +2974,7 @@ function saveVocab() {
     status: document.getElementById('v-status').value||'needs-both',
     verified: existing?.verified||false,
     confirmedSignLink: existing?.confirmedSignLink||null,
+    rejectedLinks: existing?.rejectedLinks||[],
     deafResources: existing?.deafResources||[],
     aslVideos: existing?.aslVideos||[],
     conceptVideos: existing?.conceptVideos||[],
@@ -2915,11 +3021,7 @@ function quickAddVocabModal() {
     openVocabMergeModal(dupe.id, { word, category:classObj?.name||'', classId, studentId });
     return;
   }
-  DB.vocab.unshift({ id:uid(), word, category:classObj?.name||'', signType:'', classId, studentId,
-    definition:'', params:'', wordBreakdown:'', mastery:1, source:'', link:'', status:'needs-both',
-    verified:false, confirmedSignLink:null,
-    deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-    createdAt:Date.now() });
+  DB.vocab.unshift(makeBlankVocabEntry({ word, category:classObj?.name||'', classId, studentId }));
   save(); renderVocab(); populateClassSelectors();
   document.getElementById('qv-word').value='';
   closeModal('modal-quick-vocab');
@@ -2965,9 +3067,10 @@ function editVocab(id) {
 }
 
 function deleteVocab(id) {
-  if (!confirm('Delete this vocabulary entry?')) return;
-  DB.vocab = DB.vocab.filter(v=>v.id!==id);
-  save(); renderVocab(); renderDashboard(); toast('Deleted');
+  confirmAction('Delete this vocabulary entry?', () => {
+    DB.vocab = DB.vocab.filter(v=>v.id!==id);
+    save(); renderVocab(); renderDashboard(); toast('Deleted');
+  });
 }
 // Deletes every word currently checked via the selection checkboxes.
 function bulkDeleteSelected() {
@@ -2975,11 +3078,12 @@ function bulkDeleteSelected() {
   if (!n) { toast('Select some words first (checkboxes)','warn'); return; }
   const words = DB.vocab.filter(v=>vocabSelection.has(v.id)).map(v=>v.word);
   const preview = words.slice(0,5).join(', ') + (words.length>5?`, +${words.length-5} more`:'');
-  if (!confirm(`Delete ${n} selected word${n===1?'':'s'}?\n(${preview})\nThis can't be undone.`)) return;
-  DB.vocab = DB.vocab.filter(v=>!vocabSelection.has(v.id));
-  vocabSelection.clear();
-  save(); updateSelectionBar(); renderVocab(); renderDashboard();
-  toast(`Deleted ${n} word${n===1?'':'s'}`);
+  confirmAction(`Delete ${n} selected word${n===1?'':'s'}?\n(${preview})\nThis can't be undone.`, () => {
+    DB.vocab = DB.vocab.filter(v=>!vocabSelection.has(v.id));
+    vocabSelection.clear();
+    save(); updateSelectionBar(); renderVocab(); renderDashboard();
+    toast(`Deleted ${n} word${n===1?'':'s'}`);
+  }, {title:'Delete selected words', okLabel:'Delete'});
 }
 // Deletes every word created by the most recent bulk-add (AI Research Prep or
 // Document Builder) — an "undo my last import" button. Only covers brand-new
@@ -2990,11 +3094,12 @@ function deleteLatestBatch() {
   const words = DB.vocab.filter(v=>v.batchId===batch.id);
   if (!words.length) { toast('That batch has already been cleared out'); DB.lastImportBatch = null; save(); return; }
   const preview = words.slice(0,5).map(v=>v.word).join(', ') + (words.length>5?`, +${words.length-5} more`:'');
-  if (!confirm(`Delete all ${words.length} word${words.length===1?'':'s'} added by your last ${batch.source} batch?\n(${preview})\nThis can't be undone.`)) return;
-  DB.vocab = DB.vocab.filter(v=>v.batchId!==batch.id);
-  DB.lastImportBatch = null;
-  save(); renderVocab(); renderDashboard();
-  toast(`Deleted ${words.length} word${words.length===1?'':'s'} from that batch`);
+  confirmAction(`Delete all ${words.length} word${words.length===1?'':'s'} added by your last ${batch.source} batch?\n(${preview})\nThis can't be undone.`, () => {
+    DB.vocab = DB.vocab.filter(v=>v.batchId!==batch.id);
+    DB.lastImportBatch = null;
+    save(); renderVocab(); renderDashboard();
+    toast(`Deleted ${words.length} word${words.length===1?'':'s'} from that batch`);
+  }, {title:'Delete last batch', okLabel:'Delete'});
 }
 
 function masteryLabel(n) { return ['','New','Recognizing','Learning','Comfortable','Mastered'][n]||''; }
@@ -3050,6 +3155,22 @@ function markResourceReviewed(vocabId, field, linkId) {
   if (link) link.reviewed = true;
   save(); renderVocab();
 }
+// Marks every unreviewed resource link on every currently-selected word as
+// reviewed in one pass — the bulk counterpart to tapping "Mark reviewed" one
+// link at a time. Doesn't touch words that have no unreviewed links.
+function bulkMarkReviewed() {
+  if (vocabSelection.size===0) { toast('Select some words first (checkboxes)','warn'); return; }
+  let linksMarked = 0, wordsTouched = 0;
+  DB.vocab.forEach(v=>{
+    if (!vocabSelection.has(v.id)) return;
+    let touched = false;
+    VOCAB_RESOURCE_FIELDS.forEach(f=>(v[f]||[]).forEach(r=>{ if (!r.reviewed) { r.reviewed = true; linksMarked++; touched = true; } }));
+    if (touched) wordsTouched++;
+  });
+  if (!linksMarked) { toast('No unreviewed links on the selected words'); return; }
+  save(); renderVocab();
+  toast(`Marked ${linksMarked} link${linksMarked===1?'':'s'} reviewed across ${wordsTouched} word${wordsTouched===1?'':'s'}`);
+}
 // True if this word has at least one unreviewed link that either has no URL at
 // all, or looks like a generic homepage rather than a page for the specific
 // sign/word.
@@ -3080,21 +3201,79 @@ function formatGenericLinkBreakdown(counts) {
   if (counts.other>0) parts.push(`other: ${counts.other}`);
   return parts.join(' · ');
 }
+// Remembers a URL as "already tried and rejected" for this word so future AI
+// Research / Document-builder prompts know not to suggest it again. Deduped
+// case-insensitively; capped so one word's list can't grow unbounded.
+function recordRejectedLink(v, url) {
+  if (!url) return;
+  if (!v.rejectedLinks) v.rejectedLinks = [];
+  const key = url.trim().toLowerCase();
+  if (!key || v.rejectedLinks.some(u=>u.toLowerCase()===key)) return;
+  v.rejectedLinks.push(url.trim());
+  if (v.rejectedLinks.length>25) v.rejectedLinks = v.rejectedLinks.slice(-25);
+}
+// Whether a flagged link should count toward the purge given the current
+// scope: 'known' = Handspeak/Lifeprint/ASL Nook only, 'all' = those plus
+// every other flagged "other" site.
+function linkMatchesPurgeScope(url, scope) {
+  const isKnown = !!getKnownOffenderLabel(url);
+  return scope==='all' ? true : isKnown;
+}
+function countGenericLinksInScope(scope) {
+  let n = 0;
+  DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => (v[f]||[]).forEach(r => {
+    if (!r.reviewed && isGenericResourceUrl(r.url, v.word) && linkMatchesPurgeScope(r.url, scope)) n++;
+  })));
+  return n;
+}
+// Opens a confirmation modal (instead of a plain confirm()) so the user can
+// choose whether "other" sites' generic links get swept up too, or only the
+// three known repeat offenders (Handspeak/Lifeprint/ASL Nook). Default is
+// known-offenders-only — "other" links are left alone unless opted in.
 function purgeGenericLinks() {
-  const n = countUnreviewedGenericLinks();
-  if (!n) { toast('No unverified generic links found — clean!'); return; }
-  const breakdown = formatGenericLinkBreakdown(getGenericLinkBreakdown());
-  if (!confirm(`Remove all ${n} unverified generic link${n===1?'':'s'} across your whole dictionary?${breakdown?`\n(${breakdown})`:''}\nLinks you've already marked reviewed are kept. This can't be undone.`)) return;
+  const total = countUnreviewedGenericLinks();
+  if (!total) { toast('No unverified generic links found — clean!'); return; }
+  const counts = getGenericLinkBreakdown();
+  const breakdown = formatGenericLinkBreakdown(counts);
+  const knownCount = counts.Handspeak + counts.Lifeprint + counts['ASL Nook'];
+  document.getElementById('pg-breakdown').textContent = breakdown ? `(${breakdown})` : '';
+  document.getElementById('pg-known-count').textContent = knownCount;
+  const otherRow = document.getElementById('pg-other-row');
+  const otherCb = document.getElementById('pg-include-other');
+  otherCb.checked = false;
+  if (counts.other>0) {
+    otherRow.style.display = '';
+    document.getElementById('pg-other-count').textContent = counts.other;
+  } else {
+    otherRow.style.display = 'none';
+  }
+  openModal('modal-purge-generic');
+}
+function confirmPurgeGenericLinks() {
+  const scope = document.getElementById('pg-include-other').checked ? 'all' : 'known';
+  const n = countGenericLinksInScope(scope);
+  closeModal('modal-purge-generic');
+  if (!n) { toast('Nothing to remove in that scope'); return; }
+  const counts = { Handspeak:0, Lifeprint:0, 'ASL Nook':0, other:0 };
   DB.vocab.forEach(v => VOCAB_RESOURCE_FIELDS.forEach(f => {
     if (!v[f]) return;
-    v[f] = v[f].filter(r => r.reviewed || !isGenericResourceUrl(r.url, v.word));
+    v[f] = v[f].filter(r => {
+      if (r.reviewed || !isGenericResourceUrl(r.url, v.word) || !linkMatchesPurgeScope(r.url, scope)) return true;
+      const label = getKnownOffenderLabel(r.url);
+      counts[label || 'other']++;
+      recordRejectedLink(v, r.url);
+      return false;
+    });
   }));
   save(); renderVocab();
+  const breakdown = formatGenericLinkBreakdown(counts);
   toast(`Removed ${n} generic link${n===1?'':'s'}${breakdown?` (${breakdown})`:''}`);
 }
 function deleteResourceLink(vocabId, field, linkId) {
   const v = DB.vocab.find(x=>x.id===vocabId);
   if (!v || !v[field]) return;
+  const link = v[field].find(r=>r.id===linkId);
+  if (link) recordRejectedLink(v, link.url);
   v[field] = v[field].filter(r=>r.id!==linkId);
   save(); renderVocab();
 }
@@ -3151,15 +3330,12 @@ function confirmVocabMerge(mode) {
     save(); renderVocab(); populateClassSelectors(); renderDashboard();
     toast(`Merged into existing "${existing.word}" — filled in what was blank`);
   } else if (mode==='separate') {
-    const nv = {
-      id:uid(), word: incoming.word||existing.word,
+    const nv = makeBlankVocabEntry({
+      word: incoming.word||existing.word,
       category: incoming.category||'', signType: incoming.signType||'', classId: incoming.classId||'', studentId: incoming.studentId||'all',
       definition: incoming.definition||'', nomenclature: incoming.nomenclature||'', wordBreakdown: incoming.wordBreakdown||'', mnemonic: incoming.mnemonic||'',
-      params: incoming.params||'', mastery:1, source: incoming.source||'', link: incoming.link||'',
-      status:'needs-both', verified:false, confirmedSignLink:null,
-      deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-      createdAt: Date.now()
-    };
+      params: incoming.params||'', source: incoming.source||'', link: incoming.link||''
+    });
     nv.status = computeVocabStatus(nv);
     DB.vocab.push(nv);
     save(); renderVocab(); populateClassSelectors(); renderDashboard();
@@ -3211,25 +3387,26 @@ function mergeDupCluster(idsStr) {
   const ids = idsStr.split(',');
   const entries = ids.map(id=>DB.vocab.find(v=>v.id===id)).filter(Boolean);
   if (entries.length<2) return;
-  if (!confirm(`Merge all ${entries.length} "${entries[0].word}" entries into one? Fields keep the first value found; all resource links are combined. This can't be undone.`)) return;
-  const keep = entries[0];
-  for (let i=1;i<entries.length;i++) {
-    const other = entries[i];
-    ['category','classId','studentId','definition','nomenclature','wordBreakdown','mnemonic','params','source','link'].forEach(f=>{
-      if (!keep[f] && other[f]) keep[f]=other[f];
-    });
-    if (!keep.confirmedSignLink && other.confirmedSignLink) keep.confirmedSignLink = other.confirmedSignLink;
-    VOCAB_RESOURCE_FIELDS.forEach(f=>{
-      const { merged } = mergeResourceArrays(keep[f]||[], other[f]||[]);
-      keep[f] = merged;
-    });
-  }
-  keep.status = computeVocabStatus(keep);
-  const removeIds = new Set(ids.slice(1));
-  DB.vocab = DB.vocab.filter(v=>!removeIds.has(v.id));
-  save(); renderVocab(); populateClassSelectors(); renderDashboard();
-  toast(`Merged into one "${keep.word}" entry`);
-  openDupFinder();
+  confirmAction(`Merge all ${entries.length} "${entries[0].word}" entries into one? Fields keep the first value found; all resource links are combined. This can't be undone.`, () => {
+    const keep = entries[0];
+    for (let i=1;i<entries.length;i++) {
+      const other = entries[i];
+      ['category','classId','studentId','definition','nomenclature','wordBreakdown','mnemonic','params','source','link'].forEach(f=>{
+        if (!keep[f] && other[f]) keep[f]=other[f];
+      });
+      if (!keep.confirmedSignLink && other.confirmedSignLink) keep.confirmedSignLink = other.confirmedSignLink;
+      VOCAB_RESOURCE_FIELDS.forEach(f=>{
+        const { merged } = mergeResourceArrays(keep[f]||[], other[f]||[]);
+        keep[f] = merged;
+      });
+    }
+    keep.status = computeVocabStatus(keep);
+    const removeIds = new Set(ids.slice(1));
+    DB.vocab = DB.vocab.filter(v=>!removeIds.has(v.id));
+    save(); renderVocab(); populateClassSelectors(); renderDashboard();
+    toast(`Merged into one "${keep.word}" entry`);
+    openDupFinder();
+  }, {title:'Merge duplicate entries', okLabel:'Merge'});
 }
 function updateSelectionBar() {
   const bar = document.getElementById('vocab-selection-bar');
@@ -3278,13 +3455,17 @@ function buildAIResearchPrompt(entries) {
     const key = clsName+'|'+dateKey;
     if (!groups[key]) groups[key] = { clsName, dateKey, ts, words: [] };
     const missing = getMissingResearchFields(v);
-    groups[key].words.push({ word:v.word, missing });
+    groups[key].words.push({ word:v.word, missing, rejected:(v.rejectedLinks||[]) });
     if (ts > groups[key].ts) groups[key].ts = ts;
   });
   const dateFmt = d => d==='Unknown date' ? d : new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   const sortedGroups = Object.values(groups).sort((a,b)=> b.ts-a.ts || a.clsName.localeCompare(b.clsName));
   const groupedList = sortedGroups.map(g=>
-    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>`- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`).join('\n')}`
+    `## ${g.clsName} — added ${dateFmt(g.dateKey)}\n${g.words.map(w=>{
+      let line = `- ${w.word}${w.missing.length?` (missing: ${w.missing.join(', ')})`:''}`;
+      if (w.rejected.length) line += `\n  ALREADY TRIED & REJECTED for this word — do not suggest these exact URLs again: ${w.rejected.join(', ')}`;
+      return line;
+    }).join('\n')}`
   ).join('\n\n');
   const existingCats = getAllCategories();
   const catNote = existingCats.length
@@ -3305,6 +3486,8 @@ function buildAIResearchPrompt(entries) {
 10. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
 Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
+
+Some words below have a line marked "ALREADY TRIED & REJECTED" listing exact URLs I removed after checking them myself — those didn't work out (wrong page, dead link, actually a homepage, etc.). Never suggest any of those exact URLs again for that word, even if it otherwise looks like a good fit; find a different link instead.
 
 The words below are grouped by the class they came from and the date I added them — words in the same group are usually from the same lesson. If a single trustworthy resource genuinely covers multiple words in the same group (e.g. one video that explains several related terms), reuse that exact same link in each of those words' entries instead of inventing a different "unique" one just for variety's sake. That said, please still give me several different trustworthy resources per category whenever multiple good ones actually exist — don't flatten everything down to one shared link if better options are out there.
 
@@ -3604,11 +3787,7 @@ function finalizeAIResearchResults(results, replaceLinks, decisions) {
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
-      v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId:'', studentId:'all',
-        definition:'', params:'', wordBreakdown:'', mastery:1, source:'AI Research', link:'', status:'needs-both',
-        verified:false, confirmedSignLink:null,
-        deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-        batchId, createdAt:Date.now() };
+      v = makeBlankVocabEntry({ word:r.word, category:'Uncategorized', source:'AI Research', batchId });
       DB.vocab.push(v); created++;
     } else updated++;
     const res = applyResultToVocab(v, r, aiResearchOverwriteMode, replaceLinks, decisions);
@@ -3779,6 +3958,14 @@ function buildDocPrompt() {
   const catNote = existingCats.length
     ? `Categories already in use: ${existingCats.join(', ')}. Reuse one of these if it genuinely fits; otherwise invent a short, sensible new one (e.g. subject area or unit name) rather than forcing a bad fit.`
     : `Suggest a short, sensible category for each word (e.g. subject area or unit name).`;
+  // Words already in the dictionary may carry links I already tried and
+  // rejected (bad/dead/homepage links I deleted). Since we don't know yet
+  // which existing words will show up in this new document, pass the whole
+  // rejected-link list so the AI can avoid re-suggesting any of them by URL.
+  const rejectedEntries = DB.vocab.filter(v=>(v.rejectedLinks||[]).length);
+  const rejectedNote = rejectedEntries.length
+    ? `\n\nFor these specific words, I've already tried and rejected the exact URLs listed (bad link, dead link, turned out to be a homepage, etc.) — if any of these words show up in this material, do not suggest these exact URLs again, even if they otherwise look correct:\n${rejectedEntries.map(v=>`${v.word}: ${v.rejectedLinks.join(', ')}`).join('\n')}`
+    : '';
 
   const prompt = `I'm a K-12 ASL interpreter prepping to interpret ${docTypeLabels[docType]||'this material'} for my Deaf/DHH student(s). Please do two things:
 
@@ -3788,6 +3975,7 @@ Formatting rules for Part 1 — these are the ONLY markdown you should use, noth
 - Wrap every key vocabulary or concept term I'll need to interpret in double asterisks the FIRST time it appears, like **photosynthesis**. Put the asterisks directly around the word only — no trailing periods/commas inside them (write **photosynthesis**, not **photosynthesis.**). The word inside the asterisks must be spelled exactly the way you write it in the matching WORD: line in Part 2.
 - Also highlight general academic/functional vocabulary that could come up in interpreting even if it's not subject-specific — words like "success," "criteria," "objective," "evaluate," "requirement" — anything a student might need explained or signed consistently, not just technical terms.
 - If the source material genuinely has clear sections, you can mark a section heading by starting that line with "## " (e.g. "## Introduction") — use this sparingly, only for real section breaks.
+- If (and only if) part of the source is naturally tabular or comparative — a schedule, a list of steps with associated details, a comparison of options, a data table, a vocabulary-style list of terms with short definitions — reformat JUST that part as a standard markdown table (a header row, then a "|---|---|" separator row, then data rows, pipe-delimited). This becomes a real rendered table in my app, so it's genuinely worth doing for anything that's naturally rows-and-columns, but don't force ordinary prose paragraphs into a table just to use one. You can still bold vocabulary terms inside table cells the same way as elsewhere.
 
 PART 2 — VOCAB DETAILS: For every term you wrapped in double asterisks in Part 1, give me the same research I use for my vocabulary dictionary, in this exact format (repeated for each word):
 
@@ -3808,7 +3996,7 @@ YOUTH_EXPLAINERS:
 [Title] — [URL]
 ---
 
-For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
+For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.${rejectedNote}
 
 Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
 
@@ -3849,50 +4037,132 @@ function fixDocPastedSpacing() {
 // spelling/formatting the AI used), a bare entry is auto-created on the spot
 // rather than leaving the word unlinked. wordIdMap is mutated as we go so
 // repeated occurrences of a newly-created word reuse the same entry.
+// Parses inline "**word**" bold-wraps out of a plain string into a segments
+// array (text/word pieces) — shared by paragraph text and individual table
+// cells. Any wrapped word not already in the dictionary gets a bare entry
+// auto-created on the spot (wordIdMap is mutated so repeats reuse it).
+function parseInlineSegments(text, classId, docTitle, wordIdMap) {
+  const segs = [];
+  const re = /\*{1,2}([^*\n]+?)\*{1,2}/g;
+  let lastIdx = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index>lastIdx) segs.push({ type:'text', text: text.slice(lastIdx, m.index) });
+    let captured = m[1].trim();
+    const trailMatch = captured.match(/^(.*?)([.,;:!?]+)$/);
+    let word = captured, trail = '';
+    if (trailMatch && trailMatch[1].trim()) { word = trailMatch[1].trim(); trail = trailMatch[2]; }
+    if (word) {
+      const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
+      let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
+      if (!vocabId) {
+        const nv = makeBlankVocabEntry({ word, category:'Uncategorized', classId: classId||'', source:`Class Notes — ${docTitle}` });
+        DB.vocab.push(nv);
+        vocabId = nv.id;
+        wordIdMap.set(norm, vocabId);
+      }
+      segs.push({ type:'word', word, vocabId });
+    }
+    if (trail) segs.push({ type:'text', text: trail });
+    lastIdx = re.lastIndex;
+  }
+  if (lastIdx < text.length) segs.push({ type:'text', text: text.slice(lastIdx) });
+  return segs;
+}
+function isTableRowLine(l) { return /^\s*\|.*\|\s*$/.test(l); }
+function isTableSepLine(l) { return isTableRowLine(l) && /^[\s|:-]+$/.test(l) && /-{2,}/.test(l); }
+function splitTableRow(line) {
+  let t = line.trim();
+  if (t.startsWith('|')) t = t.slice(1);
+  if (t.endsWith('|')) t = t.slice(0,-1);
+  return t.split('|').map(c=>c.trim());
+}
+// Turns raw marked-up text ("## Heading" lines, "**word**" wraps, and standard
+// markdown pipe tables) into a segments array. Every wrapped word — including
+// ones inside table cells — is guaranteed to end up linked to a real vocab
+// entry, auto-creating a bare one if needed so nothing is left unlinked. A
+// second pass then links any OTHER already-in-the-dictionary word that shows
+// up in the plain text but wasn't bolded, so an existing word doesn't get
+// missed just because the AI didn't emphasize it this time.
 function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
   const segments = [];
-  const processParagraph = (paraText) => {
-    const re = /\*{1,2}([^*\n]+?)\*{1,2}/g;
-    let lastIdx = 0, m;
-    while ((m = re.exec(paraText))) {
-      if (m.index>lastIdx) segments.push({ type:'text', text: paraText.slice(lastIdx, m.index) });
-      let captured = m[1].trim();
-      const trailMatch = captured.match(/^(.*?)([.,;:!?]+)$/);
-      let word = captured, trail = '';
-      if (trailMatch && trailMatch[1].trim()) { word = trailMatch[1].trim(); trail = trailMatch[2]; }
-      if (word) {
-        const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
-        let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
-        if (!vocabId) {
-          const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
-            definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
-            verified:false, confirmedSignLink:null,
-            deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-            createdAt:Date.now() };
-          DB.vocab.push(nv);
-          vocabId = nv.id;
-          wordIdMap.set(norm, vocabId);
-        }
-        segments.push({ type:'word', word, vocabId });
-      }
-      if (trail) segments.push({ type:'text', text: trail });
-      lastIdx = re.lastIndex;
-    }
-    if (lastIdx < paraText.length) segments.push({ type:'text', text: paraText.slice(lastIdx) });
-  };
+  const processParagraph = (paraText) => { segments.push(...parseInlineSegments(paraText, classId, docTitle, wordIdMap)); };
   let paraBuffer = [];
   const flush = () => { if (paraBuffer.length) { processParagraph(paraBuffer.join('\n')); paraBuffer = []; } };
-  textPart.split('\n').forEach(line=>{
+  const lines = textPart.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
     const headingMatch = line.match(/^##\s+(.+)$/);
-    if (headingMatch) { flush(); segments.push({ type:'heading', text: headingMatch[1].trim() }); }
-    else paraBuffer.push(line);
-  });
+    if (headingMatch) { flush(); segments.push({ type:'heading', text: headingMatch[1].trim() }); i++; continue; }
+    if (isTableRowLine(line) && lines[i+1]!==undefined && isTableSepLine(lines[i+1])) {
+      flush();
+      const headers = splitTableRow(line).map(h=>h.replace(/\*{1,2}([^*]+)\*{1,2}/g,'$1'));
+      let j = i+2;
+      const rows = [];
+      while (j < lines.length && isTableRowLine(lines[j])) {
+        const cells = splitTableRow(lines[j]);
+        rows.push(headers.map((h,ci)=>parseInlineSegments(cells[ci]||'', classId, docTitle, wordIdMap)));
+        j++;
+      }
+      segments.push({ type:'table', headers, rows });
+      i = j;
+      continue;
+    }
+    paraBuffer.push(line);
+    i++;
+  }
   flush();
   if (!segments.length) segments.push({ type:'text', text: textPart });
-  return segments;
+  return autoLinkExistingVocabWords(segments, wordIdMap);
+}
+function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+// Second pass over the plain-text segments (top-level and inside table
+// cells): links any word that's ALREADY in the dictionary (per wordIdMap) but
+// that the AI didn't wrap in ** ** this time. Only matches whole words
+// already in the map — never invents new vocab entries. Segments the AI
+// already bolded are left alone (they're 'word' type, not 'text').
+function autoLinkExistingVocabWords(segments, wordIdMap) {
+  const words = [...wordIdMap.keys()].filter(w=>w && w.length>=3).sort((a,b)=>b.length-a.length);
+  if (!words.length) return segments;
+  const pattern = new RegExp('\\b(' + words.map(escapeRegExp).join('|') + ')\\b', 'gi');
+  const linkText = (text) => {
+    const out = [];
+    let lastIdx = 0, m;
+    pattern.lastIndex = 0;
+    while ((m = pattern.exec(text))) {
+      if (m.index>lastIdx) out.push({ type:'text', text: text.slice(lastIdx, m.index) });
+      const matched = m[0];
+      const vocabId = wordIdMap.get(matched.toLowerCase());
+      out.push(vocabId ? { type:'word', word: matched, vocabId } : { type:'text', text: matched });
+      lastIdx = pattern.lastIndex;
+    }
+    if (lastIdx<text.length) out.push({ type:'text', text: text.slice(lastIdx) });
+    return out;
+  };
+  return segments.map(seg=>{
+    if (seg.type==='text') return linkText(seg.text);
+    if (seg.type==='table') return { ...seg, rows: seg.rows.map(row=>row.map(cell=>
+      (cell||[]).flatMap(cs=> cs.type==='text' ? linkText(cs.text) : [cs])
+    )) };
+    return [seg];
+  }).flat();
+}
+function inlineSegsToText(segs) {
+  return (segs||[]).map(s => s.type==='word' ? `**${s.word}**` : s.text).join('');
+}
+function tableSegmentToMarkdown(s) {
+  const headerRow = `| ${s.headers.join(' | ')} |`;
+  const sepRow = `| ${s.headers.map(()=>'---').join(' | ')} |`;
+  const bodyRows = s.rows.map(r=>`| ${s.headers.map((h,i)=>inlineSegsToText(r[i])).join(' | ')} |`);
+  return `\n${headerRow}\n${sepRow}\n${bodyRows.join('\n')}\n`;
 }
 function docMarkedTextFromSegments(segments) {
-  return segments.map(s => s.type==='heading' ? `## ${s.text}\n` : s.type==='word' ? `**${s.word}**` : s.text).join('');
+  return segments.map(s => {
+    if (s.type==='heading') return `## ${s.text}\n`;
+    if (s.type==='word') return `**${s.word}**`;
+    if (s.type==='table') return tableSegmentToMarkdown(s);
+    return s.text;
+  }).join('');
 }
 
 function applyDocBuilderResults() {
@@ -3923,11 +4193,7 @@ function finalizeDocBuilderResults(results, replaceLinks, decisions, textPart, c
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
-      v = { id:uid(), word:r.word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
-        definition:'', params:'', mastery:1, source:`Class Notes — ${title}`, link:'', status:'needs-both',
-        verified:false, confirmedSignLink:null, wordBreakdown:'',
-        deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-        batchId, createdAt:Date.now() };
+      v = makeBlankVocabEntry({ word:r.word, category:'Uncategorized', classId: classId||'', source:`Class Notes — ${title}`, batchId });
       DB.vocab.push(v); created++;
     } else updated++;
     const res = applyResultToVocab(v, r, false, replaceLinks, decisions);
@@ -4005,7 +4271,8 @@ function renderClassDocs() {
     docs = docs.filter(d => {
       if (d.title.toLowerCase().includes(search)) return true;
       return d.segments.some(s => (s.type==='text'||s.type==='heading') && s.text.toLowerCase().includes(search)
-        || (s.type==='word' && s.word.toLowerCase().includes(search)));
+        || (s.type==='word' && s.word.toLowerCase().includes(search))
+        || (s.type==='table' && (s.headers.some(h=>h.toLowerCase().includes(search)) || s.rows.some(r=>r.some(cell=>inlineSegsToText(cell).toLowerCase().includes(search))))));
     });
   }
   if (!docs.length) { box.innerHTML = '<div class="tbl-empty">No documents match your search.</div>'; return; }
@@ -4039,20 +4306,40 @@ function renderClassDocs() {
   }).join('');
 }
 // Plain-text teaser for the card face — pulled from the first couple text
-// segments, tags/tables/headings stripped, truncated to roughly one line.
+// segments (including table cells), tags/headings stripped, truncated to
+// roughly one line.
 function docTeaserText(d) {
   let t = '';
   for (const s of d.segments) {
     if (s.type==='text') t += s.text;
     else if (s.type==='word') t += s.word;
+    else if (s.type==='table') s.rows.forEach(r=>r.forEach(cell=>{ t += ' ' + inlineSegsToText(cell); }));
     if (t.length > 160) break;
   }
   t = t.replace(/\s+/g,' ').trim();
   return t.length > 150 ? t.slice(0,150)+'…' : t;
 }
+// Every linked-vocab word occurrence across a document, including inside
+// table cells — each tagged with a unique "key" matching the element-id
+// scheme used when rendering (top-level segment index, or a composite
+// table/row/col/word key), so callers can jump to and highlight the exact spot.
+function allDocWordOccurrences(d) {
+  const out = [];
+  d.segments.forEach((s, idx) => {
+    if (s.type==='word' && s.vocabId) out.push({ vocabId:s.vocabId, word:s.word, key:String(idx) });
+    else if (s.type==='table') {
+      s.rows.forEach((row, ri) => row.forEach((cell, ci) => {
+        (cell||[]).forEach((cs, wi) => {
+          if (cs.type==='word' && cs.vocabId) out.push({ vocabId:cs.vocabId, word:cs.word, key:`t${idx}r${ri}c${ci}w${wi}`, header:s.headers[ci] });
+        });
+      }));
+    }
+  });
+  return out;
+}
 function renderDocCard(d) {
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
-  const wordCount = new Set(d.segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
+  const wordCount = new Set(allDocWordOccurrences(d).map(o=>o.vocabId)).size;
   const attachHtml = d.attachment ? `<a href="${d.attachment.dataUrl}" download="${esc(d.attachment.name)}" class="doc-attach-chip" onclick="event.stopPropagation()">📎 ${esc(d.attachment.name)}</a>` : '';
   const teaser = docTeaserText(d);
   return `<div class="doc-card">
@@ -4099,26 +4386,39 @@ function openDocReader(id, focusVocabId, focusSegIndex) {
     }, 80);
   }
 }
-function renderDocSegments(d) {
-  return d.segments.map((s,idx)=>{
-    if (s.type==='heading') return `<div class="doc-heading">${esc(s.text)}</div>`;
-    if (s.type==='table') return renderDocTable(s);
+// Renders one inline word/text segment array (used for both top-level
+// paragraph content and individual table cells) into clickable spans.
+// keyBase is the unique id prefix for this run of segments — plain
+// string/number for top-level (single-segment call), or a composite
+// table/row/col key ending in "w" for cells (index appended per word).
+function renderInlineSegs(segs, keyBase) {
+  return (segs||[]).map((s,i)=>{
     if (s.type==='text') return esc(s.text);
-    if (s.vocabId) return `<span class="doc-word" id="docseg-${idx}" onclick="event.stopPropagation();toggleDocWordPop(${idx},'${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${idx}"></span>`;
+    const key = keyBase.endsWith('w') ? `${keyBase}${i}` : keyBase;
+    if (s.vocabId) return `<span class="doc-word" id="docseg-${key}" onclick="event.stopPropagation();toggleDocWordPop('${key}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${key}"></span>`;
     return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
   }).join('');
 }
-function renderDocTable(s) {
+function renderDocSegments(d) {
+  return d.segments.map((s,idx)=>{
+    if (s.type==='heading') return `<div class="doc-heading">${esc(s.text)}</div>`;
+    if (s.type==='table') return renderDocTable(s, idx);
+    if (s.type==='text') return esc(s.text);
+    return renderInlineSegs([s], String(idx));
+  }).join('');
+}
+function renderDocTable(s, tIdx) {
   return `<table class="doc-table"><thead><tr>${s.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${
-    s.rows.map(r=>`<tr>${s.headers.map((h,i)=>`<td>${esc(r[i]||'')}</td>`).join('')}</tr>`).join('')
+    s.rows.map((r,ri)=>`<tr>${s.headers.map((h,ci)=>`<td>${renderInlineSegs(r[ci], `t${tIdx}r${ri}c${ci}w`)}</td>`).join('')}</tr>`).join('')
   }</tbody></table>`;
 }
-// Consolidated list of every unique word linked in this document, pulled live
-// from DB.vocab — since it's a live lookup (not a stored copy), editing a word's
-// definition anywhere always shows up here immediately, and vice versa.
+// Consolidated list of every unique word linked in this document (including
+// inside tables), pulled live from DB.vocab — since it's a live lookup (not a
+// stored copy), editing a word's definition anywhere always shows up here
+// immediately, and vice versa.
 function renderDocVocabList(d) {
   const seen = new Map();
-  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
+  allDocWordOccurrences(d).forEach(o=>{ if (!seen.has(o.vocabId)) { const v=DB.vocab.find(x=>x.id===o.vocabId); if (v) seen.set(o.vocabId, v); } });
   const words = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
   if (!words.length) return '';
   return `<div class="doc-vocab-list"><div class="doc-vocab-list-hdr">📋 Vocabulary in This Document (${words.length})</div>
@@ -4172,9 +4472,10 @@ function jumpToVocabWord(word) {
   const search = document.getElementById('vocab-search');
   if (search) { search.value = word; renderVocab(); }
 }
-// Every place a given vocab word appears across all documents, with a short
-// text snippet built live from that document's current segments (not a frozen
-// copy) — editing the document text updates the snippet automatically next render.
+// Every place a given vocab word appears across all documents (including
+// inside tables), with a short text snippet built live from that document's
+// current segments (not a frozen copy) — editing the document text updates
+// the snippet automatically next render.
 function findVocabDocAppearances(vocabId) {
   const out = [];
   DB.classDocs.forEach(d=>{
@@ -4193,7 +4494,15 @@ function findVocabDocAppearances(vocabId) {
           else if (seg.type==='word') after += ' '+seg.word;
           else break;
         }
-        out.push({ docId:d.id, docTitle:d.title, segIndex:idx, before:before.trim(), after:after.trim() });
+        out.push({ docId:d.id, docTitle:d.title, segKey:String(idx), before:before.trim(), after:after.trim() });
+      } else if (s.type==='table') {
+        s.rows.forEach((row,ri)=>row.forEach((cell,ci)=>{
+          (cell||[]).forEach((cs,wi)=>{
+            if (cs.type==='word' && cs.vocabId===vocabId) {
+              out.push({ docId:d.id, docTitle:d.title, segKey:`t${idx}r${ri}c${ci}w${wi}`, before:`${s.headers[ci]||'—'}:`, after: inlineSegsToText(cell.filter((c,ii)=>ii!==wi)).trim() });
+            }
+          });
+        }));
       }
     });
   });
@@ -4205,7 +4514,7 @@ function renderDocBacklinks(v) {
   const apps = findVocabDocAppearances(v.id);
   if (!apps.length) return '';
   return `<div class="doc-backlinks"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:4px">📄 Appears in ${apps.length} place${apps.length===1?'':'s'} in your documents:</div>
-    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}',${a.segIndex})">
+    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}','${a.segKey}')">
       <div class="doc-backlink-title">${esc(a.docTitle)}</div>
       <div class="doc-backlink-snip">${esc(a.before)} <b>${esc(v.word)}</b> ${esc(a.after)}</div>
     </div>`).join('')}
@@ -4217,19 +4526,25 @@ function updateDocDate(id, val) {
   d.date = val; save(); renderClassDocs();
 }
 function deleteClassDoc(id) {
-  if (!confirm('Delete this document? (Linked vocab words stay in your dictionary.)')) return;
-  DB.classDocs = DB.classDocs.filter(d=>d.id!==id);
-  if (docReaderCurrentId===id) closeModal('modal-doc-reader');
-  save(); renderClassDocs(); toast('Document deleted');
+  confirmAction('Delete this document? (Linked vocab words stay in your dictionary.)', () => {
+    DB.classDocs = DB.classDocs.filter(d=>d.id!==id);
+    if (docReaderCurrentId===id) closeModal('modal-doc-reader');
+    save(); renderClassDocs(); toast('Document deleted');
+  });
+}
+function renderDocTablePrint(s) {
+  return `<table class="doc-table"><thead><tr>${s.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${
+    s.rows.map(r=>`<tr>${s.headers.map((h,i)=>`<td>${(r[i]||[]).map(cs=>cs.type==='word'?`<span class="print-word">${esc(cs.word)}</span>`:esc(cs.text)).join('')}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>`;
 }
 function printClassDoc(id) {
   const d = DB.classDocs.find(x=>x.id===id);
   if (!d) return;
   const cls = DB.classes.find(c=>c.id===d.classId);
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
-  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='table' ? renderDocTable(s) : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
+  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='table' ? renderDocTablePrint(s) : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
   const seen = new Map();
-  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
+  allDocWordOccurrences(d).forEach(o=>{ if (!seen.has(o.vocabId)) { const v=DB.vocab.find(x=>x.id===o.vocabId); if (v) seen.set(o.vocabId, v); } });
   const vocabWords = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
   const vocabListHtml = vocabWords.length ? `<div class="print-vocab-list"><h3 style="font-family:'Lora',serif">Vocabulary</h3>${vocabWords.map(v=>`<div class="print-vocab-item"><b>${esc(v.word)}</b>${v.definition?` — ${esc(v.definition)}`:''}${v.mnemonic?`<br><i>💡 ${esc(v.mnemonic)}</i>`:''}</div>`).join('')}</div>` : '';
   document.getElementById('doc-print-area').innerHTML = `<h1>${esc(d.title)}</h1><div class="print-meta">${cls?esc(classLabel(cls))+' · ':''}${dateFmt}</div><div class="print-body">${bodyHtml}</div>${vocabListHtml}`;
@@ -4432,6 +4747,7 @@ function renderVocab() {
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
       ${v.createdAt?`<div class="vc-params" style="color:var(--ink3)">🕓 Added ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} at ${new Date(v.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>`:''}
       ${missing.length?`<div class="vc-missing">Still needed for research: ${missing.join(', ')}</div>`:''}
+      ${renderDocBacklinks(v)}
       ${renderAIResearchBlock(v)}
     </div>`;
   }).join('');
@@ -4443,9 +4759,14 @@ function getAllCategories() {
 }
 function quickSetCategory(id, val) {
   if (val==='__new__') {
-    const name = prompt('New category name:');
-    if (!name || !name.trim()) { renderVocab(); return; }
-    val = name.trim();
+    promptText('New Category', 'e.g. Science, Unit 4...', name => {
+      if (!name) { renderVocab(); return; }
+      const v = DB.vocab.find(x=>x.id===id);
+      if (!v) return;
+      v.category = name;
+      save(); renderVocab(); populateClassSelectors();
+    });
+    return;
   }
   const v = DB.vocab.find(x=>x.id===id);
   if (!v) return;
@@ -4471,9 +4792,14 @@ function bulkSetCategory(val) {
   if (!val) return;
   if (vocabSelection.size===0) { toast('Select some words first (checkboxes)','warn'); document.getElementById('bulk-cat-select').value=''; return; }
   if (val==='__new__') {
-    const name = prompt('New category name:');
-    if (!name || !name.trim()) { document.getElementById('bulk-cat-select').value=''; return; }
-    val = name.trim();
+    promptText('New Category', 'e.g. Science, Unit 4...', name => {
+      if (!name) { document.getElementById('bulk-cat-select').value=''; return; }
+      const n = vocabSelection.size;
+      DB.vocab.forEach(v=>{ if (vocabSelection.has(v.id)) v.category = name; });
+      save(); renderVocab(); populateClassSelectors();
+      toast(`Category set for ${n} word${n===1?'':'s'}`);
+    });
+    return;
   }
   const n = vocabSelection.size;
   DB.vocab.forEach(v=>{ if (vocabSelection.has(v.id)) v.category = val; });
@@ -4807,9 +5133,10 @@ function editBlock(id) {
 }
 
 function deleteBlock(id) {
-  if(!confirm('Delete this block?'))return;
-  DB.scheduleBlocks=DB.scheduleBlocks.filter(b=>b.id!==id);
-  save(); renderBlockList(); renderSchedule(); toast('Deleted');
+  confirmAction('Delete this block?', () => {
+    DB.scheduleBlocks=DB.scheduleBlocks.filter(b=>b.id!==id);
+    save(); renderBlockList(); renderSchedule(); toast('Deleted');
+  });
 }
 
 const BLK_ICONS={prep:'📋',drive:'🚗',lunch:'🍽',tod:'🧑‍🏫',break:'☕',off:'🚫',other:'📌'};
@@ -5100,9 +5427,10 @@ function downloadFile(id) {
 }
 
 function deleteMat(id) {
-  if(!confirm('Delete this material?'))return;
-  DB.materials=DB.materials.filter(m=>m.id!==id);
-  save(); renderMaterials(); toast('Deleted');
+  confirmAction('Delete this material?', () => {
+    DB.materials=DB.materials.filter(m=>m.id!==id);
+    save(); renderMaterials(); toast('Deleted');
+  });
 }
 
 // ── BUGS ───────────────────────────────────────────────────────────────────────
@@ -5132,9 +5460,10 @@ function updateBugStatus(id, status) {
 }
 
 function deleteBug(id) {
-  if(!confirm('Delete this entry?'))return;
-  DB.bugs=DB.bugs.filter(b=>b.id!==id);
-  save(); renderBugs(); updateBadge(); toast('Deleted');
+  confirmAction('Delete this entry?', () => {
+    DB.bugs=DB.bugs.filter(b=>b.id!==id);
+    save(); renderBugs(); updateBadge(); toast('Deleted');
+  });
 }
 
 function updateBadge() {
@@ -5656,8 +5985,9 @@ function doImport(e){
   reader.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
-      if(!confirm('This will REPLACE all current data with the imported file. Continue?')) return;
-      DB={...DB,...data}; save(); location.reload();
+      confirmAction('This will REPLACE all current data with the imported file. Continue?', () => {
+        DB={...DB,...data}; save(); location.reload();
+      }, {title:'Import data', okLabel:'Replace & Import'});
     }catch{toast('Invalid JSON file','warn');}
   };
   reader.readAsText(file);
@@ -5712,9 +6042,11 @@ function exportIEPSummary(){
 }
 
 function clearAllData(){
-  if(!confirm('Delete ALL data? This cannot be undone.')) return;
-  if(!confirm('Are you sure? All logs, vocabulary, materials will be lost.')) return;
-  localStorage.removeItem(DB_KEY); location.reload();
+  confirmAction('Delete ALL data? This cannot be undone.', () => {
+    confirmAction('Are you sure? All logs, vocabulary, materials will be lost.', () => {
+      localStorage.removeItem(DB_KEY); location.reload();
+    }, {title:'Final confirmation', okLabel:'Yes, delete everything'});
+  }, {title:'Delete all data', okLabel:'Continue'});
 }
 
 // ── CLOUD SYNC (GITHUB GIST) ────────────────────────────────────────────────────
@@ -5813,46 +6145,48 @@ async function pullFromCloud() {
   const s = getSyncSettings();
   if (!s.token) { toast('Add your GitHub token first','warn'); return; }
   if (!s.gistId) { toast('No Gist ID yet — push from another device first, or paste its Gist ID here','warn'); return; }
-  if (!confirm('This will REPLACE all data on this device with the cloud version. Continue?')) return;
-  setSyncBusy(true, 'Pulling from cloud…');
-  try {
-    const res = await fetch(`${GIST_API}/${s.gistId}`, {
-      headers: {
-        'Authorization': `Bearer ${s.token}`,
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
+  confirmAction('This will REPLACE all data on this device with the cloud version. Continue?', async () => {
+    setSyncBusy(true, 'Pulling from cloud…');
+    try {
+      const res = await fetch(`${GIST_API}/${s.gistId}`, {
+        headers: {
+          'Authorization': `Bearer ${s.token}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      if (!res.ok) {
+        if (res.status===401) throw new Error('GitHub rejected the token — check it has "gist" access.');
+        if (res.status===404) throw new Error('Gist not found — check the Gist ID.');
+        throw new Error(`GitHub error (${res.status})`);
       }
-    });
-    if (!res.ok) {
-      if (res.status===401) throw new Error('GitHub rejected the token — check it has "gist" access.');
-      if (res.status===404) throw new Error('Gist not found — check the Gist ID.');
-      throw new Error(`GitHub error (${res.status})`);
+      const data = await res.json();
+      const file = data.files[GIST_FILENAME];
+      if (!file) throw new Error('No EduInterp data found in that Gist.');
+      let content = file.content;
+      if (file.truncated) { const rawRes = await fetch(file.raw_url); content = await rawRes.text(); }
+      const parsed = JSON.parse(content);
+      DB = { ...DB, ...parsed };
+      save();
+      s.lastSyncAt = Date.now();
+      setSyncSettings(s);
+      toast('Pulled from cloud ✅ — reloading…');
+      setTimeout(()=>location.reload(), 700);
+    } catch(e) {
+      toast(e.message||'Pull failed','warn');
+      setSyncBusy(false);
     }
-    const data = await res.json();
-    const file = data.files[GIST_FILENAME];
-    if (!file) throw new Error('No EduInterp data found in that Gist.');
-    let content = file.content;
-    if (file.truncated) { const rawRes = await fetch(file.raw_url); content = await rawRes.text(); }
-    const parsed = JSON.parse(content);
-    DB = { ...DB, ...parsed };
-    save();
-    s.lastSyncAt = Date.now();
-    setSyncSettings(s);
-    toast('Pulled from cloud ✅ — reloading…');
-    setTimeout(()=>location.reload(), 700);
-  } catch(e) {
-    toast(e.message||'Pull failed','warn');
-    setSyncBusy(false);
-  }
+  }, {title:'Pull from cloud', okLabel:'Replace & Pull'});
 }
 
 function disconnectSync() {
-  if (!confirm('Disconnect Cloud Sync on this device? Your Gist itself will NOT be deleted, just forgotten here.')) return;
-  localStorage.removeItem(SYNC_KEY);
-  document.getElementById('sync-token').value='';
-  document.getElementById('sync-gist-id').value='';
-  updateSyncStatus({gistId:'',lastSyncAt:0});
-  toast('Disconnected on this device');
+  confirmAction('Disconnect Cloud Sync on this device? Your Gist itself will NOT be deleted, just forgotten here.', () => {
+    localStorage.removeItem(SYNC_KEY);
+    document.getElementById('sync-token').value='';
+    document.getElementById('sync-gist-id').value='';
+    updateSyncStatus({gistId:'',lastSyncAt:0});
+    toast('Disconnected on this device');
+  }, {title:'Disconnect Cloud Sync'});
 }
 
 // ── IEP TRACKER ───────────────────────────────────────────────────────────────
@@ -5902,9 +6236,10 @@ function editIEP(id) {
 }
 
 function deleteIEP(id) {
-  if(!confirm('Delete this IEP entry?'))return;
-  DB.iepLog=DB.iepLog.filter(x=>x.id!==id);
-  save(); renderIEP(); toast('Deleted');
+  confirmAction('Delete this IEP entry?', () => {
+    DB.iepLog=DB.iepLog.filter(x=>x.id!==id);
+    save(); renderIEP(); toast('Deleted');
+  });
 }
 
 function renderIEP() {
@@ -5986,9 +6321,10 @@ function savePD() {
 }
 
 function deletePD(id) {
-  if(!confirm('Delete this PD entry?'))return;
-  DB.pdLog=DB.pdLog.filter(e=>e.id!==id);
-  save(); renderPD(); toast('Deleted');
+  confirmAction('Delete this PD entry?', () => {
+    DB.pdLog=DB.pdLog.filter(e=>e.id!==id);
+    save(); renderPD(); toast('Deleted');
+  });
 }
 
 function renderPD() {
@@ -6150,9 +6486,10 @@ function editEIPAModal(id) {
 }
 
 function deleteEIPA(id) {
-  if(!confirm('Delete this assessment?'))return;
-  DB.eipaAssessments=DB.eipaAssessments.filter(x=>x.id!==id);
-  save(); renderEIPAPage(); toast('Deleted');
+  confirmAction('Delete this assessment?', () => {
+    DB.eipaAssessments=DB.eipaAssessments.filter(x=>x.id!==id);
+    save(); renderEIPAPage(); toast('Deleted');
+  });
 }
 
 function getNormsKey(score) {
@@ -6415,9 +6752,10 @@ function editEIPAGoal(id) {
 }
 
 function deleteEIPAGoal(id) {
-  if(!confirm('Delete this goal?'))return;
-  DB.eipaGoals=DB.eipaGoals.filter(g=>g.id!==id);
-  save(); renderEIPAGoals(); toast('Deleted');
+  confirmAction('Delete this goal?', () => {
+    DB.eipaGoals=DB.eipaGoals.filter(g=>g.id!==id);
+    save(); renderEIPAGoals(); toast('Deleted');
+  });
 }
 
 function updateGoalStatus(id, status) {
