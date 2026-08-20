@@ -338,6 +338,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .doc-backlink-item:hover{background:var(--s2)}
 .doc-backlink-title{font-weight:600;color:var(--sage-d)}
 .doc-backlink-snip{color:var(--ink3);margin-top:2px;line-height:1.4}
+.doc-reader-content{white-space:pre-wrap}
 
 /* ── VOCAB SELECTION BAR ── */
 #vocab-selection-bar{display:none;align-items:center;gap:8px;background:var(--sage-l);border:1px solid var(--sage-m);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--sage-d);font-weight:500}
@@ -664,6 +665,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <button class="btn sm gold" onclick="autoDefineAll()" title="Look up plain-English definitions for every word missing one">🔍 Auto-Define All</button>
               <button class="btn sm" onclick="openDupFinder()" title="Scan for words entered more than once">🔗 Find Duplicate Words</button>
               <button class="btn sm" onclick="purgeGenericLinks()" title="Remove every unverified generic link across the whole dictionary">🧹 Purge Generic Links</button>
+              <button class="btn sm" id="delete-batch-btn" onclick="deleteLatestBatch()" style="display:none" title="Undo the most recent AI Research or Document batch add">🗑️ Delete Latest Batch</button>
               <button class="btn sm pri" onclick="openAIResearchModal()" title="Build a prompt for an AI to find Deaf-led resources, ASL videos, and memory tips">🧏 AI Research Prep</button>
             </div>
           </div>
@@ -706,6 +708,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <select id="bulk-cat-select" class="pill-select" onchange="bulkSetCategory(this.value)"></select>
             <select id="bulk-class-select" class="pill-select" onchange="bulkSetClass(this.value)"></select>
             <button class="btn sm pri" onclick="openAIResearchModal()">🧏 Research Selected</button>
+            <button class="btn sm" style="color:var(--clay)" onclick="bulkDeleteSelected()">🗑️ Delete Selected</button>
             <button class="btn gh sm" onclick="clearVocabSelection()">Clear</button>
           </div>
           <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
@@ -2024,7 +2027,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       </div>
       <div class="notice n-info" style="margin-top:8px;margin-bottom:0">
         <span>🔗</span>
-        <div style="font-size:11px">If a word already has links in a field: <label style="display:inline-flex;align-items:center;gap:3px;margin-left:2px"><input type="radio" name="ai-link-mode" value="add" checked> Add new ones alongside</label> &nbsp; <label style="display:inline-flex;align-items:center;gap:3px"><input type="radio" name="ai-link-mode" value="replace"> Replace with the new ones</label></div>
+        <div style="font-size:11px">If a word already has links in a field: <label style="display:inline-flex;align-items:center;gap:3px;margin-left:2px"><input type="radio" name="ai-link-mode" value="add" checked> Add new ones alongside</label> &nbsp; <label style="display:inline-flex;align-items:center;gap:3px"><input type="radio" name="ai-link-mode" value="replace"> Replace with the new ones</label><br><span style="color:var(--ink3)">Replace mode shows you old vs. new side-by-side for each word/field before anything changes.</span></div>
       </div>
     </div>
     <div class="mf">
@@ -2108,7 +2111,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         <div style="margin-top:6px"><button class="btn gh sm" onclick="fixDocPastedSpacing()">🧹 Fix Spacing (%20 → space)</button></div>
         <div class="notice n-info" style="margin-top:8px;margin-bottom:0">
           <span>🔗</span>
-          <div style="font-size:11px">If a word already has links in a field: <label style="display:inline-flex;align-items:center;gap:3px;margin-left:2px"><input type="radio" name="doc-link-mode" value="add" checked> Add new ones alongside</label> &nbsp; <label style="display:inline-flex;align-items:center;gap:3px"><input type="radio" name="doc-link-mode" value="replace"> Replace with the new ones</label></div>
+          <div style="font-size:11px">If a word already has links in a field: <label style="display:inline-flex;align-items:center;gap:3px;margin-left:2px"><input type="radio" name="doc-link-mode" value="add" checked> Add new ones alongside</label> &nbsp; <label style="display:inline-flex;align-items:center;gap:3px"><input type="radio" name="doc-link-mode" value="replace"> Replace with the new ones</label><br><span style="color:var(--ink3)">Replace mode shows you old vs. new side-by-side for each word/field before anything changes.</span></div>
         </div>
       </div>
       <div id="doc-builder-editmode" style="display:none">
@@ -2142,7 +2145,19 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         <button class="mod-close" onclick="closeModal('modal-doc-reader')">✕</button>
       </div>
     </div>
-    <div class="mb" id="doc-reader-body" style="font-size:14px;line-height:1.9"></div>
+    <div class="mb doc-reader-content" id="doc-reader-body" style="font-size:14px;line-height:1.9"></div>
+  </div>
+</div>
+
+<!-- Link Replacement Review — shown before Replace mode overwrites existing links -->
+<div class="ov" id="modal-link-review">
+  <div class="mod">
+    <div class="mh"><h2>🔁 Review Link Replacements</h2><button class="mod-close" onclick="closeModal('modal-link-review')">✕</button></div>
+    <div class="mb" id="link-review-body"></div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-link-review')">Cancel</button>
+      <button class="btn pri" onclick="confirmLinkReplacements()">✅ Apply</button>
+    </div>
   </div>
 </div>
 
@@ -2203,7 +2218,8 @@ let DB = {
   scheduleBlocks: [],
   noSchoolDays: [],
   skippedClasses: [],
-  classDocs: []
+  classDocs: [],
+  lastImportBatch: null
 };
 
 function save() {
@@ -2771,11 +2787,21 @@ function isGenericResourceUrl(url, word) {
   const hasWord = wordLc.length>1 && hayLc.includes(wordLc);
   const segs = path.split('/').filter(Boolean);
   const isKnownOffender = !!getKnownOffenderLabel(url);
+  const last = segs[segs.length-1] || '';
+  const GENERIC_LAST = /^(index(\.html?|\.php)?|home|en|search|dictionary|browse|topics?|categor(y|ies)|main|lessons?|asl101|words?|signs?)$/i;
+  const isGenericKeyword = GENERIC_LAST.test(last);
+  // Some dictionary sites (Handspeak especially) key their specific-word pages by
+  // a numeric ID rather than the word's text — e.g. /word/12481 or
+  // /word/index.php?id=12481 — so a digit in the last path segment is as strong
+  // a "this is one specific entry" signal as the word itself appearing in the
+  // URL, UNLESS that segment is itself a known generic keyword that just happens
+  // to contain digits (like "asl101") rather than being an actual ID.
+  const hasIdentifier = (!isGenericKeyword && /\d/.test(last)) || /[?&](id|word|sign|entry)=[^&]+/i.test(u.search);
   const isRootish = segs.length===0
-    || (segs.length===1 && /^(index\.html?|home|en|search|dictionary)$/i.test(segs[0]))
-    || (isKnownOffender && segs.length<=2); // Handspeak/Lifeprint/ASL Nook: be stricter — a real word page on these sites almost always has the word in the URL, so a same-word-free 2-segment path (category/topic/browse pages) is still treated as generic.
-  const looksLikeChannelHome = /\/(channel|c|user|@)[^/]*$/i.test(path) && !/watch|shorts/i.test(path);
-  return (isRootish || looksLikeChannelHome) && !hasWord;
+    || (segs.length===1 && isGenericKeyword)
+    || (isKnownOffender && segs.length===2 && isGenericKeyword); // e.g. handspeak.com/word/index.php with no id — genuinely the generic search page, not a specific entry.
+  const looksLikeChannelHome = /^\/(channel|c|user)\/[^/]+$/i.test(path) || /^\/@[^/]+$/i.test(path);
+  return (isRootish || looksLikeChannelHome) && !hasWord && !hasIdentifier;
 }
 function hasGoodLinks(arr, word) {
   const list = arr||[];
@@ -2942,6 +2968,33 @@ function deleteVocab(id) {
   if (!confirm('Delete this vocabulary entry?')) return;
   DB.vocab = DB.vocab.filter(v=>v.id!==id);
   save(); renderVocab(); renderDashboard(); toast('Deleted');
+}
+// Deletes every word currently checked via the selection checkboxes.
+function bulkDeleteSelected() {
+  const n = vocabSelection.size;
+  if (!n) { toast('Select some words first (checkboxes)','warn'); return; }
+  const words = DB.vocab.filter(v=>vocabSelection.has(v.id)).map(v=>v.word);
+  const preview = words.slice(0,5).join(', ') + (words.length>5?`, +${words.length-5} more`:'');
+  if (!confirm(`Delete ${n} selected word${n===1?'':'s'}?\n(${preview})\nThis can't be undone.`)) return;
+  DB.vocab = DB.vocab.filter(v=>!vocabSelection.has(v.id));
+  vocabSelection.clear();
+  save(); updateSelectionBar(); renderVocab(); renderDashboard();
+  toast(`Deleted ${n} word${n===1?'':'s'}`);
+}
+// Deletes every word created by the most recent bulk-add (AI Research Prep or
+// Document Builder) — an "undo my last import" button. Only covers brand-new
+// words from that batch, never ones that already existed and just got updated.
+function deleteLatestBatch() {
+  const batch = DB.lastImportBatch;
+  if (!batch) { toast('No recent batch on record to delete','warn'); return; }
+  const words = DB.vocab.filter(v=>v.batchId===batch.id);
+  if (!words.length) { toast('That batch has already been cleared out'); DB.lastImportBatch = null; save(); return; }
+  const preview = words.slice(0,5).map(v=>v.word).join(', ') + (words.length>5?`, +${words.length-5} more`:'');
+  if (!confirm(`Delete all ${words.length} word${words.length===1?'':'s'} added by your last ${batch.source} batch?\n(${preview})\nThis can't be undone.`)) return;
+  DB.vocab = DB.vocab.filter(v=>v.batchId!==batch.id);
+  DB.lastImportBatch = null;
+  save(); renderVocab(); renderDashboard();
+  toast(`Deleted ${words.length} word${words.length===1?'':'s'} from that batch`);
 }
 
 function masteryLabel(n) { return ['','New','Recognizing','Learning','Comfortable','Mastered'][n]||''; }
@@ -3402,7 +3455,7 @@ function isSignDictionaryUrl(url) {
   catch(e) { return false; }
 }
 
-function applyResultToVocab(v, r, overwriteMode, replaceLinks) {
+function applyResultToVocab(v, r, overwriteMode, replaceLinks, decisions) {
   let linksAdded = 0, genericSkipped = 0, fieldsReplaced = 0;
   const setText = (field, val) => { if (val && (overwriteMode || !v[field])) v[field] = val; };
   // Category counts as "blank" if it's empty OR still the default Uncategorized —
@@ -3413,6 +3466,16 @@ function applyResultToVocab(v, r, overwriteMode, replaceLinks) {
   setText('wordBreakdown', r.wordBreakdown);
   setText('mnemonic', r.mnemonic);
   setText('params', r.signDescription);
+  // Per-field replace/keep decision, from the individual review modal. Falls
+  // back to the blanket replaceLinks setting for any field that wasn't shown in
+  // the review (i.e. there was nothing to conflict with, so replace vs. merge
+  // makes no practical difference).
+  const shouldReplace = (field) => {
+    if (!replaceLinks) return false;
+    if (!decisions) return true;
+    const key = v.id+'|'+field;
+    return decisions.hasOwnProperty(key) ? decisions[key] : true;
+  };
 
   // DEAF_LINKS: reclassify sign-dictionary pages into ASL Videos; reject anything
   // that still looks like a bare homepage rather than a page for this word — it
@@ -3423,12 +3486,12 @@ function applyResultToVocab(v, r, overwriteMode, replaceLinks) {
     const toDeafLinks = incoming.filter(link=>!isSignDictionaryUrl(link.url));
     const goodDeaf = toDeafLinks.filter(link=>!isGenericResourceUrl(link.url, v.word));
     genericSkipped += toDeafLinks.length - goodDeaf.length;
-    const rd = mergeOrReplace(v.deafResources||[], goodDeaf, replaceLinks);
+    const rd = mergeOrReplace(v.deafResources||[], goodDeaf, shouldReplace('deafResources'));
     v.deafResources = rd.merged; linksAdded += rd.addedCount; if (rd.replaced) fieldsReplaced++;
     if (toAslVideos.length) {
       const goodAsl = toAslVideos.filter(link=>!isGenericResourceUrl(link.url, v.word));
       genericSkipped += toAslVideos.length - goodAsl.length;
-      const ra = mergeOrReplace(v.aslVideos||[], goodAsl, replaceLinks);
+      const ra = mergeOrReplace(v.aslVideos||[], goodAsl, shouldReplace('aslVideos'));
       v.aslVideos = ra.merged; linksAdded += ra.addedCount; if (ra.replaced) fieldsReplaced++;
     }
   }
@@ -3436,7 +3499,7 @@ function applyResultToVocab(v, r, overwriteMode, replaceLinks) {
     const incoming = parseResourceLinesToArray(r.aslVideos);
     const good = incoming.filter(link=>!isGenericResourceUrl(link.url, v.word));
     genericSkipped += incoming.length - good.length;
-    const ra = mergeOrReplace(v.aslVideos||[], good, replaceLinks);
+    const ra = mergeOrReplace(v.aslVideos||[], good, shouldReplace('aslVideos'));
     v.aslVideos = ra.merged; linksAdded += ra.addedCount; if (ra.replaced) fieldsReplaced++;
   }
   // Concept videos / youth explainers / general text resources aren't required to
@@ -3446,7 +3509,7 @@ function applyResultToVocab(v, r, overwriteMode, replaceLinks) {
     if (!r[rKey]) return;
     const incoming = parseResourceLinesToArray(r[rKey]);
     if (!incoming.length) return;
-    const rr = mergeOrReplace(v[vField]||[], incoming, replaceLinks);
+    const rr = mergeOrReplace(v[vField]||[], incoming, shouldReplace(vField));
     v[vField] = rr.merged;
     linksAdded += rr.addedCount; if (rr.replaced) fieldsReplaced++;
   });
@@ -3454,11 +3517,74 @@ function applyResultToVocab(v, r, overwriteMode, replaceLinks) {
   return { linksAdded, genericSkipped, fieldsReplaced };
 }
 
+// Builds a preview of exactly what would change for every word/field where the
+// AI gave new links AND the word already has links there — i.e. everywhere
+// "replace" would actually replace something. Words with no existing conflict
+// aren't included since there's nothing to review (merge and replace behave
+// identically when the field started empty).
+function buildReplacePreview(results) {
+  const preview = [];
+  const addOrMerge = (vocabId, word, field, fieldLabel, existing, incoming) => {
+    if (!incoming.length || !existing.length) return;
+    const item = preview.find(p=>p.vocabId===vocabId && p.field===field);
+    if (item) item.incoming = item.incoming.concat(incoming);
+    else preview.push({ vocabId, word, field, fieldLabel, existing, incoming });
+  };
+  results.forEach(r=>{
+    const v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
+    if (!v) return; // brand-new word — nothing existing to conflict with
+    if (r.deafLinks) {
+      const incoming = parseResourceLinesToArray(r.deafLinks);
+      const toAslVideos = incoming.filter(link=>isSignDictionaryUrl(link.url));
+      const toDeafLinks = incoming.filter(link=>!isSignDictionaryUrl(link.url));
+      addOrMerge(v.id, v.word, 'deafResources', 'Deaf Links', v.deafResources||[], toDeafLinks.filter(l=>!isGenericResourceUrl(l.url, v.word)));
+      addOrMerge(v.id, v.word, 'aslVideos', 'ASL Videos', v.aslVideos||[], toAslVideos.filter(l=>!isGenericResourceUrl(l.url, v.word)));
+    }
+    if (r.aslVideos) {
+      const incoming = parseResourceLinesToArray(r.aslVideos).filter(l=>!isGenericResourceUrl(l.url, v.word));
+      addOrMerge(v.id, v.word, 'aslVideos', 'ASL Videos', v.aslVideos||[], incoming);
+    }
+    [['conceptVideos','conceptVideos','Concept Videos'],['youthExplainers','youthExplainers','Youth Explainers'],['textResources','textResources','Text Resources']].forEach(([rKey,vField,label])=>{
+      if (!r[rKey]) return;
+      addOrMerge(v.id, v.word, vField, label, v[vField]||[], parseResourceLinesToArray(r[rKey]));
+    });
+  });
+  return preview;
+}
+let pendingLinkReview = null;
+function openReplaceReviewModal(preview, onConfirm) {
+  pendingLinkReview = { preview, onConfirm };
+  const linkLine = r => r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : `<span style="color:var(--clay)">${esc(r.title||'(no link)')}</span>`;
+  document.getElementById('link-review-body').innerHTML =
+    `<div class="notice n-info" style="margin-bottom:8px"><span>ℹ️</span><div style="font-size:11px">Uncheck any word/field you'd rather keep as-is — the new links still get added alongside the old ones either way, just not as a replacement.</div></div>`
+    + preview.map((item,idx)=>`<div style="border:1px solid var(--br);border-radius:8px;padding:8px 10px;margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;margin-bottom:6px">
+          <input type="checkbox" id="lr-check-${idx}" checked> ${esc(item.word)} — ${esc(item.fieldLabel)}
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div style="font-size:9.5px;color:var(--ink3);font-weight:600;margin-bottom:2px">CURRENTLY (${item.existing.length})</div>${item.existing.map(linkLine).map(h=>`<div style="font-size:11px;margin-bottom:2px">${h}</div>`).join('')}</div>
+          <div><div style="font-size:9.5px;color:var(--sage-d);font-weight:600;margin-bottom:2px">WOULD REPLACE WITH (${item.incoming.length})</div>${item.incoming.map(linkLine).map(h=>`<div style="font-size:11px;margin-bottom:2px">${h}</div>`).join('')}</div>
+        </div>
+      </div>`).join('');
+  openModal('modal-link-review');
+}
+function confirmLinkReplacements() {
+  if (!pendingLinkReview) return;
+  const { preview, onConfirm } = pendingLinkReview;
+  const decisions = {};
+  preview.forEach((item, idx) => {
+    const checked = document.getElementById(`lr-check-${idx}`)?.checked;
+    decisions[item.vocabId+'|'+item.field] = !!checked;
+  });
+  closeModal('modal-link-review');
+  pendingLinkReview = null;
+  onConfirm(decisions);
+}
+
 function applyAIResearchResults() {
   let raw = document.getElementById('ai-response-text').value.trim();
   if (!raw) { toast('Paste the AI response first','warn'); return; }
   const replaceLinks = document.querySelector('input[name="ai-link-mode"]:checked')?.value === 'replace';
-  if (replaceLinks && !confirm('Replace mode is on: for any word where you already have links AND the AI gave new ones for that same field, the old links will be replaced, not merged. Words/fields with no new links from the AI are untouched. Continue?')) return;
   const cleaned = cleanPercentEncoding(raw);
   if (cleaned !== raw) {
     raw = cleaned;
@@ -3466,7 +3592,15 @@ function applyAIResearchResults() {
   }
   const results = parseAIResearchResponse(raw);
   if (!results.length) { toast('No "WORD:" lines found — copy the AI\'s reply using its own Copy button (not manual select), or ask it to resend in plain text','warn'); return; }
+  if (replaceLinks) {
+    const preview = buildReplacePreview(results);
+    if (preview.length) { openReplaceReviewModal(preview, decisions => finalizeAIResearchResults(results, true, decisions)); return; }
+  }
+  finalizeAIResearchResults(results, replaceLinks, null);
+}
+function finalizeAIResearchResults(results, replaceLinks, decisions) {
   let updated=0, created=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0;
+  const batchId = uid();
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
@@ -3474,12 +3608,13 @@ function applyAIResearchResults() {
         definition:'', params:'', wordBreakdown:'', mastery:1, source:'AI Research', link:'', status:'needs-both',
         verified:false, confirmedSignLink:null,
         deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-        createdAt:Date.now() };
+        batchId, createdAt:Date.now() };
       DB.vocab.push(v); created++;
     } else updated++;
-    const res = applyResultToVocab(v, r, aiResearchOverwriteMode, replaceLinks);
+    const res = applyResultToVocab(v, r, aiResearchOverwriteMode, replaceLinks, decisions);
     linksAdded += res.linksAdded; genericSkipped += res.genericSkipped; fieldsReplaced += res.fieldsReplaced;
   });
+  if (created>0) DB.lastImportBatch = { id: batchId, source:'AI Research', count: created, createdAt: Date.now() };
   save(); renderVocab(); populateClassSelectors(); renderDashboard();
   vocabSelection.clear(); updateSelectionBar();
   closeModal('modal-ai-research');
@@ -3653,7 +3788,6 @@ Formatting rules for Part 1 — these are the ONLY markdown you should use, noth
 - Wrap every key vocabulary or concept term I'll need to interpret in double asterisks the FIRST time it appears, like **photosynthesis**. Put the asterisks directly around the word only — no trailing periods/commas inside them (write **photosynthesis**, not **photosynthesis.**). The word inside the asterisks must be spelled exactly the way you write it in the matching WORD: line in Part 2.
 - Also highlight general academic/functional vocabulary that could come up in interpreting even if it's not subject-specific — words like "success," "criteria," "objective," "evaluate," "requirement" — anything a student might need explained or signed consistently, not just technical terms.
 - If the source material genuinely has clear sections, you can mark a section heading by starting that line with "## " (e.g. "## Introduction") — use this sparingly, only for real section breaks.
-- If (and only if) part of the source is naturally tabular or comparative — a schedule, a list of steps with associated details, a comparison of options, a data table, a vocabulary-style list of terms with short definitions — reformat JUST that part as a standard markdown table (a header row, then a "|---|---|" separator row, then data rows, pipe-delimited). This becomes a real rendered table in my app, so it's genuinely worth doing for anything that's naturally rows-and-columns, but don't force ordinary prose paragraphs into a table just to use one. You can still bold vocabulary terms inside table cells the same way as elsewhere.
 
 PART 2 — VOCAB DETAILS: For every term you wrapped in double asterisks in Part 1, give me the same research I use for my vocabulary dictionary, in this exact format (repeated for each word):
 
@@ -3715,101 +3849,50 @@ function fixDocPastedSpacing() {
 // spelling/formatting the AI used), a bare entry is auto-created on the spot
 // rather than leaving the word unlinked. wordIdMap is mutated as we go so
 // repeated occurrences of a newly-created word reuse the same entry.
-// Parses inline "**word**" bold-wraps out of a plain string into a segments
-// array (text/word pieces) — shared by paragraph text and individual table
-// cells. Any wrapped word not already in the dictionary gets a bare entry
-// auto-created on the spot (wordIdMap is mutated so repeats reuse it).
-function parseInlineSegments(text, classId, docTitle, wordIdMap) {
-  const segs = [];
-  const re = /\*{1,2}([^*\n]+?)\*{1,2}/g;
-  let lastIdx = 0, m;
-  while ((m = re.exec(text))) {
-    if (m.index>lastIdx) segs.push({ type:'text', text: text.slice(lastIdx, m.index) });
-    let captured = m[1].trim();
-    const trailMatch = captured.match(/^(.*?)([.,;:!?]+)$/);
-    let word = captured, trail = '';
-    if (trailMatch && trailMatch[1].trim()) { word = trailMatch[1].trim(); trail = trailMatch[2]; }
-    if (word) {
-      const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
-      let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
-      if (!vocabId) {
-        const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
-          definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
-          verified:false, confirmedSignLink:null,
-          deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-          createdAt:Date.now() };
-        DB.vocab.push(nv);
-        vocabId = nv.id;
-        wordIdMap.set(norm, vocabId);
-      }
-      segs.push({ type:'word', word, vocabId });
-    }
-    if (trail) segs.push({ type:'text', text: trail });
-    lastIdx = re.lastIndex;
-  }
-  if (lastIdx < text.length) segs.push({ type:'text', text: text.slice(lastIdx) });
-  return segs;
-}
-function isTableRowLine(l) { return /^\s*\|.*\|\s*$/.test(l); }
-function isTableSepLine(l) { return isTableRowLine(l) && /^[\s|:-]+$/.test(l) && /-{2,}/.test(l); }
-function splitTableRow(line) {
-  let t = line.trim();
-  if (t.startsWith('|')) t = t.slice(1);
-  if (t.endsWith('|')) t = t.slice(0,-1);
-  return t.split('|').map(c=>c.trim());
-}
-// Turns raw marked-up text ("## Heading" lines, "**word**" wraps, and standard
-// markdown pipe tables) into a segments array. Every wrapped word — including
-// ones inside table cells — is guaranteed to end up linked to a real vocab
-// entry, auto-creating a bare one if needed so nothing is left unlinked.
 function buildDocSegments(textPart, classId, docTitle, wordIdMap) {
   const segments = [];
-  const processParagraph = (paraText) => { segments.push(...parseInlineSegments(paraText, classId, docTitle, wordIdMap)); };
+  const processParagraph = (paraText) => {
+    const re = /\*{1,2}([^*\n]+?)\*{1,2}/g;
+    let lastIdx = 0, m;
+    while ((m = re.exec(paraText))) {
+      if (m.index>lastIdx) segments.push({ type:'text', text: paraText.slice(lastIdx, m.index) });
+      let captured = m[1].trim();
+      const trailMatch = captured.match(/^(.*?)([.,;:!?]+)$/);
+      let word = captured, trail = '';
+      if (trailMatch && trailMatch[1].trim()) { word = trailMatch[1].trim(); trail = trailMatch[2]; }
+      if (word) {
+        const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
+        let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
+        if (!vocabId) {
+          const nv = { id:uid(), word, category:'Uncategorized', signType:'', classId: classId||'', studentId:'all',
+            definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:`Class Notes — ${docTitle}`, link:'', status:'needs-both',
+            verified:false, confirmedSignLink:null,
+            deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+            createdAt:Date.now() };
+          DB.vocab.push(nv);
+          vocabId = nv.id;
+          wordIdMap.set(norm, vocabId);
+        }
+        segments.push({ type:'word', word, vocabId });
+      }
+      if (trail) segments.push({ type:'text', text: trail });
+      lastIdx = re.lastIndex;
+    }
+    if (lastIdx < paraText.length) segments.push({ type:'text', text: paraText.slice(lastIdx) });
+  };
   let paraBuffer = [];
   const flush = () => { if (paraBuffer.length) { processParagraph(paraBuffer.join('\n')); paraBuffer = []; } };
-  const lines = textPart.split('\n');
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
+  textPart.split('\n').forEach(line=>{
     const headingMatch = line.match(/^##\s+(.+)$/);
-    if (headingMatch) { flush(); segments.push({ type:'heading', text: headingMatch[1].trim() }); i++; continue; }
-    if (isTableRowLine(line) && lines[i+1]!==undefined && isTableSepLine(lines[i+1])) {
-      flush();
-      const headers = splitTableRow(line).map(h=>h.replace(/\*{1,2}([^*]+)\*{1,2}/g,'$1'));
-      let j = i+2;
-      const rows = [];
-      while (j < lines.length && isTableRowLine(lines[j])) {
-        const cells = splitTableRow(lines[j]);
-        rows.push(headers.map((h,ci)=>parseInlineSegments(cells[ci]||'', classId, docTitle, wordIdMap)));
-        j++;
-      }
-      segments.push({ type:'table', headers, rows });
-      i = j;
-      continue;
-    }
-    paraBuffer.push(line);
-    i++;
-  }
+    if (headingMatch) { flush(); segments.push({ type:'heading', text: headingMatch[1].trim() }); }
+    else paraBuffer.push(line);
+  });
   flush();
   if (!segments.length) segments.push({ type:'text', text: textPart });
   return segments;
 }
-function inlineSegsToText(segs) {
-  return (segs||[]).map(s => s.type==='word' ? `**${s.word}**` : s.text).join('');
-}
-function tableSegmentToMarkdown(s) {
-  const headerRow = `| ${s.headers.join(' | ')} |`;
-  const sepRow = `| ${s.headers.map(()=>'---').join(' | ')} |`;
-  const bodyRows = s.rows.map(r=>`| ${s.headers.map((h,i)=>inlineSegsToText(r[i])).join(' | ')} |`);
-  return `\n${headerRow}\n${sepRow}\n${bodyRows.join('\n')}\n`;
-}
 function docMarkedTextFromSegments(segments) {
-  return segments.map(s => {
-    if (s.type==='heading') return `## ${s.text}\n`;
-    if (s.type==='word') return `**${s.word}**`;
-    if (s.type==='table') return tableSegmentToMarkdown(s);
-    return s.text;
-  }).join('');
+  return segments.map(s => s.type==='heading' ? `## ${s.text}\n` : s.type==='word' ? `**${s.word}**` : s.text).join('');
 }
 
 function applyDocBuilderResults() {
@@ -3823,11 +3906,20 @@ function applyDocBuilderResults() {
   if (!textMatch) { toast('Couldn\'t find the ===TEXT=== section — make sure the AI kept the exact ===TEXT===/===VOCAB=== markers from the prompt','warn'); return; }
   const textPart = textMatch[1].trim();
   const vocabPart = vocabMatch ? vocabMatch[1].trim() : '';
-
   const results = vocabPart ? parseAIResearchResponse(vocabPart) : [];
-  let created=0, updated=0, linksAdded=0, genericSkipped=0;
+  const replaceLinks = document.querySelector('input[name="doc-link-mode"]:checked')?.value === 'replace';
   const classId = document.getElementById('doc-class').value;
   const title = document.getElementById('doc-title').value.trim() || 'Untitled Document';
+
+  if (replaceLinks && results.length) {
+    const preview = buildReplacePreview(results);
+    if (preview.length) { openReplaceReviewModal(preview, decisions => finalizeDocBuilderResults(results, true, decisions, textPart, classId, title)); return; }
+  }
+  finalizeDocBuilderResults(results, replaceLinks, null, textPart, classId, title);
+}
+function finalizeDocBuilderResults(results, replaceLinks, decisions, textPart, classId, title) {
+  let created=0, updated=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0;
+  const batchId = uid();
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
@@ -3835,18 +3927,24 @@ function applyDocBuilderResults() {
         definition:'', params:'', mastery:1, source:`Class Notes — ${title}`, link:'', status:'needs-both',
         verified:false, confirmedSignLink:null, wordBreakdown:'',
         deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
-        createdAt:Date.now() };
+        batchId, createdAt:Date.now() };
       DB.vocab.push(v); created++;
     } else updated++;
-    const res = applyResultToVocab(v, r, false);
-    linksAdded += res.linksAdded; genericSkipped += res.genericSkipped;
+    const res = applyResultToVocab(v, r, false, replaceLinks, decisions);
+    linksAdded += res.linksAdded; genericSkipped += res.genericSkipped; fieldsReplaced += res.fieldsReplaced;
   });
 
   // Map built AFTER create/update so every researched word (including brand-new
   // ones) is linkable; buildDocSegments auto-creates a bare entry for anything
   // still unmatched (e.g. wrapped in Part 1 but missing its Part 2 block).
   const wordIdMap = new Map(DB.vocab.map(v=>[v.word.toLowerCase().trim(), v.id]));
+  const beforeCount = DB.vocab.length;
   const segments = buildDocSegments(textPart, classId, title, wordIdMap);
+  // buildDocSegments can also create brand-new bare entries for unmatched wrapped
+  // words — count those into the same batch too, so "Delete Latest Batch" covers them.
+  const docCreatedCount = DB.vocab.length - beforeCount;
+  if (docCreatedCount>0) DB.vocab.slice(beforeCount).forEach(v=>{ if(!v.batchId) v.batchId = batchId; });
+  created += docCreatedCount;
 
   const doc = {
     id: uid(), title, classId: classId||'',
@@ -3857,10 +3955,11 @@ function applyDocBuilderResults() {
   };
   DB.classDocs.unshift(doc);
   pendingDocAttachment = null;
+  if (created>0) DB.lastImportBatch = { id: batchId, source:'Document Builder', count: created, createdAt: Date.now() };
   save(); renderVocab(); renderClassDocs(); populateClassSelectors(); renderDashboard();
   closeModal('modal-doc-builder');
-  const linkedWords = new Set(allDocWordOccurrences(doc).map(o=>o.vocabId)).size;
-  toast(`Document saved — ${linkedWords} vocab word${linkedWords===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}${genericSkipped?`, skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'}`:''}`);
+  const linkedWords = new Set(segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
+  toast(`Document saved — ${linkedWords} vocab word${linkedWords===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}${fieldsReplaced?`, ${fieldsReplaced} field${fieldsReplaced===1?'':'s'} replaced`:''}${genericSkipped?`, skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'}`:''}`);
 }
 
 // ── EDITING A SAVED DOCUMENT ─────────────────────────────────────────────────────
@@ -3906,8 +4005,7 @@ function renderClassDocs() {
     docs = docs.filter(d => {
       if (d.title.toLowerCase().includes(search)) return true;
       return d.segments.some(s => (s.type==='text'||s.type==='heading') && s.text.toLowerCase().includes(search)
-        || (s.type==='word' && s.word.toLowerCase().includes(search))
-        || (s.type==='table' && (s.headers.some(h=>h.toLowerCase().includes(search)) || s.rows.some(r=>r.some(cell=>inlineSegsToText(cell).toLowerCase().includes(search))))));
+        || (s.type==='word' && s.word.toLowerCase().includes(search)));
     });
   }
   if (!docs.length) { box.innerHTML = '<div class="tbl-empty">No documents match your search.</div>'; return; }
@@ -3941,40 +4039,20 @@ function renderClassDocs() {
   }).join('');
 }
 // Plain-text teaser for the card face — pulled from the first couple text
-// segments (including table cells), tags/headings stripped, truncated to
-// roughly one line.
+// segments, tags/tables/headings stripped, truncated to roughly one line.
 function docTeaserText(d) {
   let t = '';
   for (const s of d.segments) {
     if (s.type==='text') t += s.text;
     else if (s.type==='word') t += s.word;
-    else if (s.type==='table') s.rows.forEach(r=>r.forEach(cell=>{ t += ' ' + inlineSegsToText(cell); }));
     if (t.length > 160) break;
   }
   t = t.replace(/\s+/g,' ').trim();
   return t.length > 150 ? t.slice(0,150)+'…' : t;
 }
-// Every linked-vocab word occurrence across a document, including inside
-// table cells — each tagged with a unique "key" matching the element-id
-// scheme used when rendering (top-level segment index, or a composite
-// table/row/col/word key), so callers can jump to and highlight the exact spot.
-function allDocWordOccurrences(d) {
-  const out = [];
-  d.segments.forEach((s, idx) => {
-    if (s.type==='word' && s.vocabId) out.push({ vocabId:s.vocabId, word:s.word, key:String(idx) });
-    else if (s.type==='table') {
-      s.rows.forEach((row, ri) => row.forEach((cell, ci) => {
-        (cell||[]).forEach((cs, wi) => {
-          if (cs.type==='word' && cs.vocabId) out.push({ vocabId:cs.vocabId, word:cs.word, key:`t${idx}r${ri}c${ci}w${wi}`, header:s.headers[ci] });
-        });
-      }));
-    }
-  });
-  return out;
-}
 function renderDocCard(d) {
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
-  const wordCount = new Set(allDocWordOccurrences(d).map(o=>o.vocabId)).size;
+  const wordCount = new Set(d.segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
   const attachHtml = d.attachment ? `<a href="${d.attachment.dataUrl}" download="${esc(d.attachment.name)}" class="doc-attach-chip" onclick="event.stopPropagation()">📎 ${esc(d.attachment.name)}</a>` : '';
   const teaser = docTeaserText(d);
   return `<div class="doc-card">
@@ -4021,38 +4099,26 @@ function openDocReader(id, focusVocabId, focusSegIndex) {
     }, 80);
   }
 }
-// Renders one inline word/text segment array (used for both top-level
-// paragraph content and individual table cells) into clickable spans. `key`
-// is the unique id prefix for this run of segments — plain string/number for
-// top-level, or a composite table/row/col key for cells.
-function renderInlineSegs(segs, keyBase) {
-  return (segs||[]).map((s,i)=>{
-    if (s.type==='text') return esc(s.text);
-    const key = keyBase.endsWith('w') ? `${keyBase}${i}` : keyBase;
-    if (s.vocabId) return `<span class="doc-word" id="docseg-${key}" onclick="event.stopPropagation();toggleDocWordPop('${key}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${key}"></span>`;
-    return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
-  }).join('');
-}
 function renderDocSegments(d) {
   return d.segments.map((s,idx)=>{
     if (s.type==='heading') return `<div class="doc-heading">${esc(s.text)}</div>`;
-    if (s.type==='table') return renderDocTable(s, idx);
+    if (s.type==='table') return renderDocTable(s);
     if (s.type==='text') return esc(s.text);
-    return renderInlineSegs([s], String(idx));
+    if (s.vocabId) return `<span class="doc-word" id="docseg-${idx}" onclick="event.stopPropagation();toggleDocWordPop(${idx},'${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${idx}"></span>`;
+    return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
   }).join('');
 }
-function renderDocTable(s, tIdx) {
+function renderDocTable(s) {
   return `<table class="doc-table"><thead><tr>${s.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${
-    s.rows.map((r,ri)=>`<tr>${s.headers.map((h,ci)=>`<td>${renderInlineSegs(r[ci], `t${tIdx}r${ri}c${ci}w`)}</td>`).join('')}</tr>`).join('')
+    s.rows.map(r=>`<tr>${s.headers.map((h,i)=>`<td>${esc(r[i]||'')}</td>`).join('')}</tr>`).join('')
   }</tbody></table>`;
 }
-// Consolidated list of every unique word linked in this document (including
-// inside tables), pulled live from DB.vocab — since it's a live lookup (not a
-// stored copy), editing a word's definition anywhere always shows up here
-// immediately, and vice versa.
+// Consolidated list of every unique word linked in this document, pulled live
+// from DB.vocab — since it's a live lookup (not a stored copy), editing a word's
+// definition anywhere always shows up here immediately, and vice versa.
 function renderDocVocabList(d) {
   const seen = new Map();
-  allDocWordOccurrences(d).forEach(o=>{ if (!seen.has(o.vocabId)) { const v=DB.vocab.find(x=>x.id===o.vocabId); if (v) seen.set(o.vocabId, v); } });
+  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
   const words = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
   if (!words.length) return '';
   return `<div class="doc-vocab-list"><div class="doc-vocab-list-hdr">📋 Vocabulary in This Document (${words.length})</div>
@@ -4106,10 +4172,9 @@ function jumpToVocabWord(word) {
   const search = document.getElementById('vocab-search');
   if (search) { search.value = word; renderVocab(); }
 }
-// Every place a given vocab word appears across all documents (including
-// inside tables), with a short text snippet built live from that document's
-// current segments (not a frozen copy) — editing the document text updates
-// the snippet automatically next render.
+// Every place a given vocab word appears across all documents, with a short
+// text snippet built live from that document's current segments (not a frozen
+// copy) — editing the document text updates the snippet automatically next render.
 function findVocabDocAppearances(vocabId) {
   const out = [];
   DB.classDocs.forEach(d=>{
@@ -4128,15 +4193,7 @@ function findVocabDocAppearances(vocabId) {
           else if (seg.type==='word') after += ' '+seg.word;
           else break;
         }
-        out.push({ docId:d.id, docTitle:d.title, segKey:String(idx), before:before.trim(), after:after.trim() });
-      } else if (s.type==='table') {
-        s.rows.forEach((row,ri)=>row.forEach((cell,ci)=>{
-          (cell||[]).forEach((cs,wi)=>{
-            if (cs.type==='word' && cs.vocabId===vocabId) {
-              out.push({ docId:d.id, docTitle:d.title, segKey:`t${idx}r${ri}c${ci}w${wi}`, before:`${s.headers[ci]||'—'}:`, after: inlineSegsToText(cell.filter((c,ii)=>ii!==wi)).trim() });
-            }
-          });
-        }));
+        out.push({ docId:d.id, docTitle:d.title, segIndex:idx, before:before.trim(), after:after.trim() });
       }
     });
   });
@@ -4148,7 +4205,7 @@ function renderDocBacklinks(v) {
   const apps = findVocabDocAppearances(v.id);
   if (!apps.length) return '';
   return `<div class="doc-backlinks"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:4px">📄 Appears in ${apps.length} place${apps.length===1?'':'s'} in your documents:</div>
-    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}','${a.segKey}')">
+    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}',${a.segIndex})">
       <div class="doc-backlink-title">${esc(a.docTitle)}</div>
       <div class="doc-backlink-snip">${esc(a.before)} <b>${esc(v.word)}</b> ${esc(a.after)}</div>
     </div>`).join('')}
@@ -4165,19 +4222,14 @@ function deleteClassDoc(id) {
   if (docReaderCurrentId===id) closeModal('modal-doc-reader');
   save(); renderClassDocs(); toast('Document deleted');
 }
-function renderDocTablePrint(s) {
-  return `<table class="doc-table"><thead><tr>${s.headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${
-    s.rows.map(r=>`<tr>${s.headers.map((h,i)=>`<td>${(r[i]||[]).map(cs=>cs.type==='word'?`<span class="print-word">${esc(cs.word)}</span>`:esc(cs.text)).join('')}</td>`).join('')}</tr>`).join('')
-  }</tbody></table>`;
-}
 function printClassDoc(id) {
   const d = DB.classDocs.find(x=>x.id===id);
   if (!d) return;
   const cls = DB.classes.find(c=>c.id===d.classId);
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '';
-  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='table' ? renderDocTablePrint(s) : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
+  const bodyHtml = d.segments.map(s=> s.type==='heading' ? `<div style="font-family:'Lora',serif;font-weight:700;font-size:15px;margin:14px 0 6px">${esc(s.text)}</div>` : s.type==='table' ? renderDocTable(s) : s.type==='word' ? `<span class="print-word">${esc(s.word)}</span>` : esc(s.text)).join('');
   const seen = new Map();
-  allDocWordOccurrences(d).forEach(o=>{ if (!seen.has(o.vocabId)) { const v=DB.vocab.find(x=>x.id===o.vocabId); if (v) seen.set(o.vocabId, v); } });
+  d.segments.forEach(s=>{ if (s.type==='word' && s.vocabId && !seen.has(s.vocabId)) { const v=DB.vocab.find(x=>x.id===s.vocabId); if (v) seen.set(s.vocabId, v); } });
   const vocabWords = [...seen.values()].sort((a,b)=>a.word.localeCompare(b.word));
   const vocabListHtml = vocabWords.length ? `<div class="print-vocab-list"><h3 style="font-family:'Lora',serif">Vocabulary</h3>${vocabWords.map(v=>`<div class="print-vocab-item"><b>${esc(v.word)}</b>${v.definition?` — ${esc(v.definition)}`:''}${v.mnemonic?`<br><i>💡 ${esc(v.mnemonic)}</i>`:''}</div>`).join('')}</div>` : '';
   document.getElementById('doc-print-area').innerHTML = `<h1>${esc(d.title)}</h1><div class="print-meta">${cls?esc(classLabel(cls))+' · ':''}${dateFmt}</div><div class="print-body">${bodyHtml}</div>${vocabListHtml}`;
@@ -4313,6 +4365,13 @@ function renderVocab() {
   const filterClass = document.getElementById('vocab-filter-class')?.value||'';
   const vocab = getFilteredVocab();
   count.textContent = DB.vocab.length;
+  refreshOpenDocPopover();
+  const batchBtn = document.getElementById('delete-batch-btn');
+  if (batchBtn) {
+    const stillExists = DB.lastImportBatch && DB.vocab.some(v=>v.batchId===DB.lastImportBatch.id);
+    batchBtn.style.display = stillExists ? 'inline-flex' : 'none';
+    if (stillExists) batchBtn.title = `Undo: delete ${DB.lastImportBatch.count} word(s) added by your last ${DB.lastImportBatch.source} batch`;
+  }
   if (!vocab.length) { list.innerHTML=`<div class="tbl-empty">No vocabulary entries${search||filterCat||filterClass?' matching filters':' yet'}.</div>`; return; }
   const masteryColors=['','pr','pr','pa','pb','pg'];
   const statusBadge={
@@ -4373,7 +4432,6 @@ function renderVocab() {
       ${v.source?`<div class="vc-params">Source: ${esc(v.source)}</div>`:''}
       ${v.createdAt?`<div class="vc-params" style="color:var(--ink3)">🕓 Added ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} at ${new Date(v.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>`:''}
       ${missing.length?`<div class="vc-missing">Still needed for research: ${missing.join(', ')}</div>`:''}
-      ${renderDocBacklinks(v)}
       ${renderAIResearchBlock(v)}
     </div>`;
   }).join('');
