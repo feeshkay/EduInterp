@@ -670,6 +670,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <button class="btn sm" onclick="openDupFinder()" title="Scan for words entered more than once">🔗 Find Duplicate Words</button>
               <button class="btn sm" onclick="purgeGenericLinks()" title="Remove every unverified generic link across the whole dictionary">🧹 Purge Generic Links</button>
               <button class="btn sm" id="delete-batch-btn" onclick="deleteLatestBatch()" style="display:none" title="Undo the most recent AI Research or Document batch add">🗑️ Delete Latest Batch</button>
+              <button class="btn sm" onclick="openVerifyLinksModal()" title="Build a prompt for an AI to actually visit every link and confirm it's the right word">🔍 Verify Links</button>
               <button class="btn sm pri" onclick="openAIResearchModal()" title="Build a prompt for an AI to find Deaf-led resources, ASL videos, and memory tips">🧏 AI Research Prep</button>
             </div>
           </div>
@@ -712,6 +713,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <select id="bulk-cat-select" class="pill-select" onchange="bulkSetCategory(this.value)"></select>
             <select id="bulk-class-select" class="pill-select" onchange="bulkSetClass(this.value)"></select>
             <button class="btn sm pri" onclick="openAIResearchModal()">🧏 Research Selected</button>
+            <button class="btn sm" onclick="openVerifyLinksModal(true)">🔍 Verify Selected</button>
             <button class="btn sm" onclick="bulkMarkReviewed()">✅ Mark Reviewed</button>
             <button class="btn sm" style="color:var(--clay)" onclick="bulkDeleteSelected()">🗑️ Delete Selected</button>
             <button class="btn gh sm" onclick="clearVocabSelection()">Clear</button>
@@ -736,6 +738,9 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
           </div>
           <div class="doc-toolbar">
             <input class="search-input" type="text" placeholder="Search documents..." oninput="renderClassDocs()" id="doc-search" style="flex:1;min-width:140px">
+            <select id="doc-filter-class" onchange="renderClassDocs()" class="filter-sel">
+              <option value="">All Classes</option>
+            </select>
             <select id="doc-view-mode" onchange="renderClassDocs()" class="filter-sel">
               <option value="class">Group: By Class</option>
               <option value="recent">Group: Recently Added</option>
@@ -2043,6 +2048,47 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
   </div>
 </div>
 
+<!-- Link Verification Helper Modal -->
+<div class="ov" id="modal-verify-links">
+  <div class="mod" style="max-width:640px">
+    <div class="mh"><h2>🔍 Verify Links</h2><button class="mod-close" onclick="closeModal('modal-verify-links')">✕</button></div>
+    <div class="mb">
+      <div class="notice n-ok" style="margin-bottom:10px">
+        <span>1️⃣</span>
+        <div style="font-size:11px">Copy this into an AI with real web access (Claude, ChatGPT, or Gemini, each with browsing/search turned on — this won't work well without it). It asks the AI to actually open each link and confirm it shows the sign for that specific word, for <span id="verify-links-count" style="font-weight:600"></span>.</div>
+      </div>
+      <textarea id="verify-prompt-text" readonly style="min-height:150px;font-size:11px;font-family:'DM Mono',monospace;margin-bottom:8px" onclick="this.select()"></textarea>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
+        <button class="btn pri sm" onclick="copyVerifyLinksPrompt()">📋 Copy Prompt</button>
+        <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn sm">Open Claude ↗</a>
+        <a href="https://chatgpt.com/" target="_blank" rel="noopener" class="btn sm">Open ChatGPT ↗</a>
+        <a href="https://gemini.google.com/" target="_blank" rel="noopener" class="btn sm">Open Gemini ↗</a>
+      </div>
+      <div class="notice n-ok" style="margin-bottom:10px">
+        <span>2️⃣</span>
+        <div style="font-size:11px">Paste the AI's full reply below and tap "Review Results." You'll get a checklist of every link it flagged as wrong or dead — review them together and remove all the bad ones in one pass, instead of hunting through word cards one at a time.</div>
+      </div>
+      <textarea id="verify-response-text" placeholder="Paste the AI's full response here..." style="min-height:150px;font-size:11px"></textarea>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-verify-links')">Close</button>
+      <button class="btn pri" onclick="parseVerifyLinksResponse()">✅ Review Results</button>
+    </div>
+  </div>
+</div>
+
+<!-- Link Verification Results — bulk remove flagged-bad links -->
+<div class="ov" id="modal-verify-results">
+  <div class="mod">
+    <div class="mh"><h2>🔍 Flagged Links</h2><button class="mod-close" onclick="closeModal('modal-verify-results')">✕</button></div>
+    <div class="mb" id="verify-results-body"></div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-verify-results')">Cancel</button>
+      <button class="btn pri" style="color:var(--clay)" onclick="applyVerifyResults()">🗑️ Remove Checked Links</button>
+    </div>
+  </div>
+</div>
+
 <!-- Duplicate Word — Merge Modal -->
 <div class="ov" id="modal-vocab-merge">
   <div class="mod" style="max-width:560px">
@@ -2296,6 +2342,15 @@ function load() {
 // (so we can flag/review/reuse individual links) — this converts old data on
 // load, once, safely. Already-migrated (array) fields are left untouched.
 const VOCAB_RESOURCE_FIELDS = ['deafResources','aslVideos','conceptVideos','youthExplainers','textResources'];
+// A past version of the paste-back parser mangled links when the AI wrote a
+// markdown link with a label in front of it (e.g. "Handspeak: [text](url)") —
+// the URL ended up with a stray "](" + a repeated copy of the URL glued onto
+// the end. This detects and repairs already-saved links with that exact shape.
+function repairMangledUrl(url) {
+  if (!url) return url;
+  const cut = url.search(/\]\(|%5D\(|%5d\(/);
+  return cut>-1 ? url.slice(0, cut) : url;
+}
 function migrateVocabResourceFields() {
   let changed = false;
   (DB.vocab||[]).forEach(v => {
@@ -2305,6 +2360,10 @@ function migrateVocabResourceFields() {
         changed = true;
       } else if (!Array.isArray(v[f])) {
         v[f] = [];
+      } else {
+        v[f].forEach(r=>{
+          if (r.url) { const fixed = repairMangledUrl(r.url); if (fixed !== r.url) { r.url = fixed; r.reviewed = false; changed = true; } }
+        });
       }
     });
     if (v.verified === undefined) v.verified = false;
@@ -2625,6 +2684,14 @@ function populateClassSelectors() {
     if (cur) vcf2.value = cur;
   }
 
+  const dcf = document.getElementById('doc-filter-class');
+  if (dcf) {
+    const cur = dcf.value;
+    dcf.innerHTML = '<option value="">All Classes</option><option value="__none__">❓ General / No Class</option>';
+    sorted.forEach(c => { dcf.innerHTML += `<option value="${c.id}">${esc(classLabel(c))}</option>`; });
+    if (cur) dcf.value = cur;
+  }
+
   const vcf = document.getElementById('vocab-filter-cat');
   if (vcf) {
     const cats = [...new Set(DB.vocab.map(v=>v.category).filter(Boolean))].sort();
@@ -2828,16 +2895,28 @@ function parseResourceLinesToArray(text) {
     .filter(l=>!/^(none found|none|n\/a|no results?)\.?$/i.test(l))
     .map(line=>{
       let title=line, url='';
-      const mdMatch = title.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/);
-      if (mdMatch) { title = mdMatch[1].trim(); url = mdMatch[2]; }
-      else {
+      // Markdown-style [text](url) can show up anywhere in the line, not just at
+      // the very start (e.g. a label before it: "Handspeak: [text](url)") — some
+      // AIs also write [url](url), reusing the URL as the visible link text. Search
+      // the whole line rather than anchoring to the start, or a label prefix makes
+      // this fall through to the naive fallback below and swallow the "](...)" tail
+      // right into the URL.
+      const mdMatch = title.match(/\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/);
+      if (mdMatch) {
+        url = mdMatch[2];
+        const before = title.slice(0, mdMatch.index).replace(/[-–—:]\s*$/,'').trim();
+        const bracketText = mdMatch[1].trim();
+        title = before || (bracketText && !/^https?:\/\//.test(bracketText) ? bracketText : '');
+      } else {
         const emIdx = title.lastIndexOf('—');
         const enIdx = title.lastIndexOf('–');
         const sepIdx = emIdx>-1 ? emIdx : enIdx;
         if (sepIdx>-1) { url=title.slice(sepIdx+1).trim(); title=title.slice(0,sepIdx).trim(); }
         else {
-          const m=title.match(/(https?:\/\/\S+)/);
-          if (m) { url=m[1]; title=title.replace(url,'').replace(/[-–—:]\s*$/,'').trim()||url; }
+          // Stop at ), ], or whitespace — never swallow trailing markdown syntax
+          // into the URL even if it wasn't recognized as a proper markdown link.
+          const m=title.match(/(https?:\/\/[^\s)\]]+)/);
+          if (m) { url=m[1]; title=title.replace(m[0],'').replace(/[-–—:]\s*$/,'').trim()||url; }
         }
       }
       if (url) url = url.replace(/[)\]}>,.;'"]+$/,'');
@@ -2896,6 +2975,18 @@ function isGenericResourceUrl(url, word) {
   const wordLc = (word||'').toLowerCase().replace(/[^a-z0-9]/g,'');
   const hayLc = (path+' '+u.search).toLowerCase().replace(/[^a-z0-9]/g,'');
   const hasWord = wordLc.length>1 && hayLc.includes(wordLc);
+  const hostname = u.hostname.replace(/^www\./,'');
+  // ASL Core (and similarly-structured sites) key their specific-word pages
+  // ENTIRELY by a ?id= query param — the path alone looks nearly identical
+  // whether it's the actual entry (.../entries/?id=atom) or just the category
+  // browse page (.../entries/), so path-segment logic (used below for everything
+  // else) can't tell them apart. For these sites, the query param is the only
+  // reliable signal.
+  const QUERY_ID_HOSTS = ['aslcore.org'];
+  if (QUERY_ID_HOSTS.some(h=>hostname===h || hostname.endsWith('.'+h))) {
+    const hasIdQuery = /[?&](id|word|sign|entry)=[^&]+/i.test(u.search);
+    return !hasIdQuery && !hasWord;
+  }
   const segs = path.split('/').filter(Boolean);
   const isKnownOffender = !!getKnownOffenderLabel(url);
   const last = segs[segs.length-1] || '';
@@ -3493,7 +3584,7 @@ function buildAIResearchPrompt(entries) {
 
 Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time.
 
-For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.
+For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability — their branch/category pages like aslcore.org/biology/entries/ are NOT specific-word pages, only a link with ?id=theword in it, like aslcore.org/biology/entries/?id=atom, is), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.
 
 Some words below have a line marked "ALREADY TRIED & REJECTED" listing exact URLs I removed after checking them myself — those didn't work out (wrong page, dead link, actually a homepage, etc.). Never suggest any of those exact URLs again for that word, even if it otherwise looks like a good fit; find a different link instead.
 
@@ -3560,6 +3651,128 @@ function copyAIResearchPrompt() {
   } else {
     try { document.execCommand('copy'); done(); } catch(e) { toast('Copy failed — text is selected, copy manually','warn'); }
   }
+}
+
+// ── LINK VERIFICATION ──────────────────────────────────────────────────────
+// A second, different kind of AI prompt: not "find me new links" but "actually
+// open these already-saved links and confirm they show the right word." Needs
+// an AI with real browsing/search access to be worth anything — a model
+// guessing from the URL text alone isn't a real check.
+function openVerifyLinksModal(useSelection) {
+  let entries;
+  if (useSelection) {
+    entries = DB.vocab.filter(v=>vocabSelection.has(v.id));
+    if (!entries.length) { toast('Select some words first','warn'); return; }
+  } else {
+    entries = DB.vocab;
+  }
+  entries = entries.filter(v=>VOCAB_RESOURCE_FIELDS.some(f=>(v[f]||[]).some(r=>r.url)));
+  if (!entries.length) { toast('No saved links to verify' + (useSelection?' among the selected words':''),'warn'); return; }
+  const linkCount = entries.reduce((n,v)=>n+VOCAB_RESOURCE_FIELDS.reduce((m,f)=>m+(v[f]||[]).filter(r=>r.url).length,0),0);
+  document.getElementById('verify-links-count').textContent = `${entries.length} word${entries.length===1?'':'s'} (${linkCount} link${linkCount===1?'':'s'})`;
+  document.getElementById('verify-prompt-text').value = buildVerifyLinksPrompt(entries);
+  document.getElementById('verify-response-text').value = '';
+  openModal('modal-verify-links');
+}
+function buildVerifyLinksPrompt(entries) {
+  const wordBlocks = entries.map(v=>{
+    const links = [];
+    VOCAB_RESOURCE_FIELDS.forEach(f=>{ (v[f]||[]).forEach(r=>{ if (r.url) links.push(`  ${r.url}`); }); });
+    if (!links.length) return null;
+    const subject = v.category && v.category!=='Uncategorized' ? v.category : '';
+    return `${v.word}${subject?` (subject: ${subject})`:''}\n${links.join('\n')}`;
+  }).filter(Boolean).join('\n\n');
+
+  return `I'm an ASL interpreter and I need you to fact-check a batch of sign-language dictionary links I've already saved. For EACH link below, actually open the URL and check: does that page show/define the ASL sign for the EXACT word listed directly above it — not a different word, not a homepage, not a category/browse page, not a dead link?
+
+IMPORTANT: this requires you to actually visit each URL. If you don't have real web browsing/search access right now, say so up front instead of guessing from the URL text alone — a guess isn't a real check and I'd rather know than get a false all-clear.
+
+Reply in PLAIN TEXT only, one line per link, in EXACTLY this pipe-delimited format, no markdown, no extra commentary before or after:
+WORD | URL | VERDICT | REASON
+
+VERDICT must be exactly one of: CORRECT, WRONG, or DEAD (DEAD = the page doesn't load, 404s, or the domain is gone). Leave REASON blank for CORRECT; for WRONG or DEAD give a short phrase (e.g. "shows the sign for 'orange', not 'apple'" or "this is the category browse page, not a specific entry" or "domain expired").
+
+Words and links to check:
+
+${wordBlocks}`;
+}
+function copyVerifyLinksPrompt() {
+  const ta = document.getElementById('verify-prompt-text');
+  ta.select(); ta.setSelectionRange(0,999999);
+  const done = () => toast('Prompt copied! Paste it into an AI with browsing/search turned on.');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done).catch(()=>{
+      try { document.execCommand('copy'); done(); } catch(e) { toast('Copy failed — text is selected, copy manually','warn'); }
+    });
+  } else {
+    try { document.execCommand('copy'); done(); } catch(e) { toast('Copy failed — text is selected, copy manually','warn'); }
+  }
+}
+function parseVerifyLinksResponse() {
+  const raw = document.getElementById('verify-response-text').value.trim();
+  if (!raw) { toast('Paste the AI response first','warn'); return; }
+  if (/\b(can'?t|cannot|don'?t have|unable to|no)\b[^.\n]{0,40}\b(open|access|browse|visit)\b[^.\n]{0,40}\b(url|link|website|web ?page)/i.test(raw)
+    || /no (browsing|web search|internet)[^.\n]{0,20}(access|capability|tool)/i.test(raw)) {
+    toast('The AI said it can\'t actually browse links — this result won\'t be reliable. Re-run with browsing/search turned on.','warn');
+    return;
+  }
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const flagged = [];
+  lines.forEach(line=>{
+    const clean = line.replace(/^[\s>*_#\-\d.]{0,6}/, '');
+    const parts = clean.split('|').map(p=>p.trim());
+    if (parts.length<3) return;
+    const [word, url, verdictRaw, ...rest] = parts;
+    const verdict = (verdictRaw||'').toUpperCase();
+    if (verdict!=='WRONG' && verdict!=='DEAD') return;
+    const v = DB.vocab.find(x=>x.word.toLowerCase()===word.toLowerCase());
+    if (!v) return;
+    let foundField=null, foundRes=null;
+    VOCAB_RESOURCE_FIELDS.forEach(f=>{
+      (v[f]||[]).forEach(r=>{ if (r.url && r.url.trim()===url.trim()) { foundField=f; foundRes=r; } });
+    });
+    if (!foundField) return;
+    flagged.push({ vocabId:v.id, word:v.word, field:foundField, resId:foundRes.id, url, verdict, reason: rest.join('|').trim() });
+  });
+  if (!flagged.length) { toast('Nothing flagged as wrong or dead — links checked out! (If that seems off, double-check the AI kept the WORD | URL | VERDICT | REASON format.)'); closeModal('modal-verify-links'); return; }
+  closeModal('modal-verify-links');
+  openVerifyResultsModal(flagged);
+}
+let pendingVerifyResults = null;
+function openVerifyResultsModal(flagged) {
+  pendingVerifyResults = flagged;
+  const labelMap = {deafResources:'Deaf Link', aslVideos:'ASL Video', conceptVideos:'Concept Video', youthExplainers:'Youth Explainer', textResources:'Text Resource'};
+  document.getElementById('verify-results-body').innerHTML =
+    `<div class="notice n-warn" style="margin-bottom:8px"><span>⚠️</span><div style="font-size:11px">${flagged.length} link${flagged.length===1?'':'s'} flagged. Uncheck any you want to keep (the AI can get it wrong too) — checked ones get removed and remembered, so future AI Research prompts won't suggest that exact URL again for that word.</div></div>`
+    + flagged.map((item,idx)=>`<div style="border:1px solid var(--br);border-radius:8px;padding:8px 10px;margin-bottom:8px">
+        <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="vr-check-${idx}" checked style="margin-top:2px">
+          <span>
+            <b>${esc(item.word)}</b> — ${esc(labelMap[item.field]||item.field)} <span style="color:${item.verdict==='DEAD'?'var(--clay)':'var(--gold)'}">${item.verdict==='DEAD'?'💀 Dead':'❌ Wrong word'}</span><br>
+            <a href="${esc(item.url)}" target="_blank" rel="noopener" style="font-size:10.5px;word-break:break-all">${esc(item.url)}</a>
+            ${item.reason?`<br><span style="font-size:10.5px;color:var(--ink3)">${esc(item.reason)}</span>`:''}
+          </span>
+        </label>
+      </div>`).join('');
+  openModal('modal-verify-results');
+}
+function applyVerifyResults() {
+  if (!pendingVerifyResults) return;
+  let removed = 0;
+  pendingVerifyResults.forEach((item, idx) => {
+    const checked = document.getElementById(`vr-check-${idx}`)?.checked;
+    if (!checked) return;
+    const v = DB.vocab.find(x=>x.id===item.vocabId);
+    if (!v || !v[item.field]) return;
+    recordRejectedLink(v, item.url);
+    v[item.field] = v[item.field].filter(r=>r.id!==item.resId);
+    v.status = computeVocabStatus(v);
+    removed++;
+  });
+  pendingVerifyResults = null;
+  closeModal('modal-verify-results');
+  save(); renderVocab(); renderDashboard();
+  toast(`Removed ${removed} bad link${removed===1?'':'s'} — won't be suggested again`);
 }
 
 const AI_RES_LABELS = ['CATEGORY','DEFINITION','NOMENCLATURE','WORD_BREAKDOWN','MNEMONIC','SIGN_DESCRIPTION','DEAF_LINKS','ASL_VIDEOS','CONCEPT_VIDEOS','YOUTH_EXPLAINERS','TEXT_RESOURCES'];
@@ -4007,7 +4220,7 @@ YOUTH_EXPLAINERS:
 
 For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time.
 
-For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.${rejectedNote}
+For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability — their branch/category pages like aslcore.org/biology/entries/ are NOT specific-word pages, only a link with ?id=theword in it, like aslcore.org/biology/entries/?id=atom, is), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.${rejectedNote}
 
 Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
 
@@ -4278,7 +4491,11 @@ function renderClassDocs() {
   if (!DB.classDocs.length) { box.innerHTML = '<div class="tbl-empty">No class notes documents yet — tap "New Document" to build one.</div>'; return; }
   const search = (document.getElementById('doc-search')?.value||'').toLowerCase();
   const viewMode = document.getElementById('doc-view-mode')?.value || 'class';
+  const filterClass = document.getElementById('doc-filter-class')?.value || '';
   let docs = [...DB.classDocs];
+  if (filterClass) {
+    docs = docs.filter(d => filterClass==='__none__' ? !d.classId : d.classId===filterClass);
+  }
   if (search) {
     docs = docs.filter(d => {
       if (d.title.toLowerCase().includes(search)) return true;
@@ -4287,7 +4504,7 @@ function renderClassDocs() {
         || (s.type==='table' && (s.headers.some(h=>h.toLowerCase().includes(search)) || s.rows.some(r=>r.some(cell=>inlineSegsToText(cell).toLowerCase().includes(search))))));
     });
   }
-  if (!docs.length) { box.innerHTML = '<div class="tbl-empty">No documents match your search.</div>'; return; }
+  if (!docs.length) { box.innerHTML = `<div class="tbl-empty">No documents match ${search&&filterClass?'your search and class filter':search?'your search':'that class filter'}.</div>`; return; }
 
   if (viewMode==='recent') {
     const sorted = docs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
@@ -4854,28 +5071,43 @@ function renderResourceLinesArray(arr, vocabId, field, word) {
   return (arr||[]).map(r=>{
     const label = r.reviewed ? null : resourceFlagLabel(r, word);
     const flagged = !!label;
+    const rowId = `reslink-${field}-${r.id}`;
     const linkHtml = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : `<span style="color:var(--clay)">${esc(r.title||'(untitled — no link)')}</span>`;
     const flagHtml = flagged ? `<span class="res-flag">⚠️ ${label} — verify</span><button class="res-mini-btn" onclick="markResourceReviewed('${vocabId}','${field}','${r.id}')">Mark reviewed</button>` : '';
     const signBtn = (field==='aslVideos' && r.url) ? `<button class="res-mini-btn sign" onclick="useAsConfirmedSign('${vocabId}','${r.id}')">🤟 Use as sign</button>` : '';
+    const editBtn = `<button class="res-mini-btn" onclick="toggleResourceEdit('${rowId}')" title="Edit this link">✏️</button>`;
     const delBtn = `<button class="res-mini-btn" style="color:var(--clay)" onclick="deleteResourceLink('${vocabId}','${field}','${r.id}')" title="Remove this link">✕</button>`;
-    const addLinkRow = !r.url ? `<div style="display:flex;gap:5px;margin-top:3px">
-      <input type="text" id="addlink-${vocabId}-${r.id}" placeholder="Paste the URL here…" style="flex:1;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
-      <button class="res-mini-btn" onclick="setResourceUrl('${vocabId}','${field}','${r.id}',document.getElementById('addlink-${vocabId}-${r.id}').value)">Save link</button>
-    </div>` : '';
-    return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}${delBtn}${addLinkRow}</div>`;
+    const openByDefault = !r.url;
+    const editRow = `<div class="res-edit-row" id="${rowId}" style="display:${openByDefault?'flex':'none'};gap:5px;margin-top:4px;flex-wrap:wrap">
+      <input type="text" id="${rowId}-title" value="${esc(r.title||'')}" placeholder="Label (site name, etc.)" style="flex:1;min-width:100px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
+      <input type="text" id="${rowId}-url" value="${esc(r.url||'')}" placeholder="Paste the URL here…" style="flex:2;min-width:150px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
+      <button class="res-mini-btn" onclick="saveResourceLinkEdit('${vocabId}','${field}','${r.id}',document.getElementById('${rowId}-title').value,document.getElementById('${rowId}-url').value)">Save</button>
+    </div>`;
+    return `<div class="res-line">${linkHtml}${flagHtml}${signBtn}${editBtn}${delBtn}${editRow}</div>`;
   }).join('');
 }
-function setResourceUrl(vocabId, field, resId, url) {
-  url = (url||'').trim();
-  if (!url) { toast('Paste a URL first','warn'); return; }
+function toggleResourceEdit(rowId) {
+  const el = document.getElementById(rowId);
+  if (!el) return;
+  el.style.display = el.style.display==='none' ? 'flex' : 'none';
+}
+// Replaces both the title and URL of an existing link, or fills in a
+// previously-missing one — the same box handles both cases. Editing content
+// clears "reviewed" since a changed link needs a fresh look, same as a brand
+// new one would.
+function saveResourceLinkEdit(vocabId, field, resId, title, url) {
+  title = (title||'').trim(); url = (url||'').trim();
+  if (!title && !url) { toast('Enter a label or a URL first','warn'); return; }
   const v = DB.vocab.find(x=>x.id===vocabId);
   if (!v || !v[field]) return;
   const r = v[field].find(x=>x.id===resId);
   if (!r) return;
-  r.url = url; r.reviewed = false;
+  const changed = (r.title||'')!==title || (r.url||'')!==url;
+  r.title = title; r.url = url;
+  if (changed) r.reviewed = false;
   v.status = computeVocabStatus(v);
   save(); renderVocab();
-  toast('Link added — double check it opens the right page');
+  toast('Link saved');
 }
 
 // ── SCHEDULE ──────────────────────────────────────────────────────────────────
