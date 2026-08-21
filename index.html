@@ -138,6 +138,10 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 
 /* ── MODAL ── */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center;overflow-y:auto}
+/* confirmAction()/promptText() are called from inside other modals throughout
+   the app (delete buttons, rename flows, etc.), so these two need to always
+   render on top of whichever modal triggered them, regardless of DOM order. */
+#modal-confirm,#modal-text-prompt{z-index:500}
 .ov.open{display:flex}
 .mod{background:var(--surf);border-radius:16px 16px 0 0;width:100%;max-width:600px;box-shadow:0 -8px 40px rgba(0,0,0,.18);margin-top:auto;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .mod-full{border-radius:0;max-width:100%;max-height:100dvh;height:100dvh;margin-top:0}
@@ -1071,7 +1075,8 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             </div>
             <div>
               <div class="sec">Built-In Resources</div>
-              <a href="https://aslpro.com" target="_blank" class="res-link"><div class="res-icon">🤟</div><div><div style="font-weight:500">ASLPro</div><div style="font-size:10px;color:var(--ink3)">Free sign lookup dictionary</div></div></a>
+              <a href="https://atomichands.com" target="_blank" class="res-link"><div class="res-icon">⚛️</div><div><div style="font-weight:500">Atomic Hands</div><div style="font-size:10px;color:var(--ink3)">STEM signs &amp; concept videos, Deaf-led</div></div></a>
+              <a href="https://aslcore.org" target="_blank" class="res-link"><div class="res-icon">🎓</div><div><div style="font-weight:500">ASL Core</div><div style="font-size:10px;color:var(--ink3)">Academic-subject signs (bio, physics, lit, etc.)</div></div></a>
               <a href="https://www.handspeak.com" target="_blank" class="res-link"><div class="res-icon">👋</div><div><div style="font-weight:500">Handspeak</div><div style="font-size:10px;color:var(--ink3)">Signs, culture, lessons</div></div></a>
               <a href="https://lifeprint.com" target="_blank" class="res-link"><div class="res-icon">📚</div><div><div style="font-weight:500">Lifeprint / ASLU</div><div style="font-size:10px;color:var(--ink3)">Bill Vicars' comprehensive ASL curriculum</div></div></a>
               <a href="https://www.signingsavvy.com" target="_blank" class="res-link"><div class="res-icon">✍️</div><div><div style="font-weight:500">Signing Savvy</div><div style="font-size:10px;color:var(--ink3)">Video sign dictionary with classifiers</div></div></a>
@@ -2189,6 +2194,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       <div style="display:flex;gap:4px;align-items:center">
         <button class="btn gh sm" style="padding:5px 8px;font-size:10px" id="doc-reader-edit-btn">✏️ Edit</button>
         <button class="btn gh sm" style="padding:5px 8px;font-size:10px" id="doc-reader-pdf-btn">🖨️ PDF</button>
+        <button class="btn gh sm" style="padding:5px 8px;font-size:10px;color:var(--clay)" id="doc-reader-delete-btn">🗑️</button>
         <button class="mod-close" onclick="closeModal('modal-doc-reader')">✕</button>
       </div>
     </div>
@@ -3485,7 +3491,9 @@ function buildAIResearchPrompt(entries) {
 9. CONCEPT_VIDEOS — trustworthy video clips that explain the underlying concept itself. These don't need to be in ASL or Deaf-made — general educational videos are fine (e.g. Khan Academy, CrashCourse, SciShow Kids, etc., whatever fits the topic) as long as the source is reputable.
 10. YOUTH_EXPLAINERS — trustworthy articles or websites that explain the concept in language written FOR KIDS/STUDENTS, not just professional or adult-level sources. This is so I can double-check my own understanding of the concept before I interpret it.
 
-Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.
+Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time.
+
+For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.
 
 Some words below have a line marked "ALREADY TRIED & REJECTED" listing exact URLs I removed after checking them myself — those didn't work out (wrong page, dead link, actually a homepage, etc.). Never suggest any of those exact URLs again for that word, even if it otherwise looks like a good fit; find a different link instead.
 
@@ -3631,7 +3639,7 @@ function fixPastedSpacing() {
 // ASL sign-dictionary sites — if the AI files one of these under DEAF_LINKS,
 // it almost always belongs under ASL_VIDEOS instead (it's showing the sign,
 // not explaining the word), so we move it automatically.
-const SIGN_DICTIONARY_HOSTS = ['lifeprint.com','handspeak.com','signingsavvy.com','aslpro.com','spreadthesign.com','atomichands.com','aslcore.org','babysignlanguage.com','asluniversity.com','signasl.org','aslnook.com'];
+const SIGN_DICTIONARY_HOSTS = ['lifeprint.com','handspeak.com','signingsavvy.com','spreadthesign.com','atomichands.com','aslcore.org','aslclear.org','babysignlanguage.com','asluniversity.com','signasl.org','aslnook.com'];
 function isSignDictionaryUrl(url) {
   if (!url) return false;
   try { const h = new URL(url).hostname.replace(/^www\./,''); return SIGN_DICTIONARY_HOSTS.some(host=>h===host||h.endsWith('.'+host)); }
@@ -3950,7 +3958,7 @@ function buildDocPrompt() {
   const docType = document.getElementById('doc-type')?.value || 'reading';
   const docTypeLabels = { reading:'a reading/textbook excerpt', worksheet:'a worksheet', presentation:'a slide presentation', handout:'a handout', notes:'notes', other:'a document' };
   const docTypeNote = docType==='presentation'
-    ? `This came from a slide presentation, so the extracted text may have stray slide numbers or repeated headers/footers from the export — ignore those, they're not part of the actual content.`
+    ? `This came from a slide presentation, so the extracted text likely has leftover slide numbers ("Slide 4", "4/20"), copyright footers, presenter/company name watermarks, and repeated header/footer boilerplate from the export — strip all of that out, it's not part of the actual content.`
     : docType==='worksheet'
     ? `This is a worksheet — if it has numbered questions or blanks, keep that numbering/structure since it's meaningful, not decorative.`
     : '';
@@ -3976,6 +3984,7 @@ Formatting rules for Part 1 — these are the ONLY markdown you should use, noth
 - Also highlight general academic/functional vocabulary that could come up in interpreting even if it's not subject-specific — words like "success," "criteria," "objective," "evaluate," "requirement" — anything a student might need explained or signed consistently, not just technical terms.
 - If the source material genuinely has clear sections, you can mark a section heading by starting that line with "## " (e.g. "## Introduction") — use this sparingly, only for real section breaks.
 - If (and only if) part of the source is naturally tabular or comparative — a schedule, a list of steps with associated details, a comparison of options, a data table, a vocabulary-style list of terms with short definitions — reformat JUST that part as a standard markdown table (a header row, then a "|---|---|" separator row, then data rows, pipe-delimited). This becomes a real rendered table in my app, so it's genuinely worth doing for anything that's naturally rows-and-columns, but don't force ordinary prose paragraphs into a table just to use one. You can still bold vocabulary terms inside table cells the same way as elsewhere.
+- Leave out anything that isn't actually instructional content, even if it appears in the extracted text: page or slide numbers ("Slide 4", "Page 12 of 30"), copyright lines and "© [year] [company]" notices, presenter names/dates in a footer, watermarks, repeated header/footer text that shows up on every page or slide, and generic disclaimer boilerplate. This is especially common with text pulled from PowerPoint or scanned PDFs. If you genuinely can't tell whether a short fragment is real content or export junk, err toward keeping it — but obvious page-furniture like a lone "3" on its own line or a repeated school logo/name at the bottom of every slide should go.
 
 PART 2 — VOCAB DETAILS: For every term you wrapped in double asterisks in Part 1, give me the same research I use for my vocabulary dictionary, in this exact format (repeated for each word):
 
@@ -3996,7 +4005,9 @@ YOUTH_EXPLAINERS:
 [Title] — [URL]
 ---
 
-For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time — Lifeprint and Handspeak are fine when they genuinely have the best entry, but also check ASL Core (aslcore.org, especially good for technical/STEM signs), Atomic Hands, Spread The Sign, Signing Savvy, and Deaf-led ASL YouTube creators.${rejectedNote}
+For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time.
+
+For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.${rejectedNote}
 
 Format your ENTIRE answer exactly like this, with these exact markers on their own lines:
 
@@ -4232,6 +4243,7 @@ function finalizeDocBuilderResults(results, replaceLinks, decisions, textPart, c
 function openDocEditMode(id) {
   const d = DB.classDocs.find(x=>x.id===id);
   if (!d) return;
+  closeModal('modal-doc-reader');
   pendingEditDocId = id;
   document.getElementById('doc-builder-title').textContent = '✏️ Edit Document';
   document.getElementById('doc-builder-step1').style.display='none';
@@ -4339,14 +4351,22 @@ function allDocWordOccurrences(d) {
 }
 function renderDocCard(d) {
   const dateFmt = d.date ? new Date(d.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
-  const wordCount = new Set(allDocWordOccurrences(d).map(o=>o.vocabId)).size;
+  const uniqueVocabIds = [...new Set(allDocWordOccurrences(d).map(o=>o.vocabId))];
+  const wordCount = uniqueVocabIds.length;
+  const needsResearchCount = uniqueVocabIds.filter(id => {
+    const v = DB.vocab.find(x=>x.id===id);
+    return v && getMissingResearchFields(v).length>0;
+  }).length;
+  const researchBadge = needsResearchCount
+    ? ` · <span style="color:var(--gold)">⚠️ ${needsResearchCount} need${needsResearchCount===1?'s':''} research</span>`
+    : (wordCount ? ` · <span style="color:var(--sage-d)">✅ all researched</span>` : '');
   const attachHtml = d.attachment ? `<a href="${d.attachment.dataUrl}" download="${esc(d.attachment.name)}" class="doc-attach-chip" onclick="event.stopPropagation()">📎 ${esc(d.attachment.name)}</a>` : '';
   const teaser = docTeaserText(d);
   return `<div class="doc-card">
     <div class="doc-card-hdr" onclick="openDocReader('${d.id}')">
       <div>
         <div class="doc-title">${esc(d.title)}</div>
-        <div class="doc-meta-line">${dateFmt} · ${wordCount} vocab word${wordCount===1?'':'s'} linked</div>
+        <div class="doc-meta-line">${dateFmt} · ${wordCount} vocab word${wordCount===1?'':'s'} linked${researchBadge}</div>
         ${teaser?`<div class="doc-card-teaser">${esc(teaser)}</div>`:''}
         ${attachHtml}
       </div>
@@ -4373,6 +4393,7 @@ function openDocReader(id, focusVocabId, focusSegIndex) {
   document.getElementById('doc-reader-body').innerHTML = renderDocSegments(d) + renderDocVocabList(d);
   document.getElementById('doc-reader-edit-btn').onclick = () => openDocEditMode(d.id);
   document.getElementById('doc-reader-pdf-btn').onclick = () => printClassDoc(d.id);
+  document.getElementById('doc-reader-delete-btn').onclick = () => deleteClassDoc(d.id);
   openModal('modal-doc-reader');
   if (focusVocabId!=null && focusSegIndex!=null) {
     setTimeout(()=>{
