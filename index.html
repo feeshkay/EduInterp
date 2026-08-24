@@ -2459,7 +2459,101 @@ let DB = {
 };
 
 function save() {
-  try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e) { toast('Storage full! Export your data.','warn'); }
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify(DB));
+    // A prior save may have failed and left the "degraded" banner up — a
+    // successful full write means whatever was crowding storage is gone now.
+    if (storageDegraded) { storageDegraded = false; storageBannerDismissed = false; hideStorageBanner(); }
+  } catch(e) {
+    // The whole DB write failed — almost always localStorage's quota, and
+    // almost always because of base64 document attachments, which dwarf
+    // everything else in size. Without this fallback, EVERY future save()
+    // call (vocab, documents, everything) would keep failing silently from
+    // here on, because we always write the entire DB in one shot.
+    // Retry once with attachments stripped from the write (not from memory —
+    // they still show for this session) so at least all the actual data
+    // keeps persisting; only the attached files themselves stop surviving
+    // a refresh until storage is freed up.
+    try {
+      const stripped = { ...DB, classDocs: (DB.classDocs||[]).map(d => (d && d.attachment) ? {...d, attachment:null} : d) };
+      localStorage.setItem(DB_KEY, JSON.stringify(stripped));
+      storageDegraded = true;
+      showStorageBanner('attachments');
+    } catch(e2) {
+      // Even without attachments it won't fit — genuinely nothing is saving.
+      storageDegraded = true;
+      showStorageBanner('critical');
+    }
+  }
+}
+let storageDegraded = false;
+let storageBannerDismissed = false;
+function estimateBytes(obj) { try { return new Blob([JSON.stringify(obj)]).size; } catch(e) { return 0; } }
+function fmtBytes(n) {
+  if (n>1024*1024) return (n/1024/1024).toFixed(2)+' MB';
+  if (n>1024) return Math.round(n/1024)+' KB';
+  return n+' B';
+}
+function showStorageBanner(kind) {
+  if (storageBannerDismissed) return;
+  const el = document.getElementById('storage-banner');
+  const msg = document.getElementById('storage-banner-msg');
+  if (!el || !msg) return;
+  const msgs = {
+    warning: "⚠️ Storage is getting full. Saving still works for now, but you're close to the limit — export a backup and consider removing some document attachments.",
+    attachments: "⚠️ Storage is full — document attachments have stopped saving (everything else, including vocab and document text, still is). Export a backup and remove some attachments to fix this for good.",
+    critical: "⛔ Storage is completely full — nothing new is being saved right now, including vocab and documents. Export a backup immediately, then free up space below."
+  };
+  msg.textContent = msgs[kind] || msgs.warning;
+  el.style.display = 'flex';
+  document.body.classList.add('has-storage-banner');
+}
+function hideStorageBanner() {
+  const el = document.getElementById('storage-banner');
+  if (el) el.style.display = 'none';
+  document.body.classList.remove('has-storage-banner');
+}
+function dismissStorageBanner() { storageBannerDismissed = true; hideStorageBanner(); }
+// Checked once at boot so a near-full user finds out on load, not only
+// after an attempted save has already silently failed.
+function checkStorageHealth() {
+  const bytes = estimateBytes(DB);
+  if (bytes > 4.5*1024*1024) { storageDegraded = true; showStorageBanner('warning'); }
+}
+function openStorageManagerModal() { renderStorageManager(); openModal('modal-storage-manager'); }
+function renderStorageManager() {
+  const totalBytes = estimateBytes(DB);
+  const docsWithAttach = (DB.classDocs||[]).filter(d=>d && d.attachment);
+  const attachBytes = docsWithAttach.reduce((sum,d)=>sum+estimateBytes(d.attachment),0);
+  const summary = document.getElementById('storage-mgr-summary');
+  if (summary) summary.innerHTML = `
+    <div>Estimated data size: <strong>${fmtBytes(totalBytes)}</strong></div>
+    <div style="color:var(--ink3);margin-top:2px">Most browsers allow roughly 5–10MB per site — once you're over that, saving starts failing silently.</div>
+    <div style="margin-top:6px">Attachments account for about <strong>${fmtBytes(attachBytes)}</strong> across ${docsWithAttach.length} document${docsWithAttach.length===1?'':'s'}.</div>
+  `;
+  const list = document.getElementById('storage-mgr-list');
+  if (!list) return;
+  if (!docsWithAttach.length) { list.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No documents currently have an attachment.</div>'; return; }
+  list.innerHTML = docsWithAttach.map(d => `
+    <div class="fc-summary-row">
+      <span>${esc(d.title)} <span style="color:var(--ink3)">(${fmtBytes(estimateBytes(d.attachment))})</span></span>
+      <button class="btn gh sm" onclick="removeDocAttachment('${d.id}')">Remove attachment</button>
+    </div>
+  `).join('');
+}
+function removeDocAttachment(docId) {
+  const d = DB.classDocs.find(x=>x.id===docId);
+  if (!d) return;
+  d.attachment = null;
+  save(); renderClassDocs(); renderStorageManager();
+  toast('Attachment removed');
+}
+function removeAllAttachments() {
+  confirmAction('Remove attachments from ALL documents to free up storage? The document text and vocab links stay — only the attached files themselves go.', () => {
+    (DB.classDocs||[]).forEach(d=>{ if(d) d.attachment = null; });
+    save(); renderClassDocs(); renderStorageManager();
+    toast('All attachments removed');
+  }, {okLabel:'Remove All'});
 }
 
 function load() {
