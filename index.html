@@ -160,6 +160,10 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .n-info{background:var(--sky-l);border:1px solid rgba(42,94,138,.2)}
 .n-warn{background:var(--gold-l);border:1px solid rgba(139,105,20,.2)}
 .n-ok{background:var(--sage-l);border:1px solid rgba(74,122,90,.2)}
+.storage-banner{display:none;align-items:center;gap:10px;padding:9px 14px;background:var(--gold-l);border-bottom:1px solid var(--gold-m);color:#5c4610;font-size:12px;line-height:1.5;flex-shrink:0}
+.storage-banner span{flex-shrink:0}
+.storage-banner .sb-msg{flex:1}
+.storage-banner .btn{flex-shrink:0}
 
 /* ── PROGRESS ── */
 .pbar{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:4px}
@@ -357,7 +361,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .doc-vocab-item{font-size:12px;margin-bottom:8px;line-height:1.5}
 .doc-vocab-item b{cursor:pointer;color:var(--ink)}
 .doc-vocab-item b:hover{color:var(--sage-d)}
-.doc-attach-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;background:var(--s2);color:var(--ink2);padding:3px 8px;border-radius:6px;margin-top:6px}
+.doc-attach-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;background:var(--s2);color:var(--ink2);padding:3px 8px;border-radius:6px;margin-top:6px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;-webkit-appearance:none}
 .doc-card-teaser{font-size:11.5px;color:var(--ink3);margin-top:6px;line-height:1.5;max-height:2.8em;overflow:hidden}
 .doc-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px;white-space:normal}
 .doc-table th,.doc-table td{border:1px solid var(--br);padding:6px 8px;text-align:left;vertical-align:top}
@@ -591,6 +595,12 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 
   <!-- MAIN AREA -->
   <div class="main">
+    <div class="storage-banner" id="storage-banner">
+      <span>⚠️</span>
+      <div class="sb-msg" id="storage-banner-msg"></div>
+      <button class="btn gh sm" onclick="openStorageManagerModal()">Manage</button>
+      <button class="btn gh sm" onclick="dismissStorageBanner()">✕</button>
+    </div>
     <div class="topbar">
       <button class="tb-menu-btn" onclick="openSidebar()" aria-label="Open menu">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -1708,16 +1718,17 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
             <button class="btn gold" onclick="exportVocabCSV()">📋 Export Vocab CSV</button>
             <button class="btn gold" onclick="exportIEPSummary()">📋 Export IEP Summary (Text)</button>
+            <button class="btn" onclick="openStorageManagerModal()">🗂 Manage Storage</button>
             <button class="btn warn" onclick="clearAllData()">🗑 Clear All Data</button>
           </div>
           <div style="margin-top:10px;font-size:11px;color:var(--ink3);line-height:1.6">
-            Export regularly to back up your vocabulary, logs, and materials. Data is stored in <code>localStorage</code> — clearing browser data will erase it unless exported. The IEP Summary export produces a plain-text file safe to share with a case manager (no student names included unless you added them).
+            Export regularly to back up your vocabulary, logs, and materials. Vocab/logs/documents are stored in <code>localStorage</code>, and file attachments are stored separately in <code>IndexedDB</code> (much more room — typically hundreds of MB or more). Both are browser-local — clearing browser data will erase them unless exported, and the JSON export below includes attachments too. The IEP Summary export produces a plain-text file safe to share with a case manager (no student names included unless you added them).
           </div>
         </div>
         <div class="card cp" style="margin-top:12px">
           <div class="sec">☁️ Cloud Sync (GitHub Gist)</div>
           <div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-bottom:10px">
-            Sync your data between devices using a private GitHub Gist — only you can see it. Your token stays saved on this device only and is never included in exports or the Gist itself. Needs a token with <code>gist</code> access (classic token with the "gist" scope, or a fine-grained token with "Gists: read and write").
+            Sync your data between devices using a private GitHub Gist — only you can see it. Your token stays saved on this device only and is never included in exports or the Gist itself. Note: file attachments are not included in Cloud Sync (only their names) — use the JSON export/import above to move attachments between devices. Needs a token with <code>gist</code> access (classic token with the "gist" scope, or a fine-grained token with "Gists: read and write").
           </div>
           <div class="fr fr2" style="margin-bottom:8px">
             <div class="fld"><label>GitHub Token</label>
@@ -1736,7 +1747,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
           <div class="sec">App Info</div>
           <div style="font-size:11px;color:var(--ink3);line-height:1.8;font-family:'DM Mono',monospace">
             <div>App: EduInterp v1.0</div>
-            <div>Storage: Browser localStorage, plus an optional private GitHub Gist if you turn on Cloud Sync above</div>
+            <div>Storage: Browser localStorage (data) + IndexedDB (attachments), plus an optional private GitHub Gist if you turn on Cloud Sync above</div>
             <div>Purpose: Personal educational interpreting professional log</div>
             <div>No data transmission unless Cloud Sync is turned on and you tap Push/Pull</div>
           </div>
@@ -1753,6 +1764,21 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 <!-- ════════════════ MODALS ════════════════ -->
 
 <!-- Add Student -->
+<div class="ov" id="modal-storage-manager">
+  <div class="mod">
+    <div class="mh"><h2>Manage Storage</h2><button class="mod-close" onclick="closeModal('modal-storage-manager')">✕</button></div>
+    <div class="mb">
+      <div id="storage-mgr-summary" style="font-size:12px;line-height:1.6;margin-bottom:12px"></div>
+      <div style="font-size:9px;font-family:'DM Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px">Documents with attachments</div>
+      <div id="storage-mgr-list"></div>
+    </div>
+    <div class="mf">
+      <button class="btn warn sm" onclick="removeAllAttachments()">Remove All Attachments</button>
+      <button class="btn gh sm" onclick="closeModal('modal-storage-manager')">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="modal-add-student">
   <div class="mod">
     <div class="mh"><h2>Add / Edit Student</h2><button class="mod-close" onclick="closeModal('modal-add-student')">✕</button></div>
@@ -2458,6 +2484,104 @@ let DB = {
   lastImportBatch: null
 };
 
+// ── ATTACHMENT STORE (IndexedDB) ─────────────────────────────────────────────
+// The one thing big enough to blow past localStorage's ~5-10MB ceiling is
+// file attachments (base64 PDFs, etc). Their actual bytes live here instead —
+// IndexedDB's practical ceiling is tied to free disk space (typically
+// hundreds of MB to several GB), not a fixed few-MB cap. DB/localStorage only
+// ever holds small reference metadata: {name, type, size, key}.
+// Class-doc attachments are keyed by the doc's own id; material attachments
+// are keyed 'mat_'+material id, so both share one object store.
+const ATTACH_DB_NAME = 'eduinterp_attachments';
+const ATTACH_STORE = 'files';
+let attachDbPromise = null;
+function openAttachDb() {
+  if (!window.indexedDB) return Promise.resolve(null);
+  if (attachDbPromise) return attachDbPromise;
+  attachDbPromise = new Promise(resolve => {
+    try {
+      const req = indexedDB.open(ATTACH_DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(ATTACH_STORE, { keyPath: 'key' }); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null); // treated as "unavailable" by every caller below
+    } catch(e) { resolve(null); }
+  });
+  return attachDbPromise;
+}
+const AttachStore = {
+  async set(key, record) { // record: {name, type, dataUrl}
+    const db = await openAttachDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(ATTACH_STORE, 'readwrite');
+        tx.objectStore(ATTACH_STORE).put({ key, ...record });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch(e) { resolve(false); }
+    });
+  },
+  async get(key) {
+    const db = await openAttachDb();
+    if (!db) return null;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(ATTACH_STORE, 'readonly');
+        const req = tx.objectStore(ATTACH_STORE).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      } catch(e) { resolve(null); }
+    });
+  },
+  async delete(key) {
+    const db = await openAttachDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(ATTACH_STORE, 'readwrite');
+        tx.objectStore(ATTACH_STORE).delete(key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch(e) { resolve(false); }
+    });
+  },
+  async getAll() {
+    const db = await openAttachDb();
+    if (!db) return [];
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(ATTACH_STORE, 'readonly');
+        const req = tx.objectStore(ATTACH_STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      } catch(e) { resolve([]); }
+    });
+  }
+};
+
+// One-time (and repeat-safe) migration: older saves, imports, or a cloud pull
+// may carry attachment bytes sitting inline inside DB (pre-IndexedDB format).
+// Move them out so localStorage shrinks back down and stays fast. Safe to
+// call anytime — it's a no-op once nothing inline is left.
+async function migrateInlineAttachments() {
+  if (!window.indexedDB) return; // no IndexedDB support here — leave inline, degrade gracefully
+  let migrated = false;
+  for (const d of (DB.classDocs||[])) {
+    if (d && d.attachment && d.attachment.dataUrl) {
+      const ok = await AttachStore.set(d.id, { name: d.attachment.name, type: d.attachment.type, dataUrl: d.attachment.dataUrl });
+      if (ok) { d.attachment = { name: d.attachment.name, type: d.attachment.type, size: estimateBytes(d.attachment.dataUrl), key: d.id }; migrated = true; }
+    }
+  }
+  for (const m of (DB.materials||[])) {
+    if (m && m.file && m.file.data) {
+      const key = 'mat_'+m.id;
+      const ok = await AttachStore.set(key, { name: m.file.name, type: m.file.type, dataUrl: m.file.data });
+      if (ok) { m.file = { name: m.file.name, type: m.file.type, size: m.file.size||estimateBytes(m.file.data), key }; migrated = true; }
+    }
+  }
+  if (migrated) { save(); if(document.getElementById('doc-list')) renderClassDocs(); if(document.getElementById('mat-list')) renderMaterials(); }
+}
+
 function save() {
   try {
     localStorage.setItem(DB_KEY, JSON.stringify(DB));
@@ -2465,17 +2589,23 @@ function save() {
     // successful full write means whatever was crowding storage is gone now.
     if (storageDegraded) { storageDegraded = false; storageBannerDismissed = false; hideStorageBanner(); }
   } catch(e) {
-    // The whole DB write failed — almost always localStorage's quota, and
-    // almost always because of base64 document attachments, which dwarf
-    // everything else in size. Without this fallback, EVERY future save()
-    // call (vocab, documents, everything) would keep failing silently from
-    // here on, because we always write the entire DB in one shot.
-    // Retry once with attachments stripped from the write (not from memory —
-    // they still show for this session) so at least all the actual data
-    // keeps persisting; only the attached files themselves stop surviving
-    // a refresh until storage is freed up.
+    // The whole DB write failed — localStorage's quota. Attachments normally
+    // live in IndexedDB now, not here, so this should be rare — it mainly
+    // means either IndexedDB is unavailable on this browser (attachments are
+    // sitting inline as a fallback) or the text data itself (logs, vocab,
+    // segments) has genuinely grown past the localStorage ceiling. Without
+    // this fallback, EVERY future save() call would keep failing silently
+    // from here on, because we always write the entire DB in one shot.
+    // Retry once with any inline attachment bytes stripped from the write
+    // (not from memory — they still show for this session) so at least all
+    // the actual data keeps persisting; only inline-fallback attachments
+    // stop surviving a refresh until storage is freed up.
     try {
-      const stripped = { ...DB, classDocs: (DB.classDocs||[]).map(d => (d && d.attachment) ? {...d, attachment:null} : d) };
+      const stripped = {
+        ...DB,
+        classDocs: (DB.classDocs||[]).map(d => (d && d.attachment && d.attachment.dataUrl) ? {...d, attachment:null} : d),
+        materials: (DB.materials||[]).map(m => (m && m.file && m.file.data) ? {...m, file:null} : m)
+      };
       localStorage.setItem(DB_KEY, JSON.stringify(stripped));
       storageDegraded = true;
       showStorageBanner('attachments');
@@ -2500,8 +2630,8 @@ function showStorageBanner(kind) {
   const msg = document.getElementById('storage-banner-msg');
   if (!el || !msg) return;
   const msgs = {
-    warning: "⚠️ Storage is getting full. Saving still works for now, but you're close to the limit — export a backup and consider removing some document attachments.",
-    attachments: "⚠️ Storage is full — document attachments have stopped saving (everything else, including vocab and document text, still is). Export a backup and remove some attachments to fix this for good.",
+    warning: "⚠️ Your vocab/logs/documents storage is getting full. Saving still works for now — export a backup soon. (File attachments are stored separately and aren't the cause.)",
+    attachments: "⚠️ Storage is full — some attachments fell back to inline storage and have stopped saving (everything else, including vocab and document text, still is). Export a backup and remove some attachments to fix this for good.",
     critical: "⛔ Storage is completely full — nothing new is being saved right now, including vocab and documents. Export a backup immediately, then free up space below."
   };
   msg.textContent = msgs[kind] || msgs.warning;
@@ -2521,37 +2651,74 @@ function checkStorageHealth() {
   if (bytes > 4.5*1024*1024) { storageDegraded = true; showStorageBanner('warning'); }
 }
 function openStorageManagerModal() { renderStorageManager(); openModal('modal-storage-manager'); }
-function renderStorageManager() {
-  const totalBytes = estimateBytes(DB);
-  const docsWithAttach = (DB.classDocs||[]).filter(d=>d && d.attachment);
-  const attachBytes = docsWithAttach.reduce((sum,d)=>sum+estimateBytes(d.attachment),0);
+async function renderStorageManager() {
   const summary = document.getElementById('storage-mgr-summary');
-  if (summary) summary.innerHTML = `
-    <div>Estimated data size: <strong>${fmtBytes(totalBytes)}</strong></div>
-    <div style="color:var(--ink3);margin-top:2px">Most browsers allow roughly 5–10MB per site — once you're over that, saving starts failing silently.</div>
-    <div style="margin-top:6px">Attachments account for about <strong>${fmtBytes(attachBytes)}</strong> across ${docsWithAttach.length} document${docsWithAttach.length===1?'':'s'}.</div>
-  `;
   const list = document.getElementById('storage-mgr-list');
+  if (summary) summary.innerHTML = `<div style="color:var(--ink3)">Loading…</div>`;
+
+  const dbBytes = estimateBytes(DB);
+  const idbRecords = await AttachStore.getAll(); // [] if IndexedDB unavailable
+  const idbBytes = idbRecords.reduce((sum,r)=>sum+estimateBytes(r.dataUrl),0);
+
+  let quotaLine = '';
+  if (navigator.storage?.estimate) {
+    try {
+      const est = await navigator.storage.estimate();
+      if (est.quota) quotaLine = `<div style="margin-top:6px">This device is currently allowing up to about <strong>${fmtBytes(est.quota)}</strong> for attachments (${fmtBytes(est.usage||0)} in use across this site) — that ceiling scales with your free disk space.</div>`;
+    } catch(e) {}
+  }
+
+  if (summary) summary.innerHTML = `
+    <div>Vocab, logs & documents (browser storage): <strong>${fmtBytes(dbBytes)}</strong></div>
+    <div style="color:var(--ink3);margin-top:2px">This bucket is capped by the browser at roughly 5–10MB — once it's over that, saving starts failing.</div>
+    <div style="margin-top:6px">Attachments (extended storage): <strong>${fmtBytes(idbBytes)}</strong> across ${idbRecords.length} file${idbRecords.length===1?'':''}.</div>
+    <div style="color:var(--ink3);margin-top:2px">Attachments live in a separate, much larger bucket, so they no longer count against the 5–10MB limit above.</div>
+    ${quotaLine}
+  `;
+
   if (!list) return;
-  if (!docsWithAttach.length) { list.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No documents currently have an attachment.</div>'; return; }
-  list.innerHTML = docsWithAttach.map(d => `
+  const docsWithAttach = (DB.classDocs||[]).filter(d=>d && d.attachment);
+  const matsWithFile = (DB.materials||[]).filter(m=>m && m.file);
+  if (!docsWithAttach.length && !matsWithFile.length) { list.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No documents or materials currently have an attachment.</div>'; return; }
+  const docRows = docsWithAttach.map(d => `
     <div class="fc-summary-row">
-      <span>${esc(d.title)} <span style="color:var(--ink3)">(${fmtBytes(estimateBytes(d.attachment))})</span></span>
-      <button class="btn gh sm" onclick="removeDocAttachment('${d.id}')">Remove attachment</button>
+      <span>📎 ${esc(d.title)} <span style="color:var(--ink3)">(${fmtBytes(d.attachment.size||estimateBytes(d.attachment.dataUrl))})</span></span>
+      <button class="btn gh sm" onclick="removeDocAttachment('${d.id}')">Remove</button>
     </div>
   `).join('');
+  const matRows = matsWithFile.map(m => `
+    <div class="fc-summary-row">
+      <span>📎 ${esc(m.title)} <span style="color:var(--ink3)">(${fmtBytes(m.file.size||estimateBytes(m.file.data))})</span></span>
+      <button class="btn gh sm" onclick="removeMatFile('${m.id}')">Remove</button>
+    </div>
+  `).join('');
+  list.innerHTML = docRows + matRows;
 }
-function removeDocAttachment(docId) {
+async function removeMatFile(matId) {
+  const m = DB.materials.find(x=>x.id===matId);
+  if (!m) return;
+  if (m.file?.key) await AttachStore.delete(m.file.key);
+  m.file = null;
+  save(); if(document.getElementById('mat-list')) renderMaterials(); renderStorageManager();
+  toast('Attachment removed');
+}
+async function removeDocAttachment(docId) {
   const d = DB.classDocs.find(x=>x.id===docId);
   if (!d) return;
+  if (d.attachment?.key) await AttachStore.delete(d.attachment.key);
   d.attachment = null;
   save(); renderClassDocs(); renderStorageManager();
   toast('Attachment removed');
 }
 function removeAllAttachments() {
-  confirmAction('Remove attachments from ALL documents to free up storage? The document text and vocab links stay — only the attached files themselves go.', () => {
-    (DB.classDocs||[]).forEach(d=>{ if(d) d.attachment = null; });
-    save(); renderClassDocs(); renderStorageManager();
+  confirmAction('Remove attachments from ALL documents and materials to free up storage? The document text, vocab links, and material entries stay — only the attached files themselves go.', async () => {
+    for (const d of (DB.classDocs||[])) {
+      if (d?.attachment) { if (d.attachment.key) await AttachStore.delete(d.attachment.key); d.attachment = null; }
+    }
+    for (const m of (DB.materials||[])) {
+      if (m?.file) { if (m.file.key) await AttachStore.delete(m.file.key); m.file = null; }
+    }
+    save(); renderClassDocs(); if(document.getElementById('mat-list')) renderMaterials(); renderStorageManager();
     toast('All attachments removed');
   }, {okLabel:'Remove All'});
 }
@@ -4474,17 +4641,15 @@ async function readDocFile(file) {
     document.getElementById('doc-source-text').value = text;
     let attachNote = '';
     if (document.getElementById('doc-attach-file')?.checked) {
-      if (file.size <= 4*1024*1024) {
-        pendingDocAttachment = await new Promise(resolve=>{
-          const r = new FileReader();
-          r.onload = () => resolve({ name:file.name, type:file.type||'application/octet-stream', dataUrl:r.result });
-          r.onerror = () => resolve(null);
-          r.readAsDataURL(file);
-        });
-        if (pendingDocAttachment) attachNote = ' · attached';
-      } else {
-        attachNote = ' · not attached, over 4MB';
-      }
+      // Attachments now live in IndexedDB (not localStorage), so the limit here
+      // just matches the 15MB read/extract cap above — no smaller cap needed.
+      pendingDocAttachment = await new Promise(resolve=>{
+        const r = new FileReader();
+        r.onload = () => resolve({ name:file.name, type:file.type||'application/octet-stream', dataUrl:r.result });
+        r.onerror = () => resolve(null);
+        r.readAsDataURL(file);
+      });
+      if (pendingDocAttachment) attachNote = ' · attached';
     }
     preview.innerHTML = `<div class="file-item"><span class="file-ext">${esc(ext.toUpperCase())}</span>${esc(file.name)} <span style="color:var(--sage-d);font-size:10px;font-family:'DM Mono',monospace">(${text.length.toLocaleString()} characters extracted${attachNote})</span>
       <button class="btn gh sm" style="margin-left:auto;font-size:10px;color:var(--clay)" onclick="document.getElementById('doc-file-preview').innerHTML='';document.getElementById('doc-file-input').value='';pendingDocAttachment=null">✕</button></div>`;
@@ -4751,7 +4916,7 @@ function applyDocBuilderResults() {
   }
   finalizeDocBuilderResults(results, replaceLinks, null, textPart, classId, title);
 }
-function finalizeDocBuilderResults(results, replaceLinks, decisions, textPart, classId, title) {
+async function finalizeDocBuilderResults(results, replaceLinks, decisions, textPart, classId, title) {
   let created=0, updated=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0;
   const batchId = uid();
   results.forEach(r=>{
@@ -4781,8 +4946,14 @@ function finalizeDocBuilderResults(results, replaceLinks, decisions, textPart, c
     date: document.getElementById('doc-date').value || new Date().toISOString().split('T')[0],
     createdAt: Date.now(), segments,
     rawSourceText: document.getElementById('doc-source-text').value,
-    attachment: pendingDocAttachment || null
+    attachment: null
   };
+  if (pendingDocAttachment) {
+    const ok = await AttachStore.set(doc.id, pendingDocAttachment);
+    doc.attachment = ok
+      ? { name: pendingDocAttachment.name, type: pendingDocAttachment.type, size: estimateBytes(pendingDocAttachment.dataUrl), key: doc.id }
+      : pendingDocAttachment; // extended storage unavailable — falls back to the old inline behavior
+  }
   DB.classDocs.unshift(doc);
   pendingDocAttachment = null;
   if (created>0) DB.lastImportBatch = { id: batchId, source:'Document Builder', count: created, createdAt: Date.now() };
@@ -4917,7 +5088,7 @@ function renderDocCard(d) {
   const researchBadge = needsResearchCount
     ? ` · <span style="color:var(--gold)">⚠️ ${needsResearchCount} need${needsResearchCount===1?'s':''} research</span>`
     : (wordCount ? ` · <span style="color:var(--sage-d)">✅ all researched</span>` : '');
-  const attachHtml = d.attachment ? `<a href="${d.attachment.dataUrl}" download="${esc(d.attachment.name)}" class="doc-attach-chip" onclick="event.stopPropagation()">📎 ${esc(d.attachment.name)}</a>` : '';
+  const attachHtml = d.attachment ? `<button class="doc-attach-chip" onclick="event.stopPropagation();downloadDocAttachment('${d.id}')">📎 ${esc(d.attachment.name)}</button>` : '';
   const teaser = docTeaserText(d);
   return `<div class="doc-card">
     <div class="doc-card-hdr" onclick="openDocReader('${d.id}')">
@@ -4935,6 +5106,18 @@ function renderDocCard(d) {
       </div>
     </div>
   </div>`;
+}
+async function downloadDocAttachment(id) {
+  const d = DB.classDocs.find(x=>x.id===id);
+  if (!d?.attachment) return;
+  let dataUrl = d.attachment.dataUrl; // old inline format, or IndexedDB-unavailable fallback
+  if (!dataUrl && d.attachment.key) {
+    const rec = await AttachStore.get(d.attachment.key);
+    if (!rec) { toast('Could not load that attachment','warn'); return; }
+    dataUrl = rec.dataUrl;
+  }
+  const a = document.createElement('a');
+  a.href = dataUrl; a.download = d.attachment.name; a.click();
 }
 // Opens the full-screen Document Reader for one document. If focusVocabId +
 // focusSegIndex are given (from a vocab card's "appears in documents" backlink),
@@ -5104,7 +5287,9 @@ function updateDocDate(id, val) {
   d.date = val; save(); renderClassDocs();
 }
 function deleteClassDoc(id) {
-  confirmAction('Delete this document? (Linked vocab words stay in your dictionary.)', () => {
+  confirmAction('Delete this document? (Linked vocab words stay in your dictionary.)', async () => {
+    const d = DB.classDocs.find(x=>x.id===id);
+    if (d?.attachment?.key) await AttachStore.delete(d.attachment.key);
     DB.classDocs = DB.classDocs.filter(d=>d.id!==id);
     if (docReaderCurrentId===id) closeModal('modal-doc-reader');
     save(); renderClassDocs(); toast('Document deleted');
@@ -6375,7 +6560,9 @@ function handleDrop(event) {
 }
 
 function readFile(file) {
-  if (file.size > 5*1024*1024) { toast('File too large (max 5MB)','warn'); return; }
+  // Stored in IndexedDB (not localStorage), so this cap is just a sane UI/memory
+  // limit, not a storage-quota limit — raised well past the old 5MB.
+  if (file.size > 25*1024*1024) { toast('File too large (max 25MB)','warn'); return; }
   const reader = new FileReader();
   reader.onload = e => {
     pendingFile = { name: file.name, type: file.type, size: file.size, data: e.target.result };
@@ -6387,7 +6574,7 @@ function readFile(file) {
   reader.readAsDataURL(file);
 }
 
-function saveMaterial() {
+async function saveMaterial() {
   const m = {
     id: uid(),
     title: document.getElementById('mat-title').value.trim(),
@@ -6396,10 +6583,17 @@ function saveMaterial() {
     classId: document.getElementById('mat-class').value,
     link: document.getElementById('mat-link').value.trim(),
     notes: document.getElementById('mat-notes').value.trim(),
-    file: pendingFile ? { name: pendingFile.name, type: pendingFile.type, size: pendingFile.size, data: pendingFile.data } : null,
+    file: null,
     createdAt: Date.now()
   };
   if (!m.title) { toast('Title required','warn'); return; }
+  if (pendingFile) {
+    const key = 'mat_'+m.id;
+    const ok = await AttachStore.set(key, { name: pendingFile.name, type: pendingFile.type, dataUrl: pendingFile.data });
+    m.file = ok
+      ? { name: pendingFile.name, type: pendingFile.type, size: pendingFile.size, key }
+      : { name: pendingFile.name, type: pendingFile.type, size: pendingFile.size, data: pendingFile.data }; // fallback if extended storage unavailable
+  }
   DB.materials.unshift(m);
   pendingFile = null;
   save();
@@ -6436,15 +6630,23 @@ function renderMaterials() {
   }).join('');
 }
 
-function downloadFile(id) {
+async function downloadFile(id) {
   const m=DB.materials.find(x=>x.id===id);
   if(!m?.file) return;
+  let data = m.file.data;
+  if (!data && m.file.key) {
+    const rec = await AttachStore.get(m.file.key);
+    if (!rec) { toast('Could not load that file','warn'); return; }
+    data = rec.dataUrl;
+  }
   const a=document.createElement('a');
-  a.href=m.file.data; a.download=m.file.name; a.click();
+  a.href=data; a.download=m.file.name; a.click();
 }
 
 function deleteMat(id) {
-  confirmAction('Delete this material?', () => {
+  confirmAction('Delete this material?', async () => {
+    const m = DB.materials.find(x=>x.id===id);
+    if (m?.file?.key) await AttachStore.delete(m.file.key);
     DB.materials=DB.materials.filter(m=>m.id!==id);
     save(); renderMaterials(); toast('Deleted');
   });
@@ -6986,9 +7188,25 @@ function saveSettings(){
   save(); renderDashboard(); toast('Settings saved');
 }
 
-function exportData(){
+async function exportData(){
+  // Attachments live in IndexedDB now, not in DB — embed them back in for
+  // this export so the backup file is a complete, self-contained copy.
+  toast('Preparing export…');
+  const full = JSON.parse(JSON.stringify(DB));
+  for (const d of (full.classDocs||[])) {
+    if (d?.attachment?.key) {
+      const rec = await AttachStore.get(d.attachment.key);
+      if (rec) d.attachment = { name: rec.name, type: rec.type, dataUrl: rec.dataUrl };
+    }
+  }
+  for (const m of (full.materials||[])) {
+    if (m?.file?.key) {
+      const rec = await AttachStore.get(m.file.key);
+      if (rec) m.file = { name: rec.name, type: rec.type, size: m.file.size, data: rec.dataUrl };
+    }
+  }
   const a=document.createElement('a');
-  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(DB,null,2));
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(full,null,2));
   a.download='eduinterp_backup_'+new Date().toISOString().split('T')[0]+'.json';
   a.click(); toast('Data exported!');
 }
@@ -7002,8 +7220,10 @@ function doImport(e){
   reader.onload=ev=>{
     try{
       const data=JSON.parse(ev.target.result);
-      confirmAction('This will REPLACE all current data with the imported file. Continue?', () => {
-        DB={...DB,...data}; save(); location.reload();
+      confirmAction('This will REPLACE all current data with the imported file. Continue?', async () => {
+        DB={...DB,...data};
+        await migrateInlineAttachments(); // pushes this import's attachments into IndexedDB before the reload-triggering save
+        save(); location.reload();
       }, {title:'Import data', okLabel:'Replace & Import'});
     }catch{toast('Invalid JSON file','warn');}
   };
@@ -7060,8 +7280,11 @@ function exportIEPSummary(){
 
 function clearAllData(){
   confirmAction('Delete ALL data? This cannot be undone.', () => {
-    confirmAction('Are you sure? All logs, vocabulary, materials will be lost.', () => {
-      localStorage.removeItem(DB_KEY); location.reload();
+    confirmAction('Are you sure? All logs, vocabulary, materials will be lost.', async () => {
+      localStorage.removeItem(DB_KEY);
+      const db = await openAttachDb();
+      if (db) { try { const tx=db.transaction(ATTACH_STORE,'readwrite'); tx.objectStore(ATTACH_STORE).clear(); } catch(e){} }
+      location.reload();
     }, {title:'Final confirmation', okLabel:'Yes, delete everything'});
   }, {title:'Delete all data', okLabel:'Continue'});
 }
@@ -7184,6 +7407,7 @@ async function pullFromCloud() {
       if (file.truncated) { const rawRes = await fetch(file.raw_url); content = await rawRes.text(); }
       const parsed = JSON.parse(content);
       DB = { ...DB, ...parsed };
+      await migrateInlineAttachments();
       save();
       s.lastSyncAt = Date.now();
       setSyncSettings(s);
@@ -7855,6 +8079,8 @@ if(!DB.videoLibrary) DB.videoLibrary=[];
 });
 
 initApp();
+checkStorageHealth();
+migrateInlineAttachments();
 </script>
 </body>
 </html>
