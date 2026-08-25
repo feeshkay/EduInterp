@@ -712,6 +712,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <button class="btn sm" id="delete-batch-btn" onclick="deleteLatestBatch()" style="display:none" title="Undo the most recent AI Research or Document batch add">🗑️ Delete Latest Batch</button>
               <button class="btn sm" onclick="openVerifyLinksModal()" title="Build a prompt for an AI to actually visit every link and confirm it's the right word">🔍 Verify Links</button>
               <button class="btn sm" onclick="openVideoClipModal()" title="Tag words to a moment in a YouTube/Vimeo video">🎬 Add Video</button>
+              <button class="btn sm" onclick="openCompletionChecklistModal()" title="Step-by-step progress toward every word being complete and human-verified">📋 Completion Checklist</button>
               <button class="btn sm pri" onclick="openAIResearchModal()" title="Build a prompt for an AI to find Deaf-led resources, ASL videos, and memory tips">🧏 AI Research Prep</button>
             </div>
           </div>
@@ -732,6 +733,9 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <option value="needs-def">📖 Needs Definition</option>
               <option value="needs-sign">🤟 Needs Sign</option>
               <option value="ok">✅ Complete</option>
+              <option value="missing-category">📁 Missing Category</option>
+              <option value="missing-def">📖 Missing Definition (any word)</option>
+              <option value="missing-sign">🤟 Missing Sign (any word)</option>
             </select>
             <select id="vocab-filter-verified" onchange="renderVocab()" class="filter-sel">
               <option value="">Verified: Any</option>
@@ -769,6 +773,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
           </div>
           <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn gh sm" onclick="selectAllNeedsResearch()">☑️ Select All Needing Research</button>
+            <button class="btn gh sm" style="color:var(--clay)" onclick="selectLikelyJunkVocab()" title="Selects entries that look like a stray phrase/sentence fragment, or a common word like &quot;and&quot; or &quot;my&quot; — review the selection, then Delete Selected">☑️ Select Likely Junk</button>
           </div>
           <div id="vocab-list"></div>
         </div>
@@ -853,8 +858,15 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
                 <div class="fc-stamp fc-stamp-no" id="fc-stamp-no">AGAIN</div>
                 <div class="fc-face fc-front">
                   <div id="fc-word" class="fc-word"></div>
-                  <button class="btn gh sm" id="fc-mnemonic-btn" onclick="event.stopPropagation();revealMnemonic()">💡 Show memory tip</button>
+                  <div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap">
+                    <button class="btn gh sm" id="fc-mnemonic-btn" onclick="event.stopPropagation();revealMnemonic()">💡 Show memory tip</button>
+                    <button class="res-mini-btn" onclick="event.stopPropagation();toggleFcMnemonicEdit()" title="Add or edit a memory tip for this word">✏️</button>
+                  </div>
                   <div id="fc-mnemonic-text" style="display:none;font-size:12px;color:var(--gold);background:var(--gold-l);border-radius:7px;padding:8px 10px;margin-top:10px;max-width:100%"></div>
+                  <div id="fc-mnemonic-edit" style="display:none;margin-top:8px;width:100%;max-width:260px" onclick="event.stopPropagation()">
+                    <textarea id="fc-mnemonic-edit-text" placeholder="A memory tip to help this stick…" style="width:100%;min-height:60px;font-size:11.5px;padding:6px 8px;border-radius:7px;border:1px solid var(--brk);resize:vertical;font-family:inherit"></textarea>
+                    <button class="res-mini-btn" style="margin-top:4px" onclick="saveFcMnemonicEdit()">Save</button>
+                  </div>
                   <div style="font-size:10px;color:var(--ink3);margin-top:14px">Tap card to flip • swipe or use buttons below</div>
                 </div>
                 <div class="fc-face fc-back" id="fc-back-content"></div>
@@ -2263,6 +2275,20 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 </div>
 
 
+<!-- Completion Checklist -->
+<div class="ov" id="modal-completion-checklist">
+  <div class="mod" style="max-width:520px">
+    <div class="mh"><h2>📋 Completion Checklist</h2><button class="mod-close" onclick="closeModal('modal-completion-checklist')">✕</button></div>
+    <div class="mb">
+      <div class="notice n-ok" style="margin-bottom:10px"><span>ℹ️</span><div style="font-size:11px">Five steps, in order, from a bare word to fully done. Tap "View These →" on any step to jump straight to Dictionary filtered to exactly what's left for that step. A word only counts as completely done once you've personally verified it — an AI suggestion alone never gets you there.</div></div>
+      <div id="checklist-body"></div>
+    </div>
+    <div class="mf">
+      <button class="btn gh sm" onclick="closeModal('modal-completion-checklist')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Duplicate Word — Merge Modal -->
 <div class="ov" id="modal-vocab-merge">
   <div class="mod" style="max-width:560px">
@@ -2753,6 +2779,12 @@ function load() {
 // (so we can flag/review/reuse individual links) — this converts old data on
 // load, once, safely. Already-migrated (array) fields are left untouched.
 const VOCAB_RESOURCE_FIELDS = ['deafResources','aslVideos','conceptVideos','youthExplainers','textResources'];
+// Only these two fields are actual sign-dictionary/ASL-video entries where
+// "does this show the right WORD's sign" is a meaningful question.
+// conceptVideos/youthExplainers/textResources are concept explainers (e.g. a
+// Khan Academy video on the topic) — asking an AI to confirm those show "the
+// sign for X" doesn't make sense and was cluttering the Verify Links batch.
+const SIGN_ENTRY_FIELDS = ['deafResources','aslVideos'];
 // A past version of the paste-back parser mangled links when the AI wrote a
 // markdown link with a label in front of it (e.g. "Handspeak: [text](url)") —
 // the URL ended up with a stray "](" + a repeated copy of the URL glued onto
@@ -2811,6 +2843,40 @@ function makeBlankVocabEntry(overrides={}) {
     createdAt: Date.now()
   }, overrides);
 }
+// Extremely common English function words that are never worth auto-adding
+// as vocabulary on their own — an AI bolding "my" or "and" in a document, or
+// slipping one into a WORD: line, means it over-applied emphasis, not that
+// it's a term worth tracking.
+const VOCAB_STOPWORDS = new Set(['a','an','the','and','or','but','if','so','of','in','on','at','to','for','with',
+  'from','by','as','is','are','was','were','be','been','being','am','do','does','did','have','has','had',
+  'i','you','he','she','it','we','they','me','him','her','us','them','my','your','his','its','our','their',
+  'this','that','these','those','not','no','yes','than','then','there','here','out','up','down','into',
+  'over','under','again','also','very','just','only','can','will','would','should','could','may','might','must','shall']);
+// Guards every path that auto-creates a vocab word from parsed AI text
+// (document bold-wraps, WORD: lines) against two failure modes seen in
+// practice: a whole clause/sentence getting captured as "the word" (usually
+// from the AI bolding more than it should, or a malformed WORD: line), and
+// single common function words that aren't worth tracking as vocabulary.
+// Does NOT apply to words you type in yourself — only to auto-creation.
+const VOCAB_CLAUSE_VERBS = new Set(['is','are','was','were','am','be','been','being',
+  'do','does','did','has','have','had','will','would','should','could','can','may','might','must','shall']);
+function looksLikeAutoCreatableVocabWord(text) {
+  const t = (text||'').trim();
+  if (!t) return false;
+  if (t.length > 40) return false; // way too long for a single vocab term
+  if (/[.!?;]/.test(t)) return false; // sentence punctuation mid-span = not one term
+  if (/^[^a-zA-Z0-9]/.test(t)) return false; // starts with stray punctuation — formatting artifact
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length > 4) return false; // ASL vocab compounds are rarely longer than this
+  if (words.length===1 && VOCAB_STOPWORDS.has(words[0].toLowerCase().replace(/[^a-z']/g,''))) return false;
+  // A real vocab term is a noun phrase — "photosynthesis," "checks and
+  // balances," "supply and demand." A conjugated verb almost always means
+  // this is actually a clause/sentence fragment that got bolded by mistake
+  // ("the cost is bad" is 4 words, under the length cutoff above, but "is"
+  // gives it away). Word count alone isn't enough to catch this case.
+  if (words.length>=3 && words.some(w=>VOCAB_CLAUSE_VERBS.has(w.toLowerCase().replace(/[^a-z']/g,'')))) return false;
+  return true;
+}
 
 // Words currently checked in the Vocabulary dictionary, for AI research prompts
 let vocabSelection = new Set();
@@ -2818,6 +2884,8 @@ let vocabSelection = new Set();
 // separately so it survives the innerHTML re-render every time you edit a card
 // (otherwise clicking a ✕ inside it would collapse the panel on every click).
 let openResearchBlocks = new Set();
+// Same idea for the "Appears in your documents" panel on each card.
+let openDocBacklinkBlocks = new Set();
 // Holds the "new" word data while the duplicate-word merge modal is open
 let pendingMergeExistingId = null;
 let pendingMergeData = null;
@@ -3494,7 +3562,8 @@ function isGenericResourceUrl(url, word) {
   const hasIdentifier = (!isGenericKeyword && /\d/.test(last)) || /[?&](id|word|sign|entry)=[^&]+/i.test(u.search);
   const isRootish = segs.length===0
     || (segs.length===1 && isGenericKeyword)
-    || (isKnownOffender && segs.length===2 && isGenericKeyword); // e.g. handspeak.com/word/index.php with no id — genuinely the generic search page, not a specific entry.
+    || (isKnownOffender && segs.length===2 && isGenericKeyword) // e.g. handspeak.com/word/index.php with no id — genuinely the generic search page, not a specific entry.
+    || (isKnownOffender && segs.some(s=>/^search$/i.test(s))); // e.g. handspeak.com/word/search/index.php — the site's search TOOL itself, never a specific word's page, regardless of how many segments deep it sits.
   const looksLikeChannelHome = /^\/(channel|c|user)\/[^/]+$/i.test(path) || /^\/@[^/]+$/i.test(path);
   return (isRootish || looksLikeChannelHome) && !hasWord && !hasIdentifier;
 }
@@ -3749,6 +3818,74 @@ function selectAllNeedsResearch() {
   targets.forEach(v=>vocabSelection.add(v.id));
   updateSelectionBar(); renderVocab();
 }
+// Selects existing entries that already look like the phrase-fragment/
+// stopword junk the auto-linker used to create before it was fixed to skip
+// them — a cleanup pass for anything that got in before that fix, not a
+// judgment on anything you typed in yourself on purpose.
+function selectLikelyJunkVocab() {
+  const visible = getFilteredVocab();
+  const targets = visible.filter(v=>!looksLikeAutoCreatableVocabWord(v.word));
+  if (!targets.length) { toast('Nothing in the current view looks like junk'); return; }
+  targets.forEach(v=>vocabSelection.add(v.id));
+  updateSelectionBar(); renderVocab();
+  toast(`Selected ${targets.length} likely-junk word${targets.length===1?'':'s'} — review below, then Delete Selected`);
+}
+
+// ── COMPLETION CHECKLIST ─────────────────────────────────────────────────────
+// Five steps in the order they actually happen for a word, each with its own
+// remaining-count and a one-tap way to jump the Dictionary to exactly that
+// group. Step 5 (verified by you) is deliberately the only one that makes a
+// word "done" — an AI-filled definition or a suggested sign link is a draft
+// until you've personally looked it over and hit ✅ Verified; nothing here
+// treats an AI's work alone as finished.
+function getChecklistSteps() {
+  const total = DB.vocab.length;
+  return [
+    { key:'missing-category', num:1, title:'Category assigned', desc:'Every word filed under a real subject, not left in "Uncategorized."',
+      remaining: DB.vocab.filter(v=>!v.category || v.category==='Uncategorized').length },
+    { key:'missing-def', num:2, title:'Definition added', desc:'A plain-language meaning for the word or concept.',
+      remaining: DB.vocab.filter(v=>!v.definition).length },
+    { key:'missing-sign', num:3, title:'Sign info added', desc:'A confirmed sign, sign parameters, or at least one ASL video link.',
+      remaining: DB.vocab.filter(v=>!hasSignInfo(v)).length },
+    { key:'generic-links', num:4, title:'Links checked', desc:'No links still flagged generic, dead-looking, or an unconfirmed ID-based page (Handspeak/Signing Savvy).',
+      remaining: DB.vocab.filter(v=>hasUnreviewedGenericLinks(v)).length },
+    { key:'not-verified', num:5, title:'Verified by you', desc:'You\'ve personally reviewed the word and marked it ✅ Verified. This is the only step that means a word is actually, completely done.',
+      remaining: DB.vocab.filter(v=>!v.verified).length },
+  ].map(s => ({...s, total, done: total - s.remaining, pct: total ? Math.round((total-s.remaining)/total*100) : 0}));
+}
+function openCompletionChecklistModal() {
+  renderChecklistBody();
+  openModal('modal-completion-checklist');
+}
+function renderChecklistBody() {
+  const el = document.getElementById('checklist-body');
+  if (!el) return;
+  const steps = getChecklistSteps();
+  const allDone = steps.every(s=>s.remaining===0) && steps[0].total>0;
+  el.innerHTML = (allDone ? `<div class="notice n-ok" style="margin-bottom:10px"><span>🎉</span><div style="font-size:12px">Every word has cleared all five steps — fully complete and human-verified.</div></div>` : '') +
+    steps.map(s => `
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--brk)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <div style="font-weight:600;font-size:12.5px">${s.num}. ${esc(s.title)}${s.remaining===0&&s.total>0?' ✅':''}</div>
+        <div style="font-size:11px;color:var(--ink3);white-space:nowrap;font-family:'DM Mono',monospace">${s.done}/${s.total}</div>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin:2px 0 6px">${esc(s.desc)}</div>
+      <div class="pbar"><div class="pbf" style="width:${s.pct}%;${s.remaining===0&&s.total>0?'background:var(--sage)':''}"></div></div>
+      ${s.remaining>0 ? `<button class="btn gh sm" style="margin-top:6px" onclick="applyChecklistFilter('${s.key}')">View These (${s.remaining}) →</button>` : ''}
+    </div>`).join('');
+}
+function applyChecklistFilter(statusKey) {
+  ['vocab-search','vocab-filter-cat','vocab-filter-class','vocab-filter-signtype','vocab-filter-mastery','vocab-filter-verified','vocab-filter-generic','vocab-filter-concept'].forEach(id=>{
+    const elm = document.getElementById(id);
+    if (elm) elm.value = '';
+  });
+  if (statusKey==='generic-links') { document.getElementById('vocab-filter-generic').value = 'yes'; document.getElementById('vocab-filter-status').value = ''; }
+  else if (statusKey==='not-verified') { document.getElementById('vocab-filter-verified').value = 'no'; document.getElementById('vocab-filter-status').value = ''; }
+  else { document.getElementById('vocab-filter-status').value = statusKey; }
+  closeModal('modal-completion-checklist');
+  renderVocab();
+  document.getElementById('vocab-list')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
 
 // ── VERIFIED STATUS ──────────────────────────────────────────────────────────
 function toggleVerified(id) {
@@ -3779,14 +3916,20 @@ function unlinkConfirmedSign(id) {
   v.status = computeVocabStatus(v);
   save(); renderVocab();
 }
-// Handspeak's word pages are pure numeric IDs with no known way to build the
-// right one from the word text — so instead of guessing, this sends you to
-// its plain search page to look the word up yourself. Signing Savvy's search
-// DOES take the word straight in the URL, so that one jumps right to results.
+// Handspeak's word pages are pure numeric IDs. Its own search box doesn't
+// take the word in the URL reliably either — testing a wordID=<text> param
+// this session, it silently fell through to an unrelated generic page
+// instead of the requested word, so it's not safe to build. Routing
+// through a site-restricted Google search instead actually surfaces the
+// specific word's Handspeak page (its indexed page titles are literally
+// "WORD in Sign Language • Handspeak"). Signing Savvy's own search DOES
+// take the word straight in the URL, so that one skips Google entirely.
 function idKeyedSearchUrl(url, word) {
   let h; try { h = new URL(url).hostname.replace(/^www\./,''); } catch(e) { return null; }
-  if (h==='handspeak.com' || h.endsWith('.handspeak.com')) return 'https://www.handspeak.com/word/search/index.php';
-  if (h==='signingsavvy.com' || h.endsWith('.signingsavvy.com')) return `https://www.signingsavvy.com/search/${encodeURIComponent((word||'').trim())}`;
+  const w = (word||'').trim();
+  if (!w) return null;
+  if (h==='handspeak.com' || h.endsWith('.handspeak.com')) return `https://www.google.com/search?q=${encodeURIComponent('site:handspeak.com "'+w+'" ASL sign')}`;
+  if (h==='signingsavvy.com' || h.endsWith('.signingsavvy.com')) return `https://www.signingsavvy.com/search/${encodeURIComponent(w)}`;
   return null;
 }
 // The "Confirmed sign" row is the one link a word's card actually shows and
@@ -3803,7 +3946,7 @@ function renderConfirmedSignBlock(v) {
     <button class="res-mini-btn" onclick="toggleConfirmedSignVerify('${v.id}')" title="Check this link yourself and mark it correct or wrong">🔍 Verify</button>
     ${searchUrl?`<a class="res-mini-btn" href="${esc(searchUrl)}" target="_blank" rel="noopener" title="Search for the correct page yourself">🔎 Search</a>`:''}
     <button class="res-mini-btn" onclick="toggleConfirmedSignEdit('${v.id}')" title="Edit this link">✏️</button>
-    <button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')" title="Remove">✕ remove</button>
+    <button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')" title="Just remove this link (won't affect future AI suggestions — use 🔍 Verify if it's actually wrong)">✕ remove</button>
     <div class="res-edit-row" id="csedit-${v.id}" style="display:none;gap:5px;margin-top:4px;flex-wrap:wrap">
       <input type="text" id="csedit-${v.id}-title" value="${esc(cs.title||'')}" placeholder="Label (site name, etc.)" style="flex:1;min-width:100px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
       <input type="text" id="csedit-${v.id}-url" value="${esc(cs.url||'')}" placeholder="Paste the URL here…" style="flex:2;min-width:150px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
@@ -3974,11 +4117,14 @@ function confirmPurgeGenericLinks() {
   const breakdown = formatGenericLinkBreakdown(counts);
   toast(`Removed ${n} generic link${n===1?'':'s'}${breakdown?` (${breakdown})`:''}`);
 }
+// Removing a link here does NOT count as "this was wrong" — you might just
+// be decluttering an accurate link you don't need anymore. Only the
+// explicit 🔍 Verify → "No, wrong/dead" path (confirmResourceLinkVerify)
+// records a rejection, so future AI Research prompts only exclude links
+// you've actually flagged as incorrect, not everything you've ever removed.
 function deleteResourceLink(vocabId, field, linkId) {
   const v = DB.vocab.find(x=>x.id===vocabId);
   if (!v || !v[field]) return;
-  const link = v[field].find(r=>r.id===linkId);
-  if (link) recordRejectedLink(v, link.url);
   v[field] = v[field].filter(r=>r.id!==linkId);
   save(); renderVocab();
 }
@@ -4192,7 +4338,7 @@ function buildAIResearchPrompt(entries) {
 
 Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time. Other sources worth checking alongside the formal dictionaries: ASLThat on Facebook, and threads from the Deaf/interpreting community on Reddit (e.g. r/asl, r/deaf) — real practitioner discussion of how a sign is actually used can be genuinely useful, especially for slang, regional variation, or a word with more than one possible sign depending on context.
 
-IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Handspeak's robots.txt also blocks automated browsing tools specifically — so even if you have live web access, you likely cannot actually load a handspeak.com page to confirm it; don't assume you've verified one just because a browsing tool ran without an error. For Handspeak specifically, default to writing NONE FOUND rather than a deep link, or point me to https://www.handspeak.com/word/search/index.php (their search page — no ID guessing needed) instead of a specific entry. For Signing Savvy, only give me a deep link if you're genuinely confident you've verified it by actually loading the page; otherwise write NONE FOUND or point me to https://www.signingsavvy.com/search/ + the word instead.
+IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Handspeak's robots.txt also blocks automated browsing tools specifically — so even if you have live web access, you likely cannot actually load a handspeak.com page to confirm it; don't assume you've verified one just because a browsing tool ran without an error. For Handspeak, default to writing NONE FOUND rather than a deep link — do NOT substitute the site's generic search-tool URL (handspeak.com/word/search/...) either, since that page isn't specific to this word and looks identical no matter which word I'm looking up, which isn't actually useful to me; I already have my own way of jumping to a word-specific Handspeak search from inside the app. Same for Signing Savvy: only give me a deep link if you're genuinely confident you've verified it by actually loading the page; otherwise write NONE FOUND.
 
 For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability — their branch/category pages like aslcore.org/biology/entries/ are NOT specific-word pages, only a link with ?id=theword in it, like aslcore.org/biology/entries/?id=atom, is), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.
 
@@ -4284,9 +4430,9 @@ function openVerifyLinksModal(useSelection) {
   } else {
     entries = DB.vocab;
   }
-  entries = entries.filter(v=>VOCAB_RESOURCE_FIELDS.some(f=>(v[f]||[]).some(r=>r.url)));
+  entries = entries.filter(v=>SIGN_ENTRY_FIELDS.some(f=>(v[f]||[]).some(r=>r.url)) || (v.confirmedSignLink?.url && !v.confirmedSignLink.verified));
   if (!entries.length) { toast('No saved links to verify' + (useSelection?' among the selected words':''),'warn'); return; }
-  const linkCount = entries.reduce((n,v)=>n+VOCAB_RESOURCE_FIELDS.reduce((m,f)=>m+(v[f]||[]).filter(r=>r.url).length,0),0);
+  const linkCount = entries.reduce((n,v)=>n+SIGN_ENTRY_FIELDS.reduce((m,f)=>m+(v[f]||[]).filter(r=>r.url).length,0)+((v.confirmedSignLink?.url && !v.confirmedSignLink.verified)?1:0),0);
   document.getElementById('verify-links-count').textContent = `${entries.length} word${entries.length===1?'':'s'} (${linkCount} link${linkCount===1?'':'s'})`;
   document.getElementById('verify-prompt-text').value = buildVerifyLinksPrompt(entries);
   document.getElementById('verify-response-text').value = '';
@@ -4295,7 +4441,8 @@ function openVerifyLinksModal(useSelection) {
 function buildVerifyLinksPrompt(entries) {
   const wordBlocks = entries.map(v=>{
     const links = [];
-    VOCAB_RESOURCE_FIELDS.forEach(f=>{ (v[f]||[]).forEach(r=>{ if (r.url) links.push(`  ${r.url}`); }); });
+    SIGN_ENTRY_FIELDS.forEach(f=>{ (v[f]||[]).forEach(r=>{ if (r.url) links.push(`  ${r.url}`); }); });
+    if (v.confirmedSignLink?.url && !v.confirmedSignLink.verified) links.push(`  ${v.confirmedSignLink.url}`);
     if (!links.length) return null;
     const subject = v.category && v.category!=='Uncategorized' ? v.category : '';
     return `${v.word}${subject?` (subject: ${subject})`:''}\n${links.join('\n')}`;
@@ -4336,32 +4483,49 @@ function parseVerifyLinksResponse() {
   }
   const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
   const flagged = [];
+  let correctCount = 0;
   lines.forEach(line=>{
     const clean = line.replace(/^[\s>*_#\-\d.]{0,6}/, '');
     const parts = clean.split('|').map(p=>p.trim());
     if (parts.length<3) return;
     const [word, url, verdictRaw, ...rest] = parts;
     const verdict = (verdictRaw||'').toUpperCase();
-    if (verdict!=='WRONG' && verdict!=='DEAD') return;
+    if (verdict!=='WRONG' && verdict!=='DEAD' && verdict!=='CORRECT') return;
     const v = DB.vocab.find(x=>x.word.toLowerCase()===word.toLowerCase());
     if (!v) return;
     let foundField=null, foundRes=null;
-    VOCAB_RESOURCE_FIELDS.forEach(f=>{
+    SIGN_ENTRY_FIELDS.forEach(f=>{
       (v[f]||[]).forEach(r=>{ if (r.url && r.url.trim()===url.trim()) { foundField=f; foundRes=r; } });
     });
+    if (!foundField && v.confirmedSignLink?.url && v.confirmedSignLink.url.trim()===url.trim()) {
+      foundField = 'confirmedSignLink';
+    }
     if (!foundField) return;
-    flagged.push({ vocabId:v.id, word:v.word, field:foundField, resId:foundRes.id, url, verdict, reason: rest.join('|').trim() });
+    if (verdict==='CORRECT') {
+      // Low-risk — apply immediately rather than routing through the
+      // review-and-uncheck screen that WRONG/DEAD (removal) goes through.
+      if (foundField==='confirmedSignLink') v.confirmedSignLink.verified = true;
+      else foundRes.reviewed = true;
+      correctCount++;
+      return;
+    }
+    flagged.push({ vocabId:v.id, word:v.word, field:foundField, resId:foundRes?foundRes.id:null, url, verdict, reason: rest.join('|').trim() });
   });
-  if (!flagged.length) { toast('Nothing flagged as wrong or dead — links checked out! (If that seems off, double-check the AI kept the WORD | URL | VERDICT | REASON format.)'); closeModal('modal-verify-links'); return; }
+  if (correctCount) { save(); renderVocab(); renderDashboard(); }
+  if (!flagged.length) {
+    toast(correctCount ? `${correctCount} link${correctCount===1?'':'s'} confirmed correct — nothing flagged as wrong.` : 'Nothing matched — double-check the AI kept the WORD | URL | VERDICT | REASON format.');
+    closeModal('modal-verify-links');
+    return;
+  }
   closeModal('modal-verify-links');
-  openVerifyResultsModal(flagged);
+  openVerifyResultsModal(flagged, correctCount);
 }
 let pendingVerifyResults = null;
-function openVerifyResultsModal(flagged) {
+function openVerifyResultsModal(flagged, correctCount) {
   pendingVerifyResults = flagged;
-  const labelMap = {deafResources:'Deaf Link', aslVideos:'ASL Video', conceptVideos:'Concept Video', youthExplainers:'Youth Explainer', textResources:'Text Resource'};
+  const labelMap = {deafResources:'Deaf Link', aslVideos:'ASL Video', conceptVideos:'Concept Video', youthExplainers:'Youth Explainer', textResources:'Text Resource', confirmedSignLink:'Confirmed Sign'};
   document.getElementById('verify-results-body').innerHTML =
-    `<div class="notice n-warn" style="margin-bottom:8px"><span>⚠️</span><div style="font-size:11px">${flagged.length} link${flagged.length===1?'':'s'} flagged. Uncheck any you want to keep (the AI can get it wrong too) — checked ones get removed and remembered, so future AI Research prompts won't suggest that exact URL again for that word.</div></div>`
+    `<div class="notice n-warn" style="margin-bottom:8px"><span>⚠️</span><div style="font-size:11px">${flagged.length} link${flagged.length===1?'':'s'} flagged${correctCount?` (and ${correctCount} already marked correct automatically)`:''}. Uncheck any you want to keep (the AI can get it wrong too) — checked ones get removed and remembered, so future AI Research prompts won't suggest that exact URL again for that word.</div></div>`
     + flagged.map((item,idx)=>`<div style="border:1px solid var(--br);border-radius:8px;padding:8px 10px;margin-bottom:8px">
         <label style="display:flex;align-items:flex-start;gap:6px;font-size:12px;cursor:pointer">
           <input type="checkbox" id="vr-check-${idx}" checked style="margin-top:2px">
@@ -4381,9 +4545,10 @@ function applyVerifyResults() {
     const checked = document.getElementById(`vr-check-${idx}`)?.checked;
     if (!checked) return;
     const v = DB.vocab.find(x=>x.id===item.vocabId);
-    if (!v || !v[item.field]) return;
+    if (!v) return;
     recordRejectedLink(v, item.url);
-    v[item.field] = v[item.field].filter(r=>r.id!==item.resId);
+    if (item.field==='confirmedSignLink') { v.confirmedSignLink = null; }
+    else { if (!v[item.field]) return; v[item.field] = v[item.field].filter(r=>r.id!==item.resId); }
     v.status = computeVocabStatus(v);
     removed++;
   });
@@ -4621,11 +4786,12 @@ function applyAIResearchResults() {
   finalizeAIResearchResults(results, replaceLinks, null);
 }
 function finalizeAIResearchResults(results, replaceLinks, decisions) {
-  let updated=0, created=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0;
+  let updated=0, created=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0, invalidSkipped=0;
   const batchId = uid();
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
+      if (!looksLikeAutoCreatableVocabWord(r.word)) { invalidSkipped++; return; }
       v = makeBlankVocabEntry({ word:r.word, category:'Uncategorized', source:'AI Research', batchId });
       DB.vocab.push(v); created++;
     } else updated++;
@@ -4636,7 +4802,7 @@ function finalizeAIResearchResults(results, replaceLinks, decisions) {
   save(); renderVocab(); populateClassSelectors(); renderDashboard();
   vocabSelection.clear(); updateSelectionBar();
   closeModal('modal-ai-research');
-  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''}${fieldsReplaced?`, ${fieldsReplaced} field${fieldsReplaced===1?'':'s'} replaced`:''}${genericSkipped?` — skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'} (not word-specific)`:''}`);
+  toast(`Filled in ${updated+created} word${updated+created===1?'':'s'}${created?` (${created} new, in Uncategorized)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'} added`:''}${fieldsReplaced?`, ${fieldsReplaced} field${fieldsReplaced===1?'':'s'} replaced`:''}${genericSkipped?` — skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'} (not word-specific)`:''}${invalidSkipped?` — skipped ${invalidSkipped} malformed WORD line${invalidSkipped===1?'':'s'} (looked like a phrase, not a word)`:''}`);
 }
 
 // ── CLASS NOTES / DOCUMENTS ─────────────────────────────────────────────────────
@@ -4645,6 +4811,12 @@ function finalizeAIResearchResults(results, replaceLinks, decisions) {
 // or document) is instantly reflected everywhere else. One source of truth.
 let pendingDocAttachment = null;
 let pendingEditDocId = null;
+// Set only while the doc-builder modal is being used to UPDATE an existing
+// document via AI (openDocUpdateModal) rather than create a new one — checked
+// by buildDocPrompt (to phrase the prompt as a merge, not a fresh build) and
+// by finalizeDocBuilderResults (to overwrite the existing doc in place,
+// keeping its id/attachment/backlinks, instead of adding a new one).
+let docUpdateTargetId = null;
 
 function populateDocClassSelect() {
   const el = document.getElementById('doc-class');
@@ -4671,7 +4843,43 @@ function openDocBuilder() {
   document.getElementById('doc-edit-save-btn').style.display='none';
   pendingDocAttachment = null;
   pendingEditDocId = null;
+  docUpdateTargetId = null;
   populateDocClassSelect();
+  openModal('modal-doc-builder');
+}
+// "Refresh this document" — pre-fills the SAME builder modal with the
+// document's current content (via docMarkedTextFromSegments, the identical
+// reconstruction used by the raw-text Edit mode, so it round-trips through
+// the AI's bold/heading/table markup cleanly) plus a clear marker line for
+// where to paste new or corrected material. If the original file is still
+// attached, offers it for download so it can be handed to the AI directly —
+// often more accurate than re-feeding my own extracted text back to it.
+function openDocUpdateModal(id) {
+  const d = DB.classDocs.find(x=>x.id===id);
+  if (!d) return;
+  docUpdateTargetId = id;
+  pendingEditDocId = null;
+  pendingDocAttachment = null;
+  populateDocClassSelect();
+  document.getElementById('doc-title').value = d.title;
+  document.getElementById('doc-class').value = d.classId || '';
+  document.getElementById('doc-date').value = d.date || new Date().toISOString().split('T')[0];
+  document.getElementById('doc-type').value = 'reading';
+  document.getElementById('doc-attach-file').checked = false; // don't silently drop/replace the original attachment unless a new file is chosen below
+  const currentText = docMarkedTextFromSegments(d.segments);
+  document.getElementById('doc-source-text').value = `${currentText}\n\n----- PASTE NEW OR UPDATED SOURCE MATERIAL BELOW THIS LINE (or edit the text above directly) -----\n\n`;
+  document.getElementById('doc-file-preview').innerHTML = d.attachment
+    ? `<div class="file-item"><span class="file-ext">${esc((d.attachment.name||'').split('.').pop()?.toUpperCase()||'FILE')}</span>${esc(d.attachment.name||'Original file')} <button class="btn gh sm" style="margin-left:auto;font-size:10px" onclick="downloadDocAttachment('${d.id}')">⬇️ Download original — hand this to your AI too, for the most accurate update</button></div>`
+    : '';
+  document.getElementById('doc-file-input').value = '';
+  document.getElementById('doc-prompt-text').value = '';
+  document.getElementById('doc-response-text').value = '';
+  document.getElementById('doc-builder-title').textContent = `🔄 Update: ${d.title}`;
+  document.getElementById('doc-builder-step1').style.display = 'block';
+  document.getElementById('doc-builder-step2').style.display = 'none';
+  document.getElementById('doc-builder-editmode').style.display = 'none';
+  document.getElementById('doc-save-btn').style.display = 'none';
+  document.getElementById('doc-edit-save-btn').style.display = 'none';
   openModal('modal-doc-builder');
 }
 
@@ -4804,9 +5012,9 @@ function buildDocPrompt() {
     ? `\n\nFor these specific words, I've already tried and rejected the exact URLs listed (bad link, dead link, turned out to be a homepage, etc.) — if any of these words show up in this material, do not suggest these exact URLs again, even if they otherwise look correct:\n${rejectedEntries.map(v=>`${v.word}: ${v.rejectedLinks.join(', ')}`).join('\n')}`
     : '';
 
-  const prompt = `I'm a K-12 ASL interpreter prepping to interpret ${docTypeLabels[docType]||'this material'} for my Deaf/DHH student(s). Please do two things:
+  const prompt = `${docUpdateTargetId ? `I'm a K-12 ASL interpreter and I'm UPDATING a document I already have in my class-notes app with new or corrected information. Below is the document's CURRENT content, followed by new/updated source material (marked off with a line of dashes). Merge them into ONE clean, updated document — keep anything from the current content that's still accurate, update or replace anything the new material corrects or supersedes, and fold in anything genuinely new. Don't just concatenate the two blocks back to back. Then do two things:` : `I'm a K-12 ASL interpreter prepping to interpret ${docTypeLabels[docType]||'this material'} for my Deaf/DHH student(s). Please do two things:`}
 
-PART 1 — REORGANIZED TEXT: Reproduce the text below preserving the original wording and order as closely as possible (you may lightly clean up paragraph breaks/formatting if the source is messy, like OCR text or a scanned handout, but don't rewrite, summarize, or shorten the actual content). ${docTypeNote}
+${docUpdateTargetId ? `PART 1 — UPDATED TEXT: Give me the full merged, updated document (not just a summary of what changed), preserving accurate original wording where nothing changed.` : `PART 1 — REORGANIZED TEXT: Reproduce the text below preserving the original wording and order as closely as possible (you may lightly clean up paragraph breaks/formatting if the source is messy, like OCR text or a scanned handout, but don't rewrite, summarize, or shorten the actual content).`} ${docTypeNote}
 
 Formatting rules for Part 1 — these are the ONLY markdown you should use, nothing else (no #, no bullets, no other bold):
 - Wrap every key vocabulary or concept term I'll need to interpret in double asterisks the FIRST time it appears, like **photosynthesis**. Put the asterisks directly around the word only — no trailing periods/commas inside them (write **photosynthesis**, not **photosynthesis.**). The word inside the asterisks must be spelled exactly the way you write it in the matching WORD: line in Part 2.
@@ -4838,7 +5046,7 @@ YOUTH_EXPLAINERS:
 
 For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time. Other sources worth checking: ASLThat on Facebook, and threads from the Deaf/interpreting community on Reddit (e.g. r/asl, r/deaf) — real practitioner discussion of how a sign is actually used can be genuinely useful, especially for slang, regional variation, or a word with more than one possible sign depending on context.
 
-IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Handspeak's robots.txt also blocks automated browsing tools specifically — so even if you have live web access, you likely cannot actually load a handspeak.com page to confirm it; don't assume you've verified one just because a browsing tool ran without an error. For Handspeak specifically, default to writing NONE FOUND rather than a deep link, or point me to https://www.handspeak.com/word/search/index.php (their search page — no ID guessing needed) instead of a specific entry. For Signing Savvy, only give me a deep link if you're genuinely confident you've verified it by actually loading the page; otherwise write NONE FOUND or point me to https://www.signingsavvy.com/search/ + the word instead.
+IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Handspeak's robots.txt also blocks automated browsing tools specifically — so even if you have live web access, you likely cannot actually load a handspeak.com page to confirm it; don't assume you've verified one just because a browsing tool ran without an error. For Handspeak, default to writing NONE FOUND rather than a deep link — do NOT substitute the site's generic search-tool URL (handspeak.com/word/search/...) either, since that page isn't specific to this word and looks identical no matter which word I'm looking up, which isn't actually useful to me; I already have my own way of jumping to a word-specific Handspeak search from inside the app. Same for Signing Savvy: only give me a deep link if you're genuinely confident you've verified it by actually loading the page; otherwise write NONE FOUND.
 
 CONCEPTUAL ACCURACY — for DEAF_LINKS and ASL_VIDEOS specifically: matching the right ASL SIGN to the intended MEANING (not just the English word) is often the hardest part — plenty of English words map to several different signs depending on context, and a resource can be a real, working, Deaf-made page while still showing the wrong sense of the word. For each DEAF_LINKS/ASL_VIDEOS link, add a line directly underneath it rating your confidence it matches the intended concept, in exactly this format: "CONCEPT: HIGH — [short reason]" (or MEDIUM/LOW). Use HIGH only when genuinely confident it matches the specific meaning intended in this material; LOW when it's a plausible guess or the word has multiple common meanings and you're unsure which this shows. Skip the line entirely if you truly can't judge it.
 
@@ -4900,6 +5108,15 @@ function parseInlineSegments(text, classId, docTitle, wordIdMap) {
     if (word) {
       const norm = word.toLowerCase().replace(/[.,;:!?]+$/,'').trim();
       let vocabId = wordIdMap.get(norm) || wordIdMap.get(norm.replace(/s$/,'')) || wordIdMap.get(norm+'s');
+      // A bold-wrap the AI applied to a whole clause, or to a common function
+      // word, isn't real vocabulary — render it as plain text (no linking,
+      // no new dictionary entry) rather than polluting the dictionary with it.
+      // Already-existing vocab words still link normally either way.
+      if (!vocabId && !looksLikeAutoCreatableVocabWord(word)) {
+        segs.push({ type:'text', text: word + trail });
+        lastIdx = re.lastIndex;
+        continue;
+      }
       if (!vocabId) {
         const nv = makeBlankVocabEntry({ word, category:'Uncategorized', classId: classId||'', source:`Class Notes — ${docTitle}` });
         DB.vocab.push(nv);
@@ -5034,11 +5251,12 @@ function applyDocBuilderResults() {
   finalizeDocBuilderResults(results, replaceLinks, null, textPart, classId, title);
 }
 async function finalizeDocBuilderResults(results, replaceLinks, decisions, textPart, classId, title) {
-  let created=0, updated=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0;
+  let created=0, updated=0, linksAdded=0, genericSkipped=0, fieldsReplaced=0, invalidSkipped=0;
   const batchId = uid();
   results.forEach(r=>{
     let v = DB.vocab.find(x=>x.word.toLowerCase()===r.word.toLowerCase());
     if (!v) {
+      if (!looksLikeAutoCreatableVocabWord(r.word)) { invalidSkipped++; return; }
       v = makeBlankVocabEntry({ word:r.word, category:'Uncategorized', classId: classId||'', source:`Class Notes — ${title}`, batchId });
       DB.vocab.push(v); created++;
     } else updated++;
@@ -5057,6 +5275,36 @@ async function finalizeDocBuilderResults(results, replaceLinks, decisions, textP
   const docCreatedCount = DB.vocab.length - beforeCount;
   if (docCreatedCount>0) DB.vocab.slice(beforeCount).forEach(v=>{ if(!v.batchId) v.batchId = batchId; });
   created += docCreatedCount;
+
+  // UPDATE mode: overwrite the existing document in place — same id, so any
+  // "appears in documents" backlinks and the Document Reader keep pointing at
+  // the same record instead of a duplicate. The original attachment is left
+  // untouched unless a new file was chosen this time (pendingDocAttachment set).
+  if (docUpdateTargetId) {
+    const existing = DB.classDocs.find(x=>x.id===docUpdateTargetId);
+    if (existing) {
+      existing.title = title;
+      existing.classId = classId||'';
+      existing.date = document.getElementById('doc-date').value || existing.date;
+      existing.segments = segments;
+      existing.rawSourceText = document.getElementById('doc-source-text').value;
+      existing.updatedAt = Date.now();
+      if (pendingDocAttachment) {
+        const ok = await AttachStore.set(existing.id, pendingDocAttachment);
+        existing.attachment = ok
+          ? { name: pendingDocAttachment.name, type: pendingDocAttachment.type, size: estimateBytes(pendingDocAttachment.dataUrl), key: existing.id }
+          : pendingDocAttachment;
+      }
+    }
+    docUpdateTargetId = null;
+    pendingDocAttachment = null;
+    if (created>0) DB.lastImportBatch = { id: batchId, source:'Document Builder', count: created, createdAt: Date.now() };
+    save(); renderVocab(); renderClassDocs(); populateClassSelectors(); renderDashboard();
+    closeModal('modal-doc-builder');
+    const linkedWords = new Set(segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
+    toast(`Document updated — ${linkedWords} vocab word${linkedWords===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}${fieldsReplaced?`, ${fieldsReplaced} field${fieldsReplaced===1?'':'s'} replaced`:''}${genericSkipped?`, skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'}`:''}${invalidSkipped?`, skipped ${invalidSkipped} malformed WORD line${invalidSkipped===1?'':'s'}`:''}`);
+    return;
+  }
 
   const doc = {
     id: uid(), title, classId: classId||'',
@@ -5077,7 +5325,7 @@ async function finalizeDocBuilderResults(results, replaceLinks, decisions, textP
   save(); renderVocab(); renderClassDocs(); populateClassSelectors(); renderDashboard();
   closeModal('modal-doc-builder');
   const linkedWords = new Set(segments.filter(s=>s.type==='word'&&s.vocabId).map(s=>s.vocabId)).size;
-  toast(`Document saved — ${linkedWords} vocab word${linkedWords===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}${fieldsReplaced?`, ${fieldsReplaced} field${fieldsReplaced===1?'':'s'} replaced`:''}${genericSkipped?`, skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'}`:''}`);
+  toast(`Document saved — ${linkedWords} vocab word${linkedWords===1?'':'s'} linked${created?` (${created} new)`:''}${linksAdded?`, ${linksAdded} new link${linksAdded===1?'':'s'}`:''}${fieldsReplaced?`, ${fieldsReplaced} field${fieldsReplaced===1?'':'s'} replaced`:''}${genericSkipped?`, skipped ${genericSkipped} generic link${genericSkipped===1?'':'s'}`:''}${invalidSkipped?`, skipped ${invalidSkipped} malformed WORD line${invalidSkipped===1?'':'s'}`:''}`);
 }
 
 // ── EDITING A SAVED DOCUMENT ─────────────────────────────────────────────────────
@@ -5086,6 +5334,7 @@ function openDocEditMode(id) {
   if (!d) return;
   closeModal('modal-doc-reader');
   pendingEditDocId = id;
+  docUpdateTargetId = null;
   document.getElementById('doc-builder-title').textContent = '✏️ Edit Document';
   document.getElementById('doc-builder-step1').style.display='none';
   document.getElementById('doc-builder-step2').style.display='none';
@@ -5273,8 +5522,12 @@ function renderInlineSegs(segs, keyBase) {
   return (segs||[]).map((s,i)=>{
     if (s.type==='text') return esc(s.text);
     const key = keyBase.endsWith('w') ? `${keyBase}${i}` : keyBase;
-    if (s.vocabId) return `<span class="doc-word" id="docseg-${key}" onclick="event.stopPropagation();toggleDocWordPop('${key}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${key}"></span>`;
-    return `<span class="doc-word" style="cursor:default;opacity:.6" title="Not found in dictionary">${esc(s.word)}</span>`;
+    // Live check, not just "does this segment have a vocabId" — a deleted
+    // vocab word's old segments fall back to plain, undecorated text (no
+    // highlight, no click, no popover) rather than a dimmed placeholder that
+    // still looks/acts like a special word.
+    if (s.vocabId && DB.vocab.some(v=>v.id===s.vocabId)) return `<span class="doc-word" id="docseg-${key}" onclick="event.stopPropagation();toggleDocWordPop('${key}','${s.vocabId}')">${esc(s.word)}</span><span class="doc-word-pop" id="doc-pop-${key}"></span>`;
+    return esc(s.word);
   }).join('');
 }
 function renderDocSegments(d) {
@@ -5391,12 +5644,13 @@ function findVocabDocAppearances(vocabId) {
 function renderDocBacklinks(v) {
   const apps = findVocabDocAppearances(v.id);
   if (!apps.length) return '';
-  return `<div class="doc-backlinks"><div style="font-size:10.5px;color:var(--ink3);margin-bottom:4px">📄 Appears in ${apps.length} place${apps.length===1?'':'s'} in your documents:</div>
-    ${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}','${a.segKey}')">
+  return `<details class="doc-backlinks" ${openDocBacklinkBlocks.has(v.id)?'open':''} ontoggle="if(this.open)openDocBacklinkBlocks.add('${v.id}');else openDocBacklinkBlocks.delete('${v.id}')">
+    <summary style="font-size:10.5px;color:var(--ink3);cursor:pointer">📄 Appears in ${apps.length} place${apps.length===1?'':'s'} in your documents</summary>
+    <div style="margin-top:4px">${apps.map(a=>`<div class="doc-backlink-item" onclick="openDocReader('${a.docId}','${v.id}','${a.segKey}')">
       <div class="doc-backlink-title">${esc(a.docTitle)}</div>
       <div class="doc-backlink-snip">${esc(a.before)} <b>${esc(v.word)}</b> ${esc(a.after)}</div>
-    </div>`).join('')}
-  </div>`;
+    </div>`).join('')}</div>
+  </details>`;
 }
 function updateDocDate(id, val) {
   const d = DB.classDocs.find(x=>x.id===id);
@@ -5537,19 +5791,36 @@ function getFilteredVocab() {
   else if (filterClass) vocab = vocab.filter(v=>v.classId===filterClass);
   if (filterSignType) vocab = vocab.filter(v=>v.signType===filterSignType);
   if (filterMastery) vocab = vocab.filter(v=>v.mastery===parseInt(filterMastery));
-  if (filterStatus) vocab = vocab.filter(v=>(v.status||'needs-both')===filterStatus);
+  if (filterStatus==='missing-category') vocab = vocab.filter(v=>!v.category || v.category==='Uncategorized');
+  else if (filterStatus==='missing-def') vocab = vocab.filter(v=>!v.definition);
+  else if (filterStatus==='missing-sign') vocab = vocab.filter(v=>!hasSignInfo(v));
+  else if (filterStatus) vocab = vocab.filter(v=>(v.status||'needs-both')===filterStatus);
   if (filterVerified==='yes') vocab = vocab.filter(v=>v.verified);
   else if (filterVerified==='no') vocab = vocab.filter(v=>!v.verified);
   if (filterGeneric==='yes') vocab = vocab.filter(v=>hasUnreviewedGenericLinks(v));
   if (filterConcept) vocab = vocab.filter(v=>vocabConceptFilterMatch(v, filterConcept));
-  if (search) vocab = vocab.filter(v =>
-    v.word.toLowerCase().includes(search)||
-    (v.definition||'').toLowerCase().includes(search)||
-    (v.category||'').toLowerCase().includes(search)||
-    (v.signType||'').toLowerCase().includes(search)||
-    (v.params||'').toLowerCase().includes(search)||
-    (v.source||'').toLowerCase().includes(search)
-  );
+  if (search) {
+    vocab = vocab.filter(v =>
+      v.word.toLowerCase().includes(search)||
+      (v.definition||'').toLowerCase().includes(search)||
+      (v.category||'').toLowerCase().includes(search)||
+      (v.signType||'').toLowerCase().includes(search)||
+      (v.params||'').toLowerCase().includes(search)||
+      (v.source||'').toLowerCase().includes(search)
+    );
+    // Searching here is mainly "find this vocab word" — rank an actual word
+    // match (exact, then starts-with, then contains) ahead of a word that
+    // only matched because the term showed up in its definition/source/etc.
+    // Array.sort is stable, so ties keep the sortMode order already applied above.
+    const rank = v => {
+      const w = v.word.toLowerCase();
+      if (w === search) return 0;
+      if (w.startsWith(search)) return 1;
+      if (w.includes(search)) return 2;
+      return 3;
+    };
+    vocab = vocab.map(v=>v).sort((a,b) => rank(a)-rank(b));
+  }
   return vocab;
 }
 
@@ -5805,6 +6076,27 @@ function flipFlashcard() {
 function revealMnemonic() {
   const mt = document.getElementById('fc-mnemonic-text');
   mt.style.display = mt.style.display==='none' ? '' : 'none';
+}
+function toggleFcMnemonicEdit() {
+  const v = DB.vocab.find(x=>x.id===fcCurrentId);
+  if (!v) return;
+  const el = document.getElementById('fc-mnemonic-edit');
+  if (!el) return;
+  const opening = el.style.display==='none';
+  el.style.display = opening ? 'block' : 'none';
+  if (opening) document.getElementById('fc-mnemonic-edit-text').value = v.mnemonic||'';
+}
+function saveFcMnemonicEdit() {
+  const v = DB.vocab.find(x=>x.id===fcCurrentId);
+  if (!v) return;
+  v.mnemonic = document.getElementById('fc-mnemonic-edit-text').value.trim();
+  save();
+  document.getElementById('fc-mnemonic-edit').style.display = 'none';
+  document.getElementById('fc-mnemonic-btn').style.display = v.mnemonic ? '' : 'none';
+  const mt = document.getElementById('fc-mnemonic-text');
+  mt.textContent = v.mnemonic ? `💡 ${v.mnemonic}` : '';
+  mt.style.display = v.mnemonic ? '' : 'none'; // show right away so the edit is visibly saved
+  toast('Memory tip updated');
 }
 // understood = true for "got it"/swipe right, false for "don't understand"/swipe left
 function swipeFlashcard(understood) {
@@ -6200,7 +6492,7 @@ function renderResourceLinesArray(arr, vocabId, field, word, ctx) {
     const ccHtml = r.url ? renderConceptConfidenceBtn(vocabId, field, r) : '';
     const verifyBtn = r.url ? `<button class="res-mini-btn" onclick="toggleResourceVerify('${rowId}')" title="Check this link yourself and mark it correct or wrong">🔍 Verify</button>` : '';
     const editBtn = `<button class="res-mini-btn" onclick="toggleResourceEdit('${rowId}')" title="Edit this link">✏️</button>`;
-    const delBtn = `<button class="res-mini-btn" style="color:var(--clay)" onclick="deleteResourceLink('${vocabId}','${field}','${r.id}')" title="Remove this link">✕</button>`;
+    const delBtn = `<button class="res-mini-btn" style="color:var(--clay)" onclick="deleteResourceLink('${vocabId}','${field}','${r.id}')" title="Just remove this link (won't affect future AI suggestions — use 🔍 Verify if it's actually wrong)">✕</button>`;
     const openByDefault = !r.url;
     const editRow = `<div class="res-edit-row" id="${rowId}" style="display:${openByDefault?'flex':'none'};gap:5px;margin-top:4px;flex-wrap:wrap">
       <input type="text" id="${rowId}-title" value="${esc(r.title||'')}" placeholder="Label (site name, etc.)" style="flex:1;min-width:100px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
@@ -6283,20 +6575,27 @@ function vocabConceptFilterMatch(v, filterConcept) {
   return links.some(r=>r.conceptConfidence===filterConcept);
 }
 function renderConceptConfidenceBtn(vocabId, field, r) {
-  const cc = r.conceptConfidence;
-  const meta = cc ? CONCEPT_META[cc] : null;
-  const reasonAttr = r.conceptReason ? esc(r.conceptReason) : 'Tap to rate how conceptually accurate this is — cycles High → Medium → Low → Unrated';
-  return `<button class="res-mini-btn cc-btn ${meta?meta.cls:''}" onclick="cycleConceptConfidence('${vocabId}','${field}','${r.id}')" title="${reasonAttr}">🎯 ${meta?meta.label:'Rate'}${r.conceptUserAdjusted?' 👤':''}</button>`;
+  const cc = r.conceptConfidence || '';
+  const reasonAttr = r.conceptReason ? esc(r.conceptReason) : 'How conceptually accurate this suggested link is to the intended meaning';
+  const clsMap = {high:'cc-high', medium:'cc-med', low:'cc-low'};
+  return `<select class="res-mini-btn cc-btn ${clsMap[cc]||''}" onchange="event.stopPropagation();setConceptConfidence('${vocabId}','${field}','${r.id}',this.value)" onclick="event.stopPropagation()" title="${reasonAttr}">
+    <option value="" ${cc===''?'selected':''}>🎯 Rate</option>
+    <option value="high" ${cc==='high'?'selected':''}>🎯 High${r.conceptUserAdjusted&&cc==='high'?' 👤':''}</option>
+    <option value="medium" ${cc==='medium'?'selected':''}>🎯 Medium${r.conceptUserAdjusted&&cc==='medium'?' 👤':''}</option>
+    <option value="low" ${cc==='low'?'selected':''}>🎯 Low${r.conceptUserAdjusted&&cc==='low'?' 👤':''}</option>
+  </select>`;
 }
-function cycleConceptConfidence(vocabId, field, resId) {
+// Direct pick instead of a cycling button — opens the native option list
+// (scrollable on both desktop and mobile), and only applies the level you
+// actually tap, rather than advancing one step per click.
+function setConceptConfidence(vocabId, field, resId, value) {
   const v = DB.vocab.find(x=>x.id===vocabId);
   if (!v || !v[field]) return;
   const r = v[field].find(x=>x.id===resId);
   if (!r) return;
-  const idx = CONCEPT_LEVELS.indexOf(r.conceptConfidence||'');
-  r.conceptConfidence = CONCEPT_LEVELS[(idx+1)%CONCEPT_LEVELS.length] || null;
+  r.conceptConfidence = value || null;
   r.conceptUserAdjusted = true;
-  if (!r.conceptConfidence) r.conceptReason = ''; // cycling back to unrated clears the AI's old reasoning text too
+  if (!r.conceptConfidence) r.conceptReason = ''; // back to unrated clears the AI's old reasoning text too
   save(); renderVocab();
 }
 // Replaces both the title and URL of an existing link, or fills in a
