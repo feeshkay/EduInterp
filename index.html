@@ -3514,6 +3514,29 @@ function resourceFlagLabel(r, word) {
   return null;
 }
 function hasSignInfo(v) { return !!(v.params || v.confirmedSignLink); }
+// The confirmedSignLink is a copy — not a reference — of whichever resource
+// line it came from ("🤟 Use as sign" just copies title/url over), so it
+// carries none of that line's flags with it. Without this, promoting an
+// unverified Handspeak/Signing Savvy guess to "confirmed" made its warning
+// disappear entirely — right when it becomes the one link actually shown
+// and clicked on the card and in flashcards.
+function confirmedSignFlagLabel(v) {
+  const cs = v.confirmedSignLink;
+  if (!cs || !cs.url || cs.verified) return null;
+  return resourceFlagLabel({url:cs.url, reviewed:false}, v.word);
+}
+// Picks the one link a word's card/flashcard actually shows as "the" link,
+// in the same priority order used across the app, and tags where it came
+// from so an edit made here writes back to the right place.
+function resolveVocabPrimaryLink(v) {
+  if (v.confirmedSignLink?.url) return { source:'confirmedSignLink', url:v.confirmedSignLink.url, title:v.confirmedSignLink.title||'', verified: !!v.confirmedSignLink.verified };
+  const dr = (v.deafResources||[]).find(r=>r.url);
+  if (dr) return { source:'deafResources', id:dr.id, url:dr.url, title:dr.title||'', verified: !!dr.reviewed };
+  const av = (v.aslVideos||[]).find(r=>r.url);
+  if (av) return { source:'aslVideos', id:av.id, url:av.url, title:av.title||'', verified: !!av.reviewed };
+  if (v.link) return { source:'link', url:v.link, title:'', verified:true }; // legacy freeform field, no flagging system covers it
+  return null;
+}
 function computeVocabStatus(v) {
   const hasSign = hasSignInfo(v);
   if (v.definition && hasSign) return 'ok';
@@ -3742,7 +3765,9 @@ function useAsConfirmedSign(vocabId, linkId) {
   if (!v) return;
   const link = (v.aslVideos||[]).find(r=>r.id===linkId);
   if (!link) return;
-  v.confirmedSignLink = { title: link.title, url: link.url };
+  // Carry over the source line's own reviewed status — if you'd already hit
+  // 🔍 Verify on it before promoting it, it shouldn't come back as unverified.
+  v.confirmedSignLink = { title: link.title, url: link.url, verified: !!link.reviewed };
   v.status = computeVocabStatus(v);
   save(); renderVocab();
   toast(`Confirmed sign set for "${v.word}"`);
@@ -3753,6 +3778,77 @@ function unlinkConfirmedSign(id) {
   v.confirmedSignLink = null;
   v.status = computeVocabStatus(v);
   save(); renderVocab();
+}
+// Handspeak's word pages are pure numeric IDs with no known way to build the
+// right one from the word text — so instead of guessing, this sends you to
+// its plain search page to look the word up yourself. Signing Savvy's search
+// DOES take the word straight in the URL, so that one jumps right to results.
+function idKeyedSearchUrl(url, word) {
+  let h; try { h = new URL(url).hostname.replace(/^www\./,''); } catch(e) { return null; }
+  if (h==='handspeak.com' || h.endsWith('.handspeak.com')) return 'https://www.handspeak.com/word/search/index.php';
+  if (h==='signingsavvy.com' || h.endsWith('.signingsavvy.com')) return `https://www.signingsavvy.com/search/${encodeURIComponent((word||'').trim())}`;
+  return null;
+}
+// The "Confirmed sign" row is the one link a word's card actually shows and
+// gets clicked — it needs the same flag/verify/edit affordances as a
+// resource-list line, not just a bare "remove" button.
+function renderConfirmedSignBlock(v) {
+  const cs = v.confirmedSignLink;
+  const flagLabel = confirmedSignFlagLabel(v);
+  const searchUrl = flagLabel ? idKeyedSearchUrl(cs.url, v.word) : null;
+  return `<div class="vc-confirmed-sign">
+    🤟 Confirmed sign: <a href="${esc(cs.url)}" target="_blank" rel="noopener">${esc(cs.title||cs.url)}</a>
+    ${flagLabel?`<span class="res-flag">⚠️ ${flagLabel} — verify</span>`:''}
+    ${cs.verified?`<span style="font-size:9px;color:var(--sage-d)" title="You've personally verified this link">✅ checked</span>`:''}
+    <button class="res-mini-btn" onclick="toggleConfirmedSignVerify('${v.id}')" title="Check this link yourself and mark it correct or wrong">🔍 Verify</button>
+    ${searchUrl?`<a class="res-mini-btn" href="${esc(searchUrl)}" target="_blank" rel="noopener" title="Search for the correct page yourself">🔎 Search</a>`:''}
+    <button class="res-mini-btn" onclick="toggleConfirmedSignEdit('${v.id}')" title="Edit this link">✏️</button>
+    <button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')" title="Remove">✕ remove</button>
+    <div class="res-edit-row" id="csedit-${v.id}" style="display:none;gap:5px;margin-top:4px;flex-wrap:wrap">
+      <input type="text" id="csedit-${v.id}-title" value="${esc(cs.title||'')}" placeholder="Label (site name, etc.)" style="flex:1;min-width:100px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
+      <input type="text" id="csedit-${v.id}-url" value="${esc(cs.url||'')}" placeholder="Paste the URL here…" style="flex:2;min-width:150px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
+      <button class="res-mini-btn" onclick="saveConfirmedSignEdit('${v.id}',document.getElementById('csedit-${v.id}-title').value,document.getElementById('csedit-${v.id}-url').value)">Save</button>
+    </div>
+    <div class="res-verify-row" id="csverify-${v.id}" style="display:none;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--ink3)">Does this actually show "${esc(v.word)}" — not a different word, not dead?</span>
+      <button class="res-mini-btn sign" onclick="confirmConfirmedSignVerify('${v.id}',true)">✅ Yes, correct</button>
+      <button class="res-mini-btn" style="color:var(--clay)" onclick="confirmConfirmedSignVerify('${v.id}',false)">❌ No, wrong/dead</button>
+    </div>
+  </div>`;
+}
+function toggleConfirmedSignEdit(id) {
+  const el = document.getElementById(`csedit-${id}`);
+  if (el) el.style.display = el.style.display==='none' ? 'flex':'none';
+}
+function toggleConfirmedSignVerify(id) {
+  const el = document.getElementById(`csverify-${id}`);
+  if (el) el.style.display = el.style.display==='none' ? 'flex':'none';
+}
+function saveConfirmedSignEdit(id, title, url) {
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v || !v.confirmedSignLink) return;
+  title = title.trim(); url = url.trim();
+  if (!url) { toast('URL required','warn'); return; }
+  v.confirmedSignLink = { title, url, verified:false }; // an edited link needs its own re-verification
+  save(); renderVocab();
+  toast('Link updated — tap 🔍 Verify to clear the warning');
+}
+function confirmConfirmedSignVerify(id, isCorrect) {
+  const v = DB.vocab.find(x=>x.id===id);
+  if (!v || !v.confirmedSignLink) return;
+  if (isCorrect) {
+    v.confirmedSignLink.verified = true;
+    save(); renderVocab();
+    toast(`Marked correct for "${v.word}"`);
+    return;
+  }
+  const word = v.word, url = v.confirmedSignLink.url;
+  recordRejectedLink(v, url);
+  v.confirmedSignLink = null;
+  v.status = computeVocabStatus(v);
+  save(); renderVocab();
+  copyQuickRecheckPrompt(word, url);
+  toast(`Removed — won't be suggested again. Quick re-check prompt copied for "${word}".`,'warn');
 }
 
 // ── GENERIC-LINK REVIEW ─────────────────────────────────────────────────────
@@ -3783,7 +3879,8 @@ function bulkMarkReviewed() {
 // all, or looks like a generic homepage rather than a page for the specific
 // sign/word.
 function hasUnreviewedGenericLinks(v) {
-  return VOCAB_RESOURCE_FIELDS.some(f => (v[f]||[]).some(r => !r.reviewed && (!r.url || isGenericResourceUrl(r.url, v.word) || needsIdVerification(r, v.word))));
+  const inArrays = VOCAB_RESOURCE_FIELDS.some(f => (v[f]||[]).some(r => !r.reviewed && (!r.url || isGenericResourceUrl(r.url, v.word) || needsIdVerification(r, v.word))));
+  return inArrays || !!confirmedSignFlagLabel(v);
 }
 // One-tap cleanup for everything flagged generic-and-unreviewed across the whole
 // dictionary — links you've already tapped "Mark reviewed" on are left alone.
@@ -4095,7 +4192,7 @@ function buildAIResearchPrompt(entries) {
 
 Only include real, working links — never invent a URL. If you search and truly cannot find a link to a page for this SPECIFIC word (only a homepage/channel/general search page exists), write "NONE FOUND" for that field instead of giving me the homepage — a missing link is far more useful to me than a wrong one, since a homepage link just gets deleted the moment I see it. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time. Other sources worth checking alongside the formal dictionaries: ASLThat on Facebook, and threads from the Deaf/interpreting community on Reddit (e.g. r/asl, r/deaf) — real practitioner discussion of how a sign is actually used can be genuinely useful, especially for slang, regional variation, or a word with more than one possible sign depending on context.
 
-IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Only give me a deep link to either of these two sites if you're genuinely confident you've verified it; otherwise write NONE FOUND for that source rather than guess, or point me to the site's search page instead of a specific (possibly wrong) entry.
+IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Handspeak's robots.txt also blocks automated browsing tools specifically — so even if you have live web access, you likely cannot actually load a handspeak.com page to confirm it; don't assume you've verified one just because a browsing tool ran without an error. For Handspeak specifically, default to writing NONE FOUND rather than a deep link, or point me to https://www.handspeak.com/word/search/index.php (their search page — no ID guessing needed) instead of a specific entry. For Signing Savvy, only give me a deep link if you're genuinely confident you've verified it by actually loading the page; otherwise write NONE FOUND or point me to https://www.signingsavvy.com/search/ + the word instead.
 
 For concept-heavy, technical, or subject-specific vocabulary (science, math, literature, and other academic subjects), prioritize these — they're specifically built for exactly this kind of word: ASL Core (aslcore.org — ten academic branches: architecture, art, biology, computer science, engineering, literature, organic chemistry, philosophy, physics, sustainability — their branch/category pages like aslcore.org/biology/entries/ are NOT specific-word pages, only a link with ?id=theword in it, like aslcore.org/biology/entries/?id=atom, is), Atomic Hands (atomichands.com — Deaf-led STEM signs and concept videos; their page atomichands.com/asl-stem-dictionaries/ links out to several other good STEM sign dictionaries too, including ASL Clear at aslclear.org), and Signing Savvy (signingsavvy.com) or SignASL (signasl.org) for general vocabulary that isn't subject-specific. Do NOT suggest ASLPro (aslpro.com or aslpro.cc) — both domains have expired and now just redirect to parked placeholder pages, not the actual dictionary.
 
@@ -4741,7 +4838,7 @@ YOUTH_EXPLAINERS:
 
 For DEAF_LINKS and ASL_VIDEOS: only give links written/created by Deaf people, and link the specific page for that word — never a homepage or channel page. If you can't find a specific one, write "NONE FOUND" instead of linking a homepage — a missing link is far more useful to me than a wrong one. Write out the FULL raw URL as plain visible text (starting with https://) for every link, not a clickable-looking citation or shortened domain — when I copy your reply out of the chat window, only visible text survives, so an invisible URL is a lost link. Handspeak (handspeak.com), Lifeprint (lifeprint.com), and ASL Nook (aslnook.com) are the sites you've given me the bare homepage/root URL for most often in the past — double-check any link to these three actually lands on the specific word or topic page, not the homepage, a search page, or a general topic-browsing page, before including it. Draw from a variety of Deaf-led sources rather than defaulting to the same one or two every time. Other sources worth checking: ASLThat on Facebook, and threads from the Deaf/interpreting community on Reddit (e.g. r/asl, r/deaf) — real practitioner discussion of how a sign is actually used can be genuinely useful, especially for slang, regional variation, or a word with more than one possible sign depending on context.
 
-IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Only give me a deep link to either of these two sites if you're genuinely confident you've verified it; otherwise write NONE FOUND for that source rather than guess.
+IMPORTANT — Handspeak (handspeak.com) and Signing Savvy (signingsavvy.com) specifically key their individual word pages by an internal numeric ID/index, not by the word's text. If you're not actually browsing the live page right now, do NOT reconstruct or guess this kind of URL from memory — a slightly-wrong number lands on a real page for a COMPLETELY DIFFERENT word and looks 100% legitimate, which is worse than no link at all (this has happened repeatedly). Handspeak's robots.txt also blocks automated browsing tools specifically — so even if you have live web access, you likely cannot actually load a handspeak.com page to confirm it; don't assume you've verified one just because a browsing tool ran without an error. For Handspeak specifically, default to writing NONE FOUND rather than a deep link, or point me to https://www.handspeak.com/word/search/index.php (their search page — no ID guessing needed) instead of a specific entry. For Signing Savvy, only give me a deep link if you're genuinely confident you've verified it by actually loading the page; otherwise write NONE FOUND or point me to https://www.signingsavvy.com/search/ + the word instead.
 
 CONCEPTUAL ACCURACY — for DEAF_LINKS and ASL_VIDEOS specifically: matching the right ASL SIGN to the intended MEANING (not just the English word) is often the hardest part — plenty of English words map to several different signs depending on context, and a resource can be a real, working, Deaf-made page while still showing the wrong sense of the word. For each DEAF_LINKS/ASL_VIDEOS link, add a line directly underneath it rating your confidence it matches the intended concept, in exactly this format: "CONCEPT: HIGH — [short reason]" (or MEDIUM/LOW). Use HIGH only when genuinely confident it matches the specific meaning intended in this material; LOW when it's a plausible guess or the word has multiple common meanings and you're unsure which this shows. Skip the line entirely if you truly can't judge it.
 
@@ -5529,7 +5626,7 @@ function renderVocab() {
       ${(v.wordBreakdown && v.wordBreakdown!=='NONE')?`<div class="vc-nomen fedit" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start" onclick="editVocabField('${v.id}','v-breakdown')" title="Tap to edit"><span>🧩 ${esc(v.wordBreakdown)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="event.stopPropagation();clearVocabField('${v.id}','wordBreakdown')" title="Remove">✕</button></div>`:''}
       ${v.mnemonic?`<div class="vc-mnem fedit" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start" onclick="editVocabField('${v.id}','v-mnemonic')" title="Tap to edit mnemonic"><span>💡 ${esc(v.mnemonic)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="event.stopPropagation();clearVocabField('${v.id}','mnemonic')" title="Remove mnemonic">✕</button></div>`:''}
       ${v.confirmedSignLink
-        ? `<div class="vc-confirmed-sign">🤟 Confirmed sign: <a href="${esc(v.confirmedSignLink.url)}" target="_blank" rel="noopener">${esc(v.confirmedSignLink.title||v.confirmedSignLink.url)}</a><button class="res-mini-btn" onclick="unlinkConfirmedSign('${v.id}')">✕ remove</button></div>`
+        ? renderConfirmedSignBlock(v)
         : (v.params?`<div class="vc-params fedit" style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start" onclick="editVocabField('${v.id}','v-params')" title="Tap to edit"><span>🤟 ${esc(v.params)}</span><button class="res-mini-btn" style="flex-shrink:0" onclick="event.stopPropagation();clearVocabField('${v.id}','params')" title="Remove">✕</button></div>`:`<div class="vc-params fedit" style="color:var(--clay)" onclick="editVocabField('${v.id}','v-params')" title="Tap to add sign info">No sign info yet — type parameters below, or pick a video from ASL Videos once researched</div>`)}
       ${v.source?`<div class="vc-params fedit" onclick="editVocabField('${v.id}','v-source')" title="Tap to edit source">Source: ${esc(v.source)}</div>`:''}
       ${v.createdAt?`<div class="vc-params" style="color:var(--ink3)">🕓 Added ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} at ${new Date(v.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>`:''}
@@ -5651,21 +5748,55 @@ function showNextFlashcard() {
   document.getElementById('fc-mnemonic-btn').style.display = v.mnemonic ? '' : 'none';
   const mt = document.getElementById('fc-mnemonic-text');
   mt.style.display = 'none'; mt.textContent = v.mnemonic ? `💡 ${v.mnemonic}` : '';
-  const link = v.confirmedSignLink?.url || (v.deafResources||[]).find(r=>r.url)?.url || (v.aslVideos||[]).find(r=>r.url)?.url || v.link || '';
-  const linkTitle = v.confirmedSignLink?.title || '';
-  document.getElementById('fc-back-content').innerHTML = `
-    <div class="fc-back-word">${esc(v.word)}</div>
-    ${v.definition?`<div><strong>Means:</strong> ${esc(v.definition)}</div>`:'<div style="color:var(--ink3);font-style:italic">No definition saved yet</div>'}
-    ${v.nomenclature?`<div><strong>Simple term:</strong> ${esc(v.nomenclature)}</div>`:''}
-    ${v.params?`<div><strong>Sign:</strong> ${esc(v.params)}</div>`:''}
-    ${link?`<div><strong>Link:</strong> <a href="${esc(link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(linkTitle||link)}</a></div>`:''}
-    ${v.source?`<div><strong>Source:</strong> ${esc(v.source)}</div>`:''}
-    ${v.category?`<div style="color:var(--ink3)">${esc(v.category)}</div>`:''}
-  `;
+  document.getElementById('fc-back-content').innerHTML = renderFlashcardBackHTML(v);
   const seenCount = fcSeenIds.length;
   document.getElementById('fc-progress').textContent = `Card ${seenCount} of ${currentFcTotal()}`;
   document.getElementById('fc-remaining').textContent = `${fcQueue.length} to go`;
   persistFlashcardSession();
+}
+// Split out from showNextFlashcard so a link edit mid-card can repaint just
+// the back face (with the ✏️ editor) without advancing to the next card.
+function renderFlashcardBackHTML(v) {
+  const primary = resolveVocabPrimaryLink(v);
+  const flagLabel = (primary && primary.source!=='link' && !primary.verified) ? resourceFlagLabel({url:primary.url, reviewed:false}, v.word) : null;
+  return `
+    <div class="fc-back-word">${esc(v.word)}</div>
+    ${v.definition?`<div><strong>Means:</strong> ${esc(v.definition)}</div>`:'<div style="color:var(--ink3);font-style:italic">No definition saved yet</div>'}
+    ${v.nomenclature?`<div><strong>Simple term:</strong> ${esc(v.nomenclature)}</div>`:''}
+    ${v.params?`<div><strong>Sign:</strong> ${esc(v.params)}</div>`:''}
+    ${primary?`<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"><strong>Link:</strong> <a href="${esc(primary.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(primary.title||primary.url)}</a>${flagLabel?`<span class="res-flag">⚠️ ${flagLabel}</span>`:''}<button class="res-mini-btn" onclick="event.stopPropagation();toggleFcLinkEdit()" title="Edit this link">✏️</button></div>
+    <div class="res-edit-row" id="fc-link-edit" style="display:none;gap:5px;margin-top:2px;flex-wrap:wrap" onclick="event.stopPropagation()">
+      <input type="text" id="fc-link-edit-title" value="${esc(primary.title||'')}" placeholder="Label" style="flex:1;min-width:90px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
+      <input type="text" id="fc-link-edit-url" value="${esc(primary.url||'')}" placeholder="URL" style="flex:2;min-width:120px;font-size:10.5px;padding:3px 6px;border-radius:6px;border:1px solid var(--brk)">
+      <button class="res-mini-btn" onclick="saveFlashcardLinkEdit()">Save</button>
+    </div>`:''}
+    ${v.source?`<div><strong>Source:</strong> ${esc(v.source)}</div>`:''}
+    ${v.category?`<div style="color:var(--ink3)">${esc(v.category)}</div>`:''}
+  `;
+}
+function toggleFcLinkEdit() {
+  const el = document.getElementById('fc-link-edit');
+  if (el) el.style.display = el.style.display==='none' ? 'flex' : 'none';
+}
+// Writes back to whichever field the shown link actually came from —
+// confirmedSignLink, a deafResources/aslVideos line, or the legacy v.link —
+// so editing here is the real data, not a flashcard-only copy.
+function saveFlashcardLinkEdit() {
+  const v = DB.vocab.find(x=>x.id===fcCurrentId);
+  if (!v) return;
+  const title = document.getElementById('fc-link-edit-title').value.trim();
+  const url = document.getElementById('fc-link-edit-url').value.trim();
+  if (!url) { toast('URL required','warn'); return; }
+  const primary = resolveVocabPrimaryLink(v);
+  if (!primary) return;
+  if (primary.source==='confirmedSignLink') v.confirmedSignLink = { title, url, verified:false };
+  else if (primary.source==='deafResources' || primary.source==='aslVideos') {
+    const r = (v[primary.source]||[]).find(x=>x.id===primary.id);
+    if (r) { r.title = title; r.url = url; r.reviewed = false; }
+  } else if (primary.source==='link') { v.link = url; }
+  save();
+  document.getElementById('fc-back-content').innerHTML = renderFlashcardBackHTML(v);
+  toast('Link updated');
 }
 function flipFlashcard() {
   fcFlipped = !fcFlipped;
@@ -6063,6 +6194,7 @@ function renderResourceLinesArray(arr, vocabId, field, word, ctx) {
     const rowId = `reslink-${ctx}${field}-${r.id}`;
     const linkHtml = r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title||r.url)}</a>` : `<span style="color:var(--clay)">${esc(r.title||'(untitled — no link)')}</span>`;
     const flagHtml = flagged ? `<span class="res-flag">⚠️ ${label} — verify</span>` : '';
+    const searchHtml = (flagged && r.url && idKeyedSearchUrl(r.url, word)) ? `<a class="res-mini-btn" href="${esc(idKeyedSearchUrl(r.url, word))}" target="_blank" rel="noopener" title="Search for the correct page yourself">🔎 Search</a>` : '';
     const reviewedHtml = (r.reviewed && r.url) ? `<span style="font-size:9px;color:var(--sage-d)" title="You've personally verified this link">✅ checked</span>` : '';
     const signBtn = (field==='aslVideos' && r.url) ? `<button class="res-mini-btn sign" onclick="useAsConfirmedSign('${vocabId}','${r.id}')">🤟 Use as sign</button>` : '';
     const ccHtml = r.url ? renderConceptConfidenceBtn(vocabId, field, r) : '';
@@ -6080,7 +6212,7 @@ function renderResourceLinesArray(arr, vocabId, field, word, ctx) {
       <button class="res-mini-btn sign" onclick="confirmResourceLinkVerify('${vocabId}','${field}','${r.id}',true)">✅ Yes, correct</button>
       <button class="res-mini-btn" style="color:var(--clay)" onclick="confirmResourceLinkVerify('${vocabId}','${field}','${r.id}',false)">❌ No, wrong/dead</button>
     </div>` : '';
-    return `<div class="res-line">${linkHtml}${flagHtml}${reviewedHtml}${ccHtml}${signBtn}${verifyBtn}${editBtn}${delBtn}${editRow}${verifyRow}</div>`;
+    return `<div class="res-line">${linkHtml}${flagHtml}${searchHtml}${reviewedHtml}${ccHtml}${signBtn}${verifyBtn}${editBtn}${delBtn}${editRow}${verifyRow}</div>`;
   }).join('');
 }
 function toggleResourceEdit(rowId) {
