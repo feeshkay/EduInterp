@@ -697,6 +697,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
         <div class="tb-bar">
           <div class="tab active" onclick="switchTab(this,'vocab-dictionary')">Dictionary</div>
           <div class="tab" onclick="switchTab(this,'vocab-docs')">📄 Class Notes</div>
+          <div class="tab" onclick="switchTab(this,'vocab-flashcards');initFlashcardsTab()">🃏 Flashcards</div>
         </div>
 
         <!-- DICTIONARY TAB -->
@@ -710,7 +711,6 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
               <button class="btn sm" onclick="purgeGenericLinks()" title="Remove every unverified generic link across the whole dictionary">🧹 Purge Generic Links</button>
               <button class="btn sm" id="delete-batch-btn" onclick="deleteLatestBatch()" style="display:none" title="Undo the most recent AI Research or Document batch add">🗑️ Delete Latest Batch</button>
               <button class="btn sm" onclick="openVerifyLinksModal()" title="Build a prompt for an AI to actually visit every link and confirm it's the right word">🔍 Verify Links</button>
-              <button class="btn sm" onclick="openFlashcardsModal()" title="Swipe through your vocab as flashcards">🃏 Flashcards</button>
               <button class="btn sm" onclick="openVideoClipModal()" title="Tag words to a moment in a YouTube/Vimeo video">🎬 Add Video</button>
               <button class="btn sm pri" onclick="openAIResearchModal()" title="Build a prompt for an AI to find Deaf-led resources, ASL videos, and memory tips">🧏 AI Research Prep</button>
             </div>
@@ -797,6 +797,80 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
             </select>
           </div>
           <div id="doc-list"></div>
+        </div>
+        </div>
+
+        <!-- FLASHCARDS TAB -->
+        <div class="tp" id="vocab-flashcards">
+        <div class="card cp">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div class="sec" style="margin:0">🃏 Flashcards</div>
+            <button class="btn gh sm" id="fc-end-session-btn" style="display:none" onclick="endFlashcardSession()">⏹ End Session</button>
+          </div>
+
+          <div id="fc-setup">
+            <div class="fr fr2" style="margin-bottom:8px">
+              <div class="fld"><label>Order</label>
+                <select id="fc-sort" class="sel2" onchange="updateFcSetupCount()">
+                  <option value="recent">Recently added</option>
+                  <option value="oldest">Oldest added</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="class">By class</option>
+                  <option value="category">By subject</option>
+                  <option value="mastery">By mastery — lowest first</option>
+                  <option value="shuffle">Shuffle</option>
+                </select>
+              </div>
+              <div class="fld"><label>Subject</label>
+                <select id="fc-filter-cat" class="sel2" onchange="updateFcSetupCount()"><option value="">All Subjects</option></select>
+              </div>
+            </div>
+            <div class="fr fr2" style="margin-bottom:8px">
+              <div class="fld"><label>Class</label>
+                <select id="fc-filter-class" class="sel2" onchange="updateFcSetupCount()"><option value="">All Classes</option></select>
+              </div>
+              <div class="fld"><label>Mastery</label>
+                <select id="fc-filter-mastery" class="sel2" onchange="updateFcSetupCount()">
+                  <option value="">All Levels</option>
+                  <option value="1">★ New</option><option value="2">★★ Recognizing</option>
+                  <option value="3">★★★ Learning</option><option value="4">★★★★ Comfortable</option>
+                  <option value="5">★★★★★ Mastered</option>
+                </select>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--ink3);margin-bottom:12px" id="fc-setup-count"></div>
+            <button class="btn pri" style="width:100%" onclick="startFlashcards()">▶️ Start</button>
+          </div>
+
+          <div id="fc-session" style="display:none;max-width:460px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace">
+              <span id="fc-progress"></span>
+              <span id="fc-remaining"></span>
+            </div>
+            <div id="fc-card-wrap" style="position:relative;height:270px;margin-bottom:14px">
+              <div id="fc-card" class="fc-card" onclick="flipFlashcard(event)">
+                <div class="fc-stamp fc-stamp-yes" id="fc-stamp-yes">GOT IT</div>
+                <div class="fc-stamp fc-stamp-no" id="fc-stamp-no">AGAIN</div>
+                <div class="fc-face fc-front">
+                  <div id="fc-word" class="fc-word"></div>
+                  <button class="btn gh sm" id="fc-mnemonic-btn" onclick="event.stopPropagation();revealMnemonic()">💡 Show memory tip</button>
+                  <div id="fc-mnemonic-text" style="display:none;font-size:12px;color:var(--gold);background:var(--gold-l);border-radius:7px;padding:8px 10px;margin-top:10px;max-width:100%"></div>
+                  <div style="font-size:10px;color:var(--ink3);margin-top:14px">Tap card to flip • swipe or use buttons below</div>
+                </div>
+                <div class="fc-face fc-back" id="fc-back-content"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn sm" style="flex:1;color:var(--clay);border-color:var(--clay)" onclick="swipeFlashcard(false)">👎 Don't understand</button>
+              <button class="btn pri sm" style="flex:1" onclick="swipeFlashcard(true)">👍 Understand</button>
+            </div>
+          </div>
+
+          <div id="fc-summary" style="display:none;max-width:460px">
+            <div class="notice n-ok" style="margin-bottom:10px"><span>✅</span><div style="font-size:12px">Session complete. Mastery adjusts gradually from your real swipe history — three "understand"s in a row nudges a word up a star, two "don't understand"s in a row nudges it down. Only words whose mastery actually changed are listed below.</div></div>
+            <div id="fc-summary-list"></div>
+            <button class="btn pri sm" style="margin-top:12px" onclick="resetFlashcardsSetup()">🔁 New Session</button>
+          </div>
         </div>
         </div>
       </div>
@@ -2161,9 +2235,21 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
     <div class="mb">
       <div class="notice n-ok" style="margin-bottom:10px"><span>ℹ️</span><div style="font-size:11px">Paste a YouTube, Vimeo, or other video link, then add each word that shows up in it with the timestamp it appears (mm:ss, or h:mm:ss for longer videos). Tap a word's 🎬 chip later to jump straight to that moment. A word not already in your dictionary gets added automatically.</div></div>
       <div class="fld" style="margin-bottom:8px"><label>Video URL</label>
-        <input type="url" id="vid-url" placeholder="https://youtube.com/watch?v=..."></div>
-      <div class="fld" style="margin-bottom:10px"><label>Title <span style="font-weight:400;color:var(--ink3)">(optional)</span></label>
-        <input type="text" id="vid-title" placeholder="e.g. Ms. Rivera's Bio Unit 3 lecture"></div>
+        <input type="url" id="vid-url" placeholder="https://youtube.com/watch?v=..." onchange="autoFetchVideoTitle()"></div>
+      <div class="fld" style="margin-bottom:6px"><label>Title <span id="vid-title-status" style="font-weight:400;color:var(--ink3)">(optional — auto-fills for YouTube links)</span></label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="vid-title" placeholder="e.g. Ms. Rivera's Bio Unit 3 lecture" style="flex:1">
+          <button class="btn gh sm" onclick="autoFetchVideoTitle(true)" title="Fetch the title from YouTube again">🔎 Fetch</button>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <button class="btn gh sm" type="button" onclick="toggleChapterPaste()">📋 Paste chapters from the video description</button>
+        <div id="vid-chapter-box" style="display:none;margin-top:8px">
+          <div class="notice n-ok" style="margin-bottom:6px"><span>ℹ️</span><div style="font-size:11px">If the creator added chapters, YouTube lists them under the video's description as a timestamp + label on each line (e.g. "1:23 Apple"). Copy that list and paste it below — each line becomes a tagged word below, ready to review before you save. This reads whatever you paste here; it can't reach out to YouTube and grab the chapter list itself.</div></div>
+          <textarea id="vid-chapter-paste" rows="5" placeholder="0:00 Introduction&#10;1:23 Apple&#10;3:10 Banana" style="width:100%;font-size:11px;font-family:'DM Mono',monospace"></textarea>
+          <button class="btn sm pri" style="margin-top:6px" onclick="parseChapterPaste()">➕ Add as word rows</button>
+        </div>
+      </div>
       <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">Words in this video</div>
       <datalist id="vid-word-datalist"></datalist>
       <div id="vid-word-rows"></div>
@@ -2176,80 +2262,6 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
   </div>
 </div>
 
-<!-- Flashcards -->
-<div class="ov" id="modal-flashcards">
-  <div class="mod" style="max-width:460px">
-    <div class="mh"><h2>🃏 Flashcards</h2><button class="mod-close" onclick="closeFlashcardsModal()">✕</button></div>
-    <div class="mb">
-      <div id="fc-setup">
-        <div class="fr fr2" style="margin-bottom:8px">
-          <div class="fld"><label>Order</label>
-            <select id="fc-sort" class="sel2" onchange="updateFcSetupCount()">
-              <option value="recent">Recently added</option>
-              <option value="oldest">Oldest added</option>
-              <option value="alpha">Alphabetical</option>
-              <option value="class">By class</option>
-              <option value="category">By subject</option>
-              <option value="mastery">By mastery — lowest first</option>
-              <option value="shuffle">Shuffle</option>
-            </select>
-          </div>
-          <div class="fld"><label>Subject</label>
-            <select id="fc-filter-cat" class="sel2" onchange="updateFcSetupCount()"><option value="">All Subjects</option></select>
-          </div>
-        </div>
-        <div class="fr fr2" style="margin-bottom:8px">
-          <div class="fld"><label>Class</label>
-            <select id="fc-filter-class" class="sel2" onchange="updateFcSetupCount()"><option value="">All Classes</option></select>
-          </div>
-          <div class="fld"><label>Mastery</label>
-            <select id="fc-filter-mastery" class="sel2" onchange="updateFcSetupCount()">
-              <option value="">All Levels</option>
-              <option value="1">★ New</option><option value="2">★★ Recognizing</option>
-              <option value="3">★★★ Learning</option><option value="4">★★★★ Comfortable</option>
-              <option value="5">★★★★★ Mastered</option>
-            </select>
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--ink3);margin-bottom:12px" id="fc-setup-count"></div>
-        <button class="btn pri" style="width:100%" onclick="startFlashcards()">▶️ Start</button>
-      </div>
-
-      <div id="fc-session" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace">
-          <span id="fc-progress"></span>
-          <span id="fc-remaining"></span>
-        </div>
-        <div id="fc-card-wrap" style="position:relative;height:270px;margin-bottom:14px">
-          <div id="fc-card" class="fc-card" onclick="flipFlashcard(event)">
-            <div class="fc-stamp fc-stamp-yes" id="fc-stamp-yes">GOT IT</div>
-            <div class="fc-stamp fc-stamp-no" id="fc-stamp-no">AGAIN</div>
-            <div class="fc-face fc-front">
-              <div id="fc-word" class="fc-word"></div>
-              <button class="btn gh sm" id="fc-mnemonic-btn" onclick="event.stopPropagation();revealMnemonic()">💡 Show memory tip</button>
-              <div id="fc-mnemonic-text" style="display:none;font-size:12px;color:var(--gold);background:var(--gold-l);border-radius:7px;padding:8px 10px;margin-top:10px;max-width:100%"></div>
-              <div style="font-size:10px;color:var(--ink3);margin-top:14px">Tap card to flip • swipe or use buttons below</div>
-            </div>
-            <div class="fc-face fc-back" id="fc-back-content"></div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn sm" style="flex:1;color:var(--clay);border-color:var(--clay)" onclick="swipeFlashcard(false)">👎 Don't understand</button>
-          <button class="btn pri sm" style="flex:1" onclick="swipeFlashcard(true)">👍 Understand</button>
-        </div>
-      </div>
-
-      <div id="fc-summary" style="display:none">
-        <div class="notice n-ok" style="margin-bottom:10px"><span>✅</span><div style="font-size:12px">Session complete. Mastery levels below were auto-updated from how many times you needed another look at each word — tap any star rating in the Dictionary afterward if you want to adjust one yourself.</div></div>
-        <div id="fc-summary-list"></div>
-      </div>
-    </div>
-    <div class="mf">
-      <button class="btn gh sm" onclick="closeFlashcardsModal()">Close</button>
-      <button class="btn pri sm" id="fc-restart-btn" style="display:none" onclick="resetFlashcardsSetup()">🔁 New Session</button>
-    </div>
-  </div>
-</div>
 
 <!-- Duplicate Word — Merge Modal -->
 <div class="ov" id="modal-vocab-merge">
@@ -2481,6 +2493,7 @@ let DB = {
   skippedClasses: [],
   classDocs: [],
   videoLibrary: [],
+  flashcardSession: null,
   lastImportBatch: null
 };
 
@@ -2771,6 +2784,12 @@ function migrateVocabResourceFields() {
     if (v.confirmedSignLink === undefined) v.confirmedSignLink = null;
     if (v.wordBreakdown === undefined) v.wordBreakdown = '';
     if (v.category === '' && v.source === 'AI Research') v.category = 'Uncategorized';
+    // Flashcard streak counters persist FOREVER on the word (not reset each
+    // session) — mastery nudges up/down gradually as real swipe history
+    // accumulates across every session you've ever run, not recalculated
+    // fresh each time. See applyFlashcardSwipe().
+    if (v.fcRightStreak === undefined) { v.fcRightStreak = 0; changed = true; }
+    if (v.fcWrongStreak === undefined) { v.fcWrongStreak = 0; changed = true; }
   });
   if (changed) save();
 }
@@ -2788,6 +2807,7 @@ function makeBlankVocabEntry(overrides={}) {
     definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:'', link:'', status:'needs-both',
     verified:false, confirmedSignLink:null, rejectedLinks:[],
     deafResources:[], aslVideos:[], conceptVideos:[], youthExplainers:[], textResources:[],
+    fcRightStreak:0, fcWrongStreak:0,
     createdAt: Date.now()
   }, overrides);
 }
@@ -5522,35 +5542,59 @@ function renderVocab() {
 }
 
 // ── FLASHCARDS ───────────────────────────────────────────────────────────────
-// Front: word only (mnemonic hidden until tapped). Back: link, meaning,
-// source. Swipe/tap right = understood, left = needs another look — a
-// "don't understand" card goes back into the queue instead of leaving the
-// session, so it keeps resurfacing until you get it. missCounts tracks how
-// many times each word was swiped left THIS session; when it's finally
-// swiped right, that count drives the auto mastery suggestion.
+// Lives as its own tab (not a modal) specifically so it can persist: opening
+// the tab resumes whatever session was in progress instead of always
+// restarting from setup. Session progress (queue/seen/misses this run) is
+// saved to DB.flashcardSession after every card; per-word streak counters
+// (fcRightStreak/fcWrongStreak on the vocab entry itself) persist FOREVER,
+// carrying over between sessions so mastery genuinely reflects your swipe
+// history over time, not just a single pass.
 let fcQueue = [];        // array of vocab ids, front of array = next card
-let fcMissCounts = {};   // vocabId -> times swiped left this session
+let fcMissCounts = {};   // vocabId -> times swiped left this session (drives in-session requeue)
 let fcSeenIds = [];      // unique ids that have appeared, in first-seen order (for progress)
-let fcSummaryData = [];  // {id, word, oldMastery, newMastery, misses}
+let fcSummaryData = [];  // {id, word, oldMastery, newMastery} — only words whose mastery actually changed
 let fcCurrentId = null;
 let fcFlipped = false;
 let fcDragStartX = null, fcDragCurX = 0;
 
-function openFlashcardsModal() {
-  resetFlashcardsSetup();
+function initFlashcardsTab() {
   populateClassSelectors(); // refresh fc-filter-cat/fc-filter-class options
-  updateFcSetupCount();
-  openModal('modal-flashcards');
+  const sess = DB.flashcardSession;
+  if (sess && sess.active && Array.isArray(sess.queue) && (sess.queue.length || (sess.seenIds||[]).length)) {
+    fcQueue = [...sess.queue];
+    fcMissCounts = {...(sess.missCounts||{})};
+    fcSeenIds = [...(sess.seenIds||[])];
+    fcSummaryData = [...(sess.summaryData||[])];
+    document.getElementById('fc-setup').style.display = 'none';
+    document.getElementById('fc-summary').style.display = 'none';
+    document.getElementById('fc-session').style.display = '';
+    document.getElementById('fc-end-session-btn').style.display = '';
+    if (!fcQueue.length) { finishFlashcards(); return; }
+    showNextFlashcard();
+  } else {
+    resetFlashcardsSetup();
+  }
 }
-function closeFlashcardsModal() { closeModal('modal-flashcards'); }
+function persistFlashcardSession() {
+  DB.flashcardSession = {
+    active: true,
+    queue: [...fcQueue],
+    missCounts: {...fcMissCounts},
+    seenIds: [...fcSeenIds],
+    summaryData: [...fcSummaryData],
+  };
+  save();
+}
 function resetFlashcardsSetup() {
   fcQueue = []; fcMissCounts = {}; fcSeenIds = []; fcSummaryData = []; fcCurrentId = null; fcFlipped = false;
+  DB.flashcardSession = null; save();
   document.getElementById('fc-setup').style.display = '';
   document.getElementById('fc-session').style.display = 'none';
   document.getElementById('fc-summary').style.display = 'none';
-  document.getElementById('fc-restart-btn').style.display = 'none';
+  document.getElementById('fc-end-session-btn').style.display = 'none';
   updateFcSetupCount();
 }
+function endFlashcardSession() { finishFlashcards(); }
 function getFlashcardDeckSource() {
   const cat = document.getElementById('fc-filter-cat')?.value||'';
   const cls = document.getElementById('fc-filter-class')?.value||'';
@@ -5585,6 +5629,8 @@ function startFlashcards() {
   document.getElementById('fc-setup').style.display = 'none';
   document.getElementById('fc-session').style.display = '';
   document.getElementById('fc-summary').style.display = 'none';
+  document.getElementById('fc-end-session-btn').style.display = '';
+  persistFlashcardSession();
   showNextFlashcard();
 }
 function currentFcTotal() { return new Set([...fcSeenIds, ...fcQueue]).size; }
@@ -5619,6 +5665,7 @@ function showNextFlashcard() {
   const seenCount = fcSeenIds.length;
   document.getElementById('fc-progress').textContent = `Card ${seenCount} of ${currentFcTotal()}`;
   document.getElementById('fc-remaining').textContent = `${fcQueue.length} to go`;
+  persistFlashcardSession();
 }
 function flipFlashcard() {
   fcFlipped = !fcFlipped;
@@ -5638,36 +5685,57 @@ function swipeFlashcard(understood) {
   card.style.opacity = '0';
   if (!understood) {
     fcMissCounts[id] = (fcMissCounts[id]||0) + 1;
-    fcQueue.push(id); // resurface later this session
-  } else {
-    applyFlashcardMastery(id, fcMissCounts[id]||0);
+    fcQueue.push(id); // resurface later this session for extra practice
   }
+  applyFlashcardSwipe(id, understood);
   setTimeout(showNextFlashcard, 220);
 }
-// Auto mastery from how many times this word needed another look THIS
-// session before you finally understood it: 0 misses = confident/Mastered,
-// climbing misses step the suggestion down toward New.
-function applyFlashcardMastery(id, misses) {
+// The actual mastery-adjustment logic — deliberately NOT a fresh per-session
+// calculation. fcRightStreak/fcWrongStreak live on the vocab entry itself and
+// persist across every session forever. Three "understand"s in a row nudges
+// mastery up one star and resets the streak; two "don't understand"s in a
+// row nudges it down one star and resets. A single stray miss (or hit) after
+// a run of the opposite direction doesn't swing anything by itself — it
+// takes a real run of consistent swipes, in either direction, across however
+// many sessions that takes, exactly like you'd expect actual understanding
+// to accumulate.
+function applyFlashcardSwipe(id, understood) {
   const v = DB.vocab.find(x=>x.id===id);
   if (!v) return;
-  const suggested = misses<=0 ? 5 : misses===1 ? 4 : misses===2 ? 3 : misses<=4 ? 2 : 1;
+  if (v.fcRightStreak===undefined) v.fcRightStreak = 0;
+  if (v.fcWrongStreak===undefined) v.fcWrongStreak = 0;
   const oldMastery = v.mastery||3;
-  v.mastery = suggested;
-  fcSummaryData.push({id, word:v.word, oldMastery, newMastery:suggested, misses});
+  let newMastery = oldMastery;
+  if (understood) {
+    v.fcRightStreak++; v.fcWrongStreak = 0;
+    if (v.fcRightStreak>=3 && oldMastery<5) { newMastery = oldMastery+1; v.fcRightStreak = 0; }
+  } else {
+    v.fcWrongStreak++; v.fcRightStreak = 0;
+    if (v.fcWrongStreak>=2 && oldMastery>1) { newMastery = oldMastery-1; v.fcWrongStreak = 0; }
+  }
+  if (newMastery !== oldMastery) {
+    v.mastery = newMastery;
+    const existing = fcSummaryData.find(s=>s.id===id);
+    if (existing) existing.newMastery = newMastery;
+    else fcSummaryData.push({id, word:v.word, oldMastery, newMastery});
+  }
   save();
 }
 function finishFlashcards() {
   document.getElementById('fc-session').style.display = 'none';
   document.getElementById('fc-summary').style.display = '';
-  document.getElementById('fc-restart-btn').style.display = '';
+  document.getElementById('fc-end-session-btn').style.display = 'none';
   const list = document.getElementById('fc-summary-list');
-  if (!fcSummaryData.length) { list.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No cards were completed.</div>'; renderVocab(); renderDashboard(); return; }
-  list.innerHTML = fcSummaryData.map(s => `
-    <div class="fc-summary-row">
-      <span>${esc(s.word)}${s.misses?` <span style="color:var(--ink3)">(needed ${s.misses} more look${s.misses===1?'':'s'})</span>`:''}</span>
-      <span class="pill ${s.newMastery>=s.oldMastery?'pg':'pa'}">${masteryStars(s.oldMastery)} → ${masteryStars(s.newMastery)}</span>
-    </div>
-  `).join('');
+  if (!fcSummaryData.length) { list.innerHTML = '<div style="font-size:12px;color:var(--ink3)">No mastery levels changed this session — that\'s normal, it takes a consistent run of swipes in one direction to move a star.</div>'; }
+  else {
+    list.innerHTML = fcSummaryData.map(s => `
+      <div class="fc-summary-row">
+        <span>${esc(s.word)}</span>
+        <span class="pill ${s.newMastery>=s.oldMastery?'pg':'pa'}">${masteryStars(s.oldMastery)} → ${masteryStars(s.newMastery)}</span>
+      </div>
+    `).join('');
+  }
+  DB.flashcardSession = null; save();
   renderVocab(); renderDashboard();
 }
 // Drag-to-swipe (pointer events cover touch + mouse). Buttons above remain
@@ -5753,9 +5821,7 @@ function findOrCreateVocabByWord(wordText) {
   if (!wordText) return null;
   let v = DB.vocab.find(x=>x.word.toLowerCase()===wordText.toLowerCase());
   if (v) return v;
-  v = { id:uid(), word:wordText, category:'', classId:'', studentId:'all',
-    definition:'', params:'', wordBreakdown:'', mnemonic:'', mastery:1, source:'Video tag', link:'', status:'needs-both',
-    createdAt: Date.now() };
+  v = makeBlankVocabEntry({ word: wordText, mastery: 1, source: 'Video tag', status: 'needs-both' });
   DB.vocab.push(v);
   return v;
 }
@@ -5796,11 +5862,72 @@ function openVideoClipModal(prefillVocabId, prefillWord) {
   document.getElementById('vid-url').value = '';
   document.getElementById('vid-title').value = '';
   document.getElementById('vid-word-rows').innerHTML = '';
+  document.getElementById('vid-chapter-box').style.display = 'none';
+  document.getElementById('vid-chapter-paste').value = '';
+  setVidTitleStatus('(optional — auto-fills for YouTube links)');
   vidRowSeq = 0;
   const dl = document.getElementById('vid-word-datalist');
   if (dl) dl.innerHTML = DB.vocab.map(v=>`<option value="${esc(v.word)}">`).join('');
   addVideoWordRow(prefillWord||'', '');
   openModal('modal-video-clip');
+}
+function toggleChapterPaste() {
+  const box = document.getElementById('vid-chapter-box');
+  box.style.display = box.style.display==='none' ? '' : 'none';
+}
+// YouTube auto-numbers a chapter list under the video description as
+// consecutive "timestamp then label" lines starting at 0:00 — that's the
+// exact text a person copies out of the description box. This can't reach
+// out and fetch that list itself (YouTube's watch page doesn't allow
+// cross-origin reads without an API key), so it parses whatever's pasted in
+// instead: each recognized "mm:ss label" or "mm:ss - label" line becomes its
+// own word row, ready to review/rename before saving, same as typing them by
+// hand but far faster for a video with a dozen+ chapters.
+const CHAPTER_LINE_RE = /^\s*(\d{1,2}(?::\d{2}){1,2})\s*[-–—:.)]*\s*(.+?)\s*$/;
+function parseChapterPaste() {
+  const raw = document.getElementById('vid-chapter-paste').value;
+  if (!raw.trim()) { toast('Paste the chapter list first','warn'); return; }
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  let added = 0;
+  lines.forEach(line=>{
+    const m = line.match(CHAPTER_LINE_RE);
+    if (!m) return;
+    const secs = timeStrToSeconds(m[1]);
+    const label = m[2].trim();
+    if (secs==null || !label) return;
+    addVideoWordRow(label, secondsToTimeStr(secs));
+    added++;
+  });
+  if (!added) { toast('Couldn\'t find any "timestamp + label" lines in that paste — each chapter line should start with mm:ss','warn'); return; }
+  document.getElementById('vid-chapter-paste').value = '';
+  toast(`Added ${added} row${added===1?'':'s'} from the chapter list — review/rename before saving`);
+}
+function setVidTitleStatus(text) {
+  const el = document.getElementById('vid-title-status');
+  if (el) el.textContent = text;
+}
+// YouTube's oEmbed endpoint is a public, no-API-key, CORS-friendly way to get
+// a video's title from just its URL — the only piece of that kind of info
+// reachable from browser JS without a Google API key and a backend. Silent,
+// best-effort: never blocks saving, never overwrites a title you already
+// typed unless you explicitly hit "Fetch" again.
+async function autoFetchVideoTitle(force) {
+  const urlInput = document.getElementById('vid-url');
+  const titleInput = document.getElementById('vid-title');
+  const url = urlInput.value.trim();
+  if (!url) return;
+  if (!force && titleInput.value.trim()) return; // don't clobber a title you already typed
+  if (detectVideoPlatform(url)!=='youtube') { setVidTitleStatus(force ? 'Auto-fetch only works for YouTube links — type the title in yourself' : '(optional)'); return; }
+  setVidTitleStatus('Fetching title…');
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+    if (!res.ok) throw new Error('not ok');
+    const data = await res.json();
+    if (data.title) { titleInput.value = data.title; setVidTitleStatus('✅ Title fetched from YouTube'); }
+    else { setVidTitleStatus('Couldn\'t read a title from that link — type it in yourself'); }
+  } catch(e) {
+    setVidTitleStatus('Couldn\'t reach YouTube to fetch the title — type it in yourself');
+  }
 }
 function addVideoWordRow(word, time) {
   const rowId = `vidrow-${vidRowSeq++}`;
