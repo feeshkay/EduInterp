@@ -550,6 +550,10 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
     </button>
 
     <div class="sb-sec">Prep & Practice</div>
+    <button class="sbi" data-page="tasks" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+      Prep &amp; Admin Tasks
+    </button>
     <button class="sbi" data-page="prep" onclick="nav(this)">
       <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
       Prep Materials
@@ -640,7 +644,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
                 <input type="text" id="ql-vocab" placeholder="e.g. photosynthesis, mitosis, osmosis"></div>
             </div>
             <div class="fr fr1" style="margin-bottom:6px">
-              <div class="fld"><label>Notes / Demands / Controls</label>
+              <div class="fld"><label>Notes / Demands / Controls <button type="button" class="btn gh sm" style="padding:1px 6px;font-size:9px;margin-left:4px;vertical-align:middle" onclick="openGuidedPromptModal('ql-notes')">🎯 Guided Prompts</button></label>
                 <textarea id="ql-notes" placeholder="Demands encountered, register shifts, environmental controls, lag time, etc." style="min-height:55px"></textarea></div>
             </div>
             <button class="btn pri sm" onclick="quickLog()">
@@ -1050,6 +1054,169 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       </div>
 
       <!-- ══════════════════════════════════════════════
+           PAGE: PREP & ADMIN TASKS
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-tasks">
+        <div class="card cp" style="margin-bottom:12px">
+          <div class="filter-hdr">
+            <div class="sec" style="margin:0">Today's Prep/Admin Tasks</div>
+          </div>
+          <div id="today-tasks-list"></div>
+        </div>
+
+        <div class="card cp" style="margin-bottom:12px;display:none" id="float-suggest-card">
+          <div class="sec">🎈 Get Ahead Before Your Break</div>
+          <div class="notice n-info" style="margin-bottom:10px">
+            <span>📅</span>
+            <div style="font-size:11px">These floatable tasks fall on an upcoming no-school day and will be auto-skipped — reschedule them to a day before the break if you want to get ahead.</div>
+          </div>
+          <div id="float-suggest-list"></div>
+        </div>
+
+        <div class="card cp">
+          <div class="filter-hdr">
+            <div class="sec" style="margin:0">Recurring Task Templates</div>
+            <select id="tsk-filter-cat" onchange="renderTaskTemplateList()" class="filter-sel">
+              <option value="">All Categories</option>
+              <option value="lesson">📖 Lesson/Vocab Prep</option>
+              <option value="materials">📦 Materials & Logistics</option>
+              <option value="communication">💬 Communication</option>
+              <option value="paperwork">📋 Paperwork/Compliance</option>
+              <option value="growth">🌱 Professional Growth</option>
+            </select>
+          </div>
+          <div id="task-template-list"></div>
+        </div>
+      </div>
+
+      <!-- Add/Edit Task Modal -->
+      <div class="ov" id="modal-add-task">
+        <div class="mod">
+          <div class="mh"><h2 id="task-modal-title">Add Task</h2><button class="mod-close" onclick="closeModal('modal-add-task')">✕</button></div>
+          <div class="mb">
+            <input type="hidden" id="tsk-id">
+            <div class="fld" style="margin-bottom:8px"><label>Title</label><input type="text" id="tsk-title" placeholder="e.g. Prep vocab list for next unit"></div>
+            <div class="fr fr2" style="margin-bottom:8px">
+              <div class="fld"><label>Category</label>
+                <select id="tsk-category">
+                  <option value="lesson">📖 Lesson/Vocab Prep</option>
+                  <option value="materials">📦 Materials & Logistics</option>
+                  <option value="communication">💬 Communication</option>
+                  <option value="paperwork">📋 Paperwork/Compliance</option>
+                  <option value="growth">🌱 Professional Growth</option>
+                </select>
+              </div>
+              <div class="fld"><label>Priority</label>
+                <select id="tsk-priority">
+                  <option value="1">🔴 Priority 1</option>
+                  <option value="2" selected>🟡 Priority 2</option>
+                  <option value="3">🟢 Priority 3</option>
+                </select>
+              </div>
+            </div>
+            <div class="fld" style="margin-bottom:8px"><label>Ties to Schedule</label>
+              <select id="tsk-link" onchange="onTaskLinkChange()">
+                <option value="">— Custom day(s), not tied to schedule —</option>
+              </select>
+            </div>
+            <div class="fld" id="tsk-days-wrap" style="margin-bottom:8px">
+              <label>Days</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="tsk-day" value="Mon"> Mon</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="tsk-day" value="Tue"> Tue</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="tsk-day" value="Wed"> Wed</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="tsk-day" value="Thu"> Thu</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px"><input type="checkbox" class="tsk-day" value="Fri"> Fri</label>
+              </div>
+            </div>
+            <div class="fr fr2" style="margin-bottom:8px">
+              <div class="fld"><label>Typical Minutes</label><input type="number" id="tsk-minutes" min="0" placeholder="e.g. 15"></div>
+              <div class="fld" style="display:flex;align-items:flex-end;padding-bottom:6px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="tsk-floatable"> 🎈 Floatable — can be done ahead of a break</label>
+              </div>
+            </div>
+            <div class="fld"><label>Notes / Instructions (template default)</label>
+              <textarea id="tsk-notes" placeholder="Default notes to prefill when you mark this complete..." style="min-height:60px"></textarea></div>
+          </div>
+          <div class="mf">
+            <button class="btn gh sm" onclick="closeModal('modal-add-task')">Cancel</button>
+            <button class="btn pri" onclick="saveTask()">Save Task</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Complete Task Modal -->
+      <div class="ov" id="modal-complete-task">
+        <div class="mod">
+          <div class="mh"><h2>Mark Complete — <span id="tcl-title-label"></span></h2><button class="mod-close" onclick="closeModal('modal-complete-task')">✕</button></div>
+          <div class="mb">
+            <input type="hidden" id="tcl-task-id"><input type="hidden" id="tcl-date">
+            <div class="fld" style="margin-bottom:8px"><label>Minutes Spent</label><input type="number" id="tcl-minutes" min="0"></div>
+            <div class="fld"><label>Notes</label><textarea id="tcl-notes" style="min-height:60px"></textarea></div>
+          </div>
+          <div class="mf">
+            <button class="btn gh sm" onclick="closeModal('modal-complete-task')">Cancel</button>
+            <button class="btn pri" onclick="saveTaskCompletion()">Save & Complete</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reschedule Task Modal -->
+      <div class="ov" id="modal-reschedule-task">
+        <div class="mod">
+          <div class="mh"><h2>Reschedule — <span id="resched-title-label"></span></h2><button class="mod-close" onclick="closeModal('modal-reschedule-task')">✕</button></div>
+          <div class="mb">
+            <input type="hidden" id="resched-task-id">
+            <input type="hidden" id="resched-from-date">
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:8px">Originally scheduled: <span id="resched-from-label"></span></div>
+            <div class="fld"><label>Move to</label><input type="date" id="resched-to-date"></div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:6px">The recurring template stays the same — this only moves this one instance.</div>
+          </div>
+          <div class="mf">
+            <button class="btn gh sm" onclick="closeModal('modal-reschedule-task')">Cancel</button>
+            <button class="btn pri" onclick="saveReschedule()">Move Task</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Copy Completed Tasks Modal -->
+      <div class="ov" id="modal-task-export">
+        <div class="mod">
+          <div class="mh"><h2>Copy Completed Tasks</h2><button class="mod-close" onclick="closeModal('modal-task-export')">✕</button></div>
+          <div class="mb">
+            <div class="fr fr2" style="margin-bottom:8px">
+              <div class="fld"><label>From</label><input type="date" id="texp-start" onchange="buildTaskExportPreview()"></div>
+              <div class="fld"><label>To</label><input type="date" id="texp-end" onchange="buildTaskExportPreview()"></div>
+            </div>
+            <div style="font-size:11px;color:var(--ink3);margin-bottom:6px"><span id="texp-count">0</span> completed tasks in range — date, task, category, minutes (tab-separated, one per line):</div>
+            <textarea id="texp-preview" readonly style="min-height:180px;font-family:'DM Mono',monospace;font-size:11px"></textarea>
+          </div>
+          <div class="mf">
+            <button class="btn gh sm" onclick="closeModal('modal-task-export')">Close</button>
+            <button class="btn pri" onclick="copyTaskExport()">📋 Copy to Clipboard</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guided Reflection Prompts Modal -->
+      <div class="ov" id="modal-guided-prompts">
+        <div class="mod">
+          <div class="mh"><h2>Guided Reflection Prompts</h2><button class="mod-close" onclick="closeModal('modal-guided-prompts')">✕</button></div>
+          <div class="mb">
+            <div style="font-size:11px;color:var(--ink3);margin-bottom:10px">Answer any that apply — they'll be compiled into the Notes field when you tap Insert. Leave blank to skip.</div>
+            <div class="fld" style="margin-bottom:8px"><label>Demands encountered?</label><textarea id="gp-demands" style="min-height:45px" placeholder="e.g. fast-paced lecture, technical vocabulary..."></textarea></div>
+            <div class="fld" style="margin-bottom:8px"><label>Register shifts?</label><textarea id="gp-register" style="min-height:45px" placeholder="e.g. shifted from formal lecture to casual peer talk..."></textarea></div>
+            <div class="fld" style="margin-bottom:8px"><label>Lag time?</label><textarea id="gp-lag" style="min-height:45px" placeholder="e.g. fell behind during rapid-fire Q&A..."></textarea></div>
+            <div class="fld"><label>Environmental controls?</label><textarea id="gp-env" style="min-height:45px" placeholder="e.g. asked to move closer, adjusted lighting..."></textarea></div>
+          </div>
+          <div class="mf">
+            <button class="btn gh sm" onclick="closeModal('modal-guided-prompts')">Cancel</button>
+            <button class="btn pri" onclick="insertGuidedPrompts()">Insert into Notes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
            PAGE: PREP MATERIALS
       ══════════════════════════════════════════════ -->
       <div class="page pi" id="page-prep">
@@ -1092,6 +1259,9 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
                 <option value="">All Types</option>
                 <option>Note / Link</option><option>Video Link</option><option>Document Upload</option>
                 <option>Vocabulary List</option><option>Audio Resource</option><option>Other</option>
+              </select>
+              <select id="mat-filter-class" onchange="renderMaterials()" class="filter-sel">
+                <option value="">All Classes</option>
               </select>
             </div>
           </div>
@@ -2024,7 +2194,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
       <div class="fr fr2" style="margin-bottom:8px">
         <div class="fld"><label>Demands / Controls Encountered</label>
           <textarea id="log-demands" placeholder="Environmental, Paralinguistic, Interpersonal, Intralingual..." style="min-height:65px"></textarea></div>
-        <div class="fld"><label>Notes / Reflections</label>
+        <div class="fld"><label>Notes / Reflections <button type="button" class="btn gh sm" style="padding:1px 6px;font-size:9px;margin-left:4px;vertical-align:middle" onclick="openGuidedPromptModal('log-notes')">🎯 Guided Prompts</button></label>
           <textarea id="log-notes" placeholder="What went well? What was challenging?" style="min-height:65px"></textarea></div>
       </div>
       <div class="fr fr2" style="margin-bottom:8px">
@@ -2519,6 +2689,9 @@ let DB = {
   skippedClasses: [],
   classDocs: [],
   videoLibrary: [],
+  tasks: [],
+  taskLogs: [],
+  taskReschedules: [],
   flashcardSession: null,
   lastImportBatch: null
 };
@@ -2912,6 +3085,7 @@ function initApp() {
   renderNoSchool();
   renderWeekView();
   renderDayView();
+  renderTasksPage();
   loadSettings();
   loadSyncUI();
   updateBadge();
@@ -2933,6 +3107,7 @@ const pageMeta = {
   'daily-log':  ['Daily Log','Session records'],
   'vocab':      ['Vocabulary','Dictionary & study'],
   'schedule':   ['Schedule','Students, classes & events'],
+  'tasks':      ['Prep & Admin Tasks','Recurring tasks & completion log'],
   'prep':       ['Prep Materials','Files, links & notes'],
   'practice':   ['Practice','Drills & resources'],
   'eipa':       ['EIPA Scores','Assessment tracking & tool comparison'],
@@ -2976,6 +3151,10 @@ function setTopbarActions(pg) {
   }
   if (pg === 'schedule') {
     btn('+ Class', ()=>openModal('modal-add-class'), 'btn pri sm');
+  }
+  if (pg === 'tasks') {
+    btn('📋 Copy Completed', ()=>openTaskExportModal(), 'btn sm');
+    btn('+ Task', ()=>{ clearTaskForm(); populateTaskLinkSelectors(); openModal('modal-add-task'); }, 'btn pri sm');
   }
   if (pg === 'eipa') {
     btn('Export PDF', ()=>toast('Use browser Print → Save as PDF','gold'), 'btn gold sm');
@@ -3187,6 +3366,14 @@ function populateClassSelectors() {
     dcf.innerHTML = '<option value="">All Classes</option><option value="__none__">❓ General / No Class</option>';
     sorted.forEach(c => { dcf.innerHTML += `<option value="${c.id}">${esc(classLabel(c))}</option>`; });
     if (cur) dcf.value = cur;
+  }
+
+  const mfc = document.getElementById('mat-filter-class');
+  if (mfc) {
+    const cur = mfc.value;
+    mfc.innerHTML = '<option value="">All Classes</option><option value="__none__">❓ General / No Class</option>';
+    sorted.forEach(c => { mfc.innerHTML += `<option value="${c.id}">${esc(classLabel(c))}</option>`; });
+    if (cur) mfc.value = cur;
   }
 
   const vcf = document.getElementById('vocab-filter-cat');
@@ -6626,6 +6813,8 @@ function renderSchedule() {
   renderPresList();
   renderBlockList();
   renderNoSchool();
+  populateTaskLinkSelectors();
+  renderTasksPage();
 }
 
 function renderTodaySchedule() {
@@ -7165,8 +7354,10 @@ function renderMaterials() {
   const el = document.getElementById('mat-list');
   const search=(document.getElementById('mat-search')?.value||'').toLowerCase();
   const filterType=document.getElementById('mat-filter-type')?.value||'';
+  const filterClass=document.getElementById('mat-filter-class')?.value||'';
   let mats=[...DB.materials].sort((a,b)=>b.createdAt-a.createdAt);
   if(filterType) mats=mats.filter(m=>m.type===filterType);
+  if(filterClass) mats=mats.filter(m=>filterClass==='__none__' ? !m.classId : m.classId===filterClass);
   if(search) mats=mats.filter(m=>(m.title||'').toLowerCase().includes(search)||(m.notes||'').toLowerCase().includes(search));
   if(!mats.length){el.innerHTML='<div class="tbl-empty">No materials saved yet.</div>';return;}
   const typeIcons={'Note / Link':'📝','Video Link':'▶️','Document Upload':'📎','Vocabulary List':'📚','Audio Resource':'🎵','Other':'📌'};
@@ -8607,6 +8798,446 @@ function renderEIPAGoals() {
   }).join('');
 }
 
+// ── PREP & ADMIN TASKS ───────────────────────────────────────────────────────
+const TASK_CAT_META = {
+  lesson:        {label:'Lesson/Vocab Prep',     icon:'📖', pill:'pg'},
+  materials:     {label:'Materials & Logistics', icon:'📦', pill:'pb'},
+  communication: {label:'Communication',         icon:'💬', pill:'pa'},
+  paperwork:     {label:'Paperwork/Compliance',  icon:'📋', pill:'pr'},
+  growth:        {label:'Professional Growth',   icon:'🌱', pill:'pz'}
+};
+const TASK_DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function dayNameFor(dateStr) {
+  return TASK_DAY_NAMES[new Date(dateStr+'T00:00:00').getDay()];
+}
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+// day/time for a task always resolves live from its linked Block or Class
+// (or, for un-linked tasks, its own `days` list) — never duplicated/stored.
+function taskScheduleDays(t) {
+  if (t.linkType==='block') {
+    const b = DB.scheduleBlocks.find(x=>x.id===t.linkId);
+    return b ? (b.schedule||[]).map(s=>s.day) : [];
+  }
+  if (t.linkType==='class') {
+    const c = DB.classes.find(x=>x.id===t.linkId);
+    if (!c) return [];
+    return (c.schedule&&c.schedule.length) ? c.schedule.map(s=>s.day) : (c.days||[]);
+  }
+  return t.days||[];
+}
+function taskLinkLabel(t) {
+  if (t.linkType==='block') { const b=DB.scheduleBlocks.find(x=>x.id===t.linkId); return b ? `${BLK_ICONS[b.type]||'📌'} ${b.name}` : '(deleted block)'; }
+  if (t.linkType==='class') { const c=DB.classes.find(x=>x.id===t.linkId); return c ? `🏫 ${classLabel(c)}` : '(deleted class)'; }
+  return '';
+}
+function taskOccursOn(t, dateStr) {
+  return taskScheduleDays(t).includes(dayNameFor(dateStr));
+}
+// All task occurrences that should show on a given date: naturally scheduled
+// (respecting no-school auto-skip) plus anything explicitly rescheduled in,
+// minus anything explicitly rescheduled away.
+function getTaskOccurrencesForDate(dateStr) {
+  const dn = dayNameFor(dateStr);
+  const isWeekend = dn==='Sat'||dn==='Sun';
+  const noSchool = isNoSchool(dateStr);
+  const out = [];
+  (DB.tasks||[]).filter(t=>t.active!==false).forEach(t=>{
+    const movedAway = (DB.taskReschedules||[]).some(r=>r.taskId===t.id && r.fromDate===dateStr);
+    if (movedAway) return;
+    const movedIn = (DB.taskReschedules||[]).find(r=>r.taskId===t.id && r.toDate===dateStr);
+    const naturallyOccurs = !isWeekend && !noSchool && taskOccursOn(t, dateStr);
+    if (naturallyOccurs || movedIn) {
+      out.push({ task:t, date:dateStr, moved:!!movedIn, movedFrom: movedIn?movedIn.fromDate:null });
+    }
+  });
+  const priOrder={'1':0,'2':1,'3':2};
+  out.sort((a,b)=>(priOrder[a.task.priority]??9)-(priOrder[b.task.priority]??9));
+  return out;
+}
+function isTaskDoneOn(taskId, dateStr) {
+  return (DB.taskLogs||[]).some(l=>l.taskId===taskId && l.date===dateStr);
+}
+// Consecutive completed occurrences walking backward from yesterday; caps at
+// 120 days back so it stays cheap even after a full school year of data.
+function taskStreak(taskId) {
+  let streak=0;
+  const d = new Date();
+  d.setDate(d.getDate()-1);
+  for (let i=0;i<120;i++) {
+    const dateStr = d.toISOString().split('T')[0];
+    const occ = getTaskOccurrencesForDate(dateStr).find(o=>o.task.id===taskId);
+    if (occ) {
+      if (isTaskDoneOn(taskId, dateStr)) streak++;
+      else break;
+    }
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+// Scans the lookahead window for no-school days that would silently skip a
+// floatable task, so it can be gotten ahead of (or rescheduled) before a break.
+function getFloatSuggestions(daysAhead) {
+  daysAhead = daysAhead || 14;
+  const out = [];
+  const today = new Date();
+  for (let i=0;i<=daysAhead;i++){
+    const d = new Date(today); d.setDate(d.getDate()+i);
+    const dateStr = d.toISOString().split('T')[0];
+    const dn = dayNameFor(dateStr);
+    if (dn==='Sat'||dn==='Sun') continue;
+    if (!isNoSchool(dateStr)) continue;
+    (DB.tasks||[]).filter(t=>t.active!==false && t.floatable).forEach(t=>{
+      if (!taskOccursOn(t, dateStr)) return;
+      const movedAway = (DB.taskReschedules||[]).some(r=>r.taskId===t.id && r.fromDate===dateStr);
+      const done = isTaskDoneOn(t.id, dateStr);
+      if (!movedAway && !done) out.push({ task:t, missedDate:dateStr, entry:getNoSchoolEntry(dateStr) });
+    });
+  }
+  return out;
+}
+
+// ── Task template CRUD ──
+function populateTaskLinkSelectors() {
+  const el = document.getElementById('tsk-link');
+  if (!el) return;
+  const cur = el.value;
+  el.innerHTML = '<option value="">— Custom day(s), not tied to schedule —</option>';
+  if ((DB.scheduleBlocks||[]).length) {
+    const og = document.createElement('optgroup'); og.label='Schedule Blocks';
+    DB.scheduleBlocks.forEach(b=>{
+      const days=(b.schedule||[]).map(s=>s.day).join(', ');
+      const o=document.createElement('option'); o.value='block:'+b.id; o.textContent=`${BLK_ICONS[b.type]||'📌'} ${b.name}${days?' ('+days+')':''}`;
+      og.appendChild(o);
+    });
+    el.appendChild(og);
+  }
+  if ((DB.classes||[]).length) {
+    const og = document.createElement('optgroup'); og.label='Classes';
+    DB.classes.forEach(c=>{
+      const days=(c.schedule&&c.schedule.length ? c.schedule.map(s=>s.day) : (c.days||[])).join(', ');
+      const o=document.createElement('option'); o.value='class:'+c.id; o.textContent=`🏫 ${classLabel(c)}${days?' ('+days+')':''}`;
+      og.appendChild(o);
+    });
+    el.appendChild(og);
+  }
+  el.value = cur;
+}
+function onTaskLinkChange() {
+  const val = document.getElementById('tsk-link').value;
+  const wrap = document.getElementById('tsk-days-wrap');
+  if (wrap) wrap.style.display = val ? 'none' : '';
+}
+function clearTaskForm() {
+  document.getElementById('tsk-id').value='';
+  ['tsk-title','tsk-minutes','tsk-notes'].forEach(f=>document.getElementById(f).value='');
+  document.getElementById('tsk-category').value='lesson';
+  document.getElementById('tsk-link').value='';
+  document.querySelectorAll('.tsk-day').forEach(c=>c.checked=false);
+  document.getElementById('tsk-priority').value='2';
+  document.getElementById('tsk-floatable').checked=false;
+  onTaskLinkChange();
+  document.getElementById('task-modal-title').textContent='Add Task';
+}
+function saveTask() {
+  const id = document.getElementById('tsk-id').value || uid();
+  const linkVal = document.getElementById('tsk-link').value;
+  let linkType='weekday', linkId='';
+  if (linkVal.startsWith('block:')) { linkType='block'; linkId=linkVal.slice(6); }
+  else if (linkVal.startsWith('class:')) { linkType='class'; linkId=linkVal.slice(6); }
+  const days = linkType==='weekday' ? Array.from(document.querySelectorAll('.tsk-day:checked')).map(c=>c.value) : [];
+  const existing = DB.tasks.find(x=>x.id===id);
+  const t = {
+    id,
+    title: document.getElementById('tsk-title').value.trim(),
+    category: document.getElementById('tsk-category').value,
+    linkType, linkId, days,
+    priority: document.getElementById('tsk-priority').value,
+    minutes: parseInt(document.getElementById('tsk-minutes').value)||null,
+    floatable: document.getElementById('tsk-floatable').checked,
+    notes: document.getElementById('tsk-notes').value.trim(),
+    active: existing ? existing.active : true,
+    createdAt: existing ? existing.createdAt : Date.now()
+  };
+  if (!t.title) { toast('Title required','warn'); return; }
+  if (t.linkType==='weekday' && !t.days.length) { toast('Pick at least one day, or tie it to a block/class','warn'); return; }
+  const idx = DB.tasks.findIndex(x=>x.id===id);
+  if (idx>=0) DB.tasks[idx]=t; else DB.tasks.push(t);
+  save(); closeModal('modal-add-task'); clearTaskForm(); renderTasksPage();
+  toast('Task saved');
+}
+function editTaskModal(id) {
+  const t = DB.tasks.find(x=>x.id===id); if (!t) return;
+  populateTaskLinkSelectors();
+  document.getElementById('tsk-id').value=t.id;
+  document.getElementById('tsk-title').value=t.title;
+  document.getElementById('tsk-category').value=t.category;
+  document.getElementById('tsk-link').value = t.linkType==='block' ? 'block:'+t.linkId : t.linkType==='class' ? 'class:'+t.linkId : '';
+  onTaskLinkChange();
+  document.querySelectorAll('.tsk-day').forEach(c=>{ c.checked=(t.days||[]).includes(c.value); });
+  document.getElementById('tsk-priority').value=t.priority||'2';
+  document.getElementById('tsk-minutes').value=t.minutes||'';
+  document.getElementById('tsk-floatable').checked=!!t.floatable;
+  document.getElementById('tsk-notes').value=t.notes||'';
+  document.getElementById('task-modal-title').textContent='Edit Task';
+  openModal('modal-add-task');
+}
+function deleteTask(id) {
+  confirmAction('Delete this recurring task? Its completion history will be kept.', () => {
+    DB.tasks = DB.tasks.filter(t=>t.id!==id);
+    DB.taskReschedules = (DB.taskReschedules||[]).filter(r=>r.taskId!==id);
+    save(); renderTasksPage(); toast('Deleted');
+  });
+}
+function toggleTaskActive(id) {
+  const t = DB.tasks.find(x=>x.id===id); if (!t) return;
+  t.active = t.active===false ? true : false;
+  save(); renderTasksPage();
+  toast(t.active ? 'Task resumed' : 'Task paused');
+}
+function moveTaskPriority(id, dir) {
+  const tasks = DB.tasks;
+  const idx = tasks.findIndex(t=>t.id===id);
+  if (idx<0) return;
+  const pri = tasks[idx].priority;
+  let swapIdx = -1;
+  if (dir<0) { for(let i=idx-1;i>=0;i--){ if(tasks[i].priority===pri){swapIdx=i;break;} } }
+  else { for(let i=idx+1;i<tasks.length;i++){ if(tasks[i].priority===pri){swapIdx=i;break;} } }
+  if (swapIdx<0) return;
+  [tasks[idx], tasks[swapIdx]] = [tasks[swapIdx], tasks[idx]];
+  save(); renderTasksPage();
+}
+
+// ── Completion log ──
+function quickCompleteTask(taskId, dateStr) {
+  const t = DB.tasks.find(x=>x.id===taskId); if (!t) return;
+  document.getElementById('tcl-task-id').value = taskId;
+  document.getElementById('tcl-date').value = dateStr;
+  document.getElementById('tcl-title-label').textContent = t.title;
+  document.getElementById('tcl-minutes').value = t.minutes||'';
+  document.getElementById('tcl-notes').value = t.notes||'';
+  openModal('modal-complete-task');
+}
+function saveTaskCompletion() {
+  const taskId = document.getElementById('tcl-task-id').value;
+  const dateStr = document.getElementById('tcl-date').value;
+  const t = DB.tasks.find(x=>x.id===taskId);
+  if (!t) { closeModal('modal-complete-task'); return; }
+  DB.taskLogs = (DB.taskLogs||[]).filter(l=>!(l.taskId===taskId && l.date===dateStr));
+  DB.taskLogs.unshift({
+    id: uid(), taskId, date: dateStr,
+    minutes: parseInt(document.getElementById('tcl-minutes').value)||0,
+    notes: document.getElementById('tcl-notes').value.trim(),
+    category: t.category, title: t.title,
+    completedAt: Date.now()
+  });
+  save(); closeModal('modal-complete-task'); renderTasksPage();
+  toast('Marked complete!');
+}
+function unmarkTaskComplete(taskId, dateStr) {
+  confirmAction('Remove this completion record?', () => {
+    DB.taskLogs = (DB.taskLogs||[]).filter(l=>!(l.taskId===taskId && l.date===dateStr));
+    save(); renderTasksPage(); toast('Unmarked');
+  }, {danger:false, okLabel:'Remove'});
+}
+
+// ── Reschedule (moves one instance; template untouched) ──
+function openRescheduleModal(taskId, fromDate) {
+  const t = DB.tasks.find(x=>x.id===taskId);
+  document.getElementById('resched-task-id').value = taskId;
+  document.getElementById('resched-from-date').value = fromDate;
+  document.getElementById('resched-title-label').textContent = t ? t.title : '';
+  document.getElementById('resched-from-label').textContent = fromDate;
+  document.getElementById('resched-to-date').value = '';
+  openModal('modal-reschedule-task');
+}
+function saveReschedule() {
+  const taskId = document.getElementById('resched-task-id').value;
+  const fromDate = document.getElementById('resched-from-date').value;
+  const toDate = document.getElementById('resched-to-date').value;
+  if (!toDate) { toast('Pick a new date','warn'); return; }
+  DB.taskReschedules = (DB.taskReschedules||[]).filter(r=>!(r.taskId===taskId && r.fromDate===fromDate));
+  DB.taskReschedules.push({ id: uid(), taskId, fromDate, toDate, createdAt: Date.now() });
+  save(); closeModal('modal-reschedule-task'); renderTasksPage();
+  toast('Rescheduled to '+toDate);
+}
+
+// ── Copy Completed Tasks export ──
+function openTaskExportModal() {
+  const today = new Date();
+  const weekAgo = new Date(); weekAgo.setDate(today.getDate()-7);
+  document.getElementById('texp-start').value = weekAgo.toISOString().split('T')[0];
+  document.getElementById('texp-end').value = today.toISOString().split('T')[0];
+  buildTaskExportPreview();
+  openModal('modal-task-export');
+}
+function buildTaskExportPreview() {
+  const start = document.getElementById('texp-start').value;
+  const end = document.getElementById('texp-end').value;
+  let logs = (DB.taskLogs||[]).filter(l=>(!start||l.date>=start)&&(!end||l.date<=end));
+  logs = logs.sort((a,b)=>a.date.localeCompare(b.date));
+  const lines = logs.map(l=>{
+    const catLabel = (TASK_CAT_META[l.category]||{}).label || l.category || '';
+    const mins = l.minutes ? l.minutes+' min' : '';
+    return [l.date, l.title, catLabel, mins].filter(Boolean).join('\t');
+  });
+  document.getElementById('texp-preview').value = lines.length ? lines.join('\n') : '(No completed tasks in this range)';
+  document.getElementById('texp-count').textContent = logs.length;
+}
+function copyTaskExport() {
+  const ta = document.getElementById('texp-preview');
+  ta.select(); ta.setSelectionRange(0,999999);
+  const done = () => toast('Copied! Paste into your tracker document.');
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done).catch(()=>{
+      try { document.execCommand('copy'); done(); } catch(e) { toast('Copy failed — text is selected, copy manually','warn'); }
+    });
+  } else {
+    try { document.execCommand('copy'); done(); } catch(e) { toast('Copy failed — text is selected, copy manually','warn'); }
+  }
+}
+
+// ── Jump to a task's linked class docs/materials (reuses existing filtered views) ──
+function goToClassDocs(classId) {
+  const navBtn = document.querySelector('.sbi[data-page="vocab"]');
+  if (navBtn) navBtn.click();
+  const tabBtn = document.querySelector('#page-vocab .tb-bar .tab[onclick*="vocab-docs"]');
+  if (tabBtn) switchTab(tabBtn, 'vocab-docs');
+  const sel = document.getElementById('doc-filter-class');
+  if (sel) { sel.value = classId; renderClassDocs(); }
+  setTimeout(()=>document.getElementById('doc-list')?.scrollIntoView({behavior:'smooth',block:'start'}), 50);
+}
+function goToMaterials(classId) {
+  const navBtn = document.querySelector('.sbi[data-page="prep"]');
+  if (navBtn) navBtn.click();
+  const sel = document.getElementById('mat-filter-class');
+  if (sel) { sel.value = classId; renderMaterials(); }
+  setTimeout(()=>document.getElementById('mat-list')?.scrollIntoView({behavior:'smooth',block:'start'}), 50);
+}
+
+// ── Rendering ──
+function renderTasksPage() {
+  if (!document.getElementById('page-tasks')) return;
+  renderTodaysTasks();
+  renderFloatSuggestions();
+  renderTaskTemplateList();
+}
+function renderTodaysTasks() {
+  const el = document.getElementById('today-tasks-list');
+  if (!el) return;
+  const dateStr = todayStr();
+  const occs = getTaskOccurrencesForDate(dateStr);
+  if (!occs.length) { el.innerHTML = '<div class="tbl-empty">No prep/admin tasks due today.</div>'; return; }
+  const priIcon={'1':'🔴','2':'🟡','3':'🟢'};
+  el.innerHTML = occs.map(o=>{
+    const t = o.task;
+    const done = isTaskDoneOn(t.id, dateStr);
+    const meta = TASK_CAT_META[t.category]||{};
+    const linkLbl = taskLinkLabel(t);
+    const classBtns = t.linkType==='class' ? `
+      <button class="btn gh sm" style="font-size:10px;padding:2px 7px" onclick="goToClassDocs('${t.linkId}')">📄 Docs</button>
+      <button class="btn gh sm" style="font-size:10px;padding:2px 7px" onclick="goToMaterials('${t.linkId}')">📦 Materials</button>` : '';
+    return `<div class="sched-class" style="margin-bottom:6px;${done?'opacity:.6':''}">
+      <div class="sched-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div>
+            <div class="sched-name">${priIcon[t.priority]||''} ${meta.icon||''} ${esc(t.title)}${done?' ✅':''}</div>
+            <div class="sched-detail">${esc(meta.label||'')}${linkLbl?' · '+esc(linkLbl):''}${o.moved?` · <span style="color:var(--gold)">moved from ${esc(o.movedFrom)}</span>`:''}${t.minutes?' · ~'+t.minutes+'m':''}</div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+            ${done ? `<button class="btn gh sm" style="font-size:10px;padding:2px 7px" onclick="unmarkTaskComplete('${t.id}','${dateStr}')">↺ Undo</button>`
+                   : `<button class="btn pri sm" style="font-size:10px;padding:2px 7px" onclick="quickCompleteTask('${t.id}','${dateStr}')">✓ Done</button>`}
+            <button class="btn gh sm" style="font-size:10px;padding:2px 7px" onclick="openRescheduleModal('${t.id}','${dateStr}')">↻ Move</button>
+            ${classBtns}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderFloatSuggestions() {
+  const card = document.getElementById('float-suggest-card');
+  const el = document.getElementById('float-suggest-list');
+  if (!card||!el) return;
+  const sugg = getFloatSuggestions(14);
+  if (!sugg.length) { card.style.display='none'; return; }
+  card.style.display='';
+  el.innerHTML = sugg.map(s=>{
+    const t = s.task;
+    const breakLabel = s.entry ? (s.entry.desc || s.entry.type) : '';
+    return `<div class="sched-class" style="margin-bottom:6px">
+      <div class="sched-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div>
+            <div class="sched-name">${esc(t.title)}</div>
+            <div class="sched-detail">Skipped by ${esc(breakLabel||'a no-school day')} on ${s.missedDate}</div>
+          </div>
+          <button class="btn gold sm" style="font-size:10px;padding:2px 7px" onclick="openRescheduleModal('${t.id}','${s.missedDate}')">↻ Get ahead</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderTaskTemplateList() {
+  const el = document.getElementById('task-template-list');
+  if (!el) return;
+  const fCat = document.getElementById('tsk-filter-cat')?.value||'';
+  let tasks = [...DB.tasks];
+  if (fCat) tasks = tasks.filter(t=>t.category===fCat);
+  if (!tasks.length) { el.innerHTML='<div class="tbl-empty">No recurring tasks yet — tap "+ Task" to add one.</div>'; return; }
+  const priLabel={'1':'🔴 P1','2':'🟡 P2','3':'🟢 P3'};
+  el.innerHTML = tasks.map(t=>{
+    const meta = TASK_CAT_META[t.category]||{};
+    const days = taskScheduleDays(t);
+    const streak = taskStreak(t.id);
+    return `<div class="sched-class" style="margin-bottom:6px;${t.active===false?'opacity:.55':''}">
+      <div class="sched-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div>
+            <div class="sched-name">${esc(t.title)}${t.active===false?' (paused)':''}</div>
+            <div class="sched-detail">
+              <span class="pill ${meta.pill||'pz'}" style="font-size:9px">${meta.icon||''} ${esc(meta.label||t.category)}</span>
+              ${priLabel[t.priority]||''} · ${days.length?esc(days.join(', ')):'no days set'}
+              ${t.linkType!=='weekday'?' · '+esc(taskLinkLabel(t)):''}
+              ${t.minutes?' · ~'+t.minutes+'m':''}
+              ${streak>0?` · 🔥 ${streak} in a row`:''}
+              ${t.floatable?' · 🎈 floatable':''}
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn gh sm" style="padding:2px 6px;font-size:10px" onclick="moveTaskPriority('${t.id}',-1)" title="Move up in priority order">↑</button>
+            <button class="btn gh sm" style="padding:2px 6px;font-size:10px" onclick="moveTaskPriority('${t.id}',1)" title="Move down in priority order">↓</button>
+            <button class="btn gh sm" style="padding:2px 6px;font-size:10px" onclick="toggleTaskActive('${t.id}')">${t.active===false?'▶ Resume':'⏸ Pause'}</button>
+            <button class="btn gh sm" style="padding:2px 6px;font-size:10px" onclick="editTaskModal('${t.id}')">Edit</button>
+            <button class="btn warn sm" style="padding:2px 6px;font-size:10px" onclick="deleteTask('${t.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Guided reflection prompts (compiles into an existing notes textarea) ──
+let _guidedPromptTarget = 'log-notes';
+function openGuidedPromptModal(targetId) {
+  _guidedPromptTarget = targetId || 'log-notes';
+  ['gp-demands','gp-register','gp-lag','gp-env'].forEach(f=>document.getElementById(f).value='');
+  openModal('modal-guided-prompts');
+}
+function insertGuidedPrompts() {
+  const parts = [];
+  const map = [['gp-demands','Demands encountered'],['gp-register','Register shifts'],['gp-lag','Lag time'],['gp-env','Environmental controls']];
+  map.forEach(([id,label])=>{
+    const v = document.getElementById(id).value.trim();
+    if (v) parts.push(`${label}: ${v}`);
+  });
+  if (!parts.length) { toast('Answer at least one prompt first','warn'); return; }
+  const notesEl = document.getElementById(_guidedPromptTarget);
+  if (notesEl) notesEl.value = (notesEl.value ? notesEl.value.trim()+'\n\n' : '') + parts.join('\n');
+  closeModal('modal-guided-prompts');
+  toast('Inserted into Notes');
+}
+
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function esc(s){
   if(!s) return '';
@@ -8627,6 +9258,9 @@ if(!DB.scheduleBlocks) DB.scheduleBlocks=[];
 if(!DB.noSchoolDays) DB.noSchoolDays=[];
 if(!DB.skippedClasses) DB.skippedClasses=[];
 if(!DB.videoLibrary) DB.videoLibrary=[];
+if(!DB.tasks) DB.tasks=[];
+if(!DB.taskLogs) DB.taskLogs=[];
+if(!DB.taskReschedules) DB.taskReschedules=[];
 
 // Populate student selectors before init
 ['global-student','mc-student','mp-student','iep-filter-student'].forEach(id=>{
