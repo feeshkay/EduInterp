@@ -122,6 +122,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 .fld{display:flex;flex-direction:column;gap:4px}
 .fld label{font-size:9px;color:var(--ink2);font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase}
 .fld input,.fld select,.fld textarea{font-size:16px;padding:9px 11px;border:1px solid var(--brk);border-radius:8px;background:var(--s2);color:var(--ink);font-family:'DM Sans',sans-serif;-webkit-appearance:none;width:100%;transition:border-color .14s,box-shadow .14s}
+.fld input[type=checkbox],.fld input[type=radio]{width:16px;height:16px;flex-shrink:0;padding:0;border-radius:4px;accent-color:var(--sage);cursor:pointer}
 .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--sage);box-shadow:0 0 0 3px rgba(74,122,90,.12);background:var(--surf)}
 .fld textarea{resize:vertical;min-height:70px;line-height:1.55;font-size:15px}
 .fld select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A9185' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
@@ -553,6 +554,10 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
     <button class="sbi" data-page="tasks" onclick="nav(this)">
       <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
       Prep &amp; Admin Tasks
+    </button>
+    <button class="sbi" data-page="smart-goals" onclick="nav(this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      SMART Goals
     </button>
     <button class="sbi" data-page="prep" onclick="nav(this)">
       <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
@@ -1152,7 +1157,7 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
           <div class="mb">
             <input type="hidden" id="tcl-task-id"><input type="hidden" id="tcl-date">
             <div class="fld" style="margin-bottom:8px"><label>Minutes Spent</label><input type="number" id="tcl-minutes" min="0"></div>
-            <div class="fld"><label>Notes</label><textarea id="tcl-notes" style="min-height:60px"></textarea></div>
+            <div class="fld"><label>Notes <button type="button" class="btn gh sm" style="padding:1px 6px;font-size:9px;margin-left:4px;vertical-align:middle" onclick="openGuidedPromptModal('tcl-notes')">🎯 Guided Prompts</button></label><textarea id="tcl-notes" style="min-height:60px"></textarea></div>
           </div>
           <div class="mf">
             <button class="btn gh sm" onclick="closeModal('modal-complete-task')">Cancel</button>
@@ -1212,6 +1217,89 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
           <div class="mf">
             <button class="btn gh sm" onclick="closeModal('modal-guided-prompts')">Cancel</button>
             <button class="btn pri" onclick="insertGuidedPrompts()">Insert into Notes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           PAGE: SMART GOALS
+      ══════════════════════════════════════════════ -->
+      <div class="page pi" id="page-smart-goals">
+        <div class="card cp" style="margin-bottom:12px">
+          <div class="filter-hdr">
+            <div class="sec" style="margin:0">Today's Class Goals</div>
+          </div>
+          <div id="today-smart-goals-list"></div>
+        </div>
+
+        <div class="card cp" style="margin-bottom:12px">
+          <div class="sec">Stats</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+            <button class="btn sm sg-range-btn pri" data-range="week" onclick="setSmartStatsRange('week')">Week</button>
+            <button class="btn sm sg-range-btn gh" data-range="month" onclick="setSmartStatsRange('month')">Month</button>
+            <button class="btn sm sg-range-btn gh" data-range="year" onclick="setSmartStatsRange('year')">Year</button>
+            <button class="btn sm sg-range-btn gh" data-range="all" onclick="setSmartStatsRange('all')">All Time</button>
+          </div>
+          <div class="g4" style="margin-bottom:12px" id="sg-stats-grid"></div>
+          <div class="sec" style="margin-bottom:6px;font-size:12px">By Class</div>
+          <div id="sg-stats-byclass"></div>
+        </div>
+
+        <div class="card cp">
+          <div class="filter-hdr">
+            <div class="sec" style="margin:0">Goal History</div>
+            <select id="sg-history-filter" onchange="renderSmartGoalHistory()" class="filter-sel">
+              <option value="">All Classes</option>
+            </select>
+          </div>
+          <div id="sg-history-list"></div>
+        </div>
+      </div>
+
+      <!-- Add/Edit SMART Goal Modal -->
+      <div class="ov" id="modal-add-smart-goal">
+        <div class="mod">
+          <div class="mh"><h2 id="smart-goal-modal-title">Set SMART Goal</h2><button class="mod-close" onclick="closeModal('modal-add-smart-goal')">✕</button></div>
+          <div class="mb">
+            <input type="hidden" id="sg-id">
+            <div class="fr fr2" style="margin-bottom:8px">
+              <div class="fld"><label>Class</label>
+                <select id="sg-class"><option value="">— Select a class —</option></select>
+              </div>
+              <div class="fld"><label>Date</label><input type="date" id="sg-date"></div>
+            </div>
+            <div class="fld" style="margin-bottom:8px"><label>Goal (make it Specific)</label>
+              <textarea id="sg-goal" placeholder="e.g. Keep lag time under 3 seconds during the vocab review section" style="min-height:60px"></textarea></div>
+            <div class="fld"><label>How you'll measure it</label>
+              <textarea id="sg-measure" placeholder="e.g. Self-rate lag time on a 1-5 scale at day's end; note any moments I fell behind" style="min-height:50px"></textarea></div>
+          </div>
+          <div class="mf">
+            <button class="btn gh sm" onclick="closeModal('modal-add-smart-goal')">Cancel</button>
+            <button class="btn pri" onclick="saveSmartGoal()">Save Goal</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Measure Result Modal -->
+      <div class="ov" id="modal-measure-goal">
+        <div class="mod">
+          <div class="mh"><h2>Mark Result</h2><button class="mod-close" onclick="closeModal('modal-measure-goal')">✕</button></div>
+          <div class="mb">
+            <input type="hidden" id="sgm-id">
+            <div style="font-size:12px;color:var(--ink3);margin-bottom:10px" id="sgm-goal-label"></div>
+            <div class="fld" style="margin-bottom:8px"><label>Result</label>
+              <select id="sgm-result">
+                <option value="">— Pick a result —</option>
+                <option value="met">✅ Met</option>
+                <option value="partial">🟡 Partial</option>
+                <option value="not-met">❌ Not Met</option>
+              </select>
+            </div>
+            <div class="fld"><label>Notes</label><textarea id="sgm-notes" style="min-height:60px" placeholder="What happened? What would you try next time?"></textarea></div>
+          </div>
+          <div class="mf">
+            <button class="btn gh sm" onclick="closeModal('modal-measure-goal')">Cancel</button>
+            <button class="btn pri" onclick="saveGoalMeasurement()">Save Result</button>
           </div>
         </div>
       </div>
@@ -1281,6 +1369,11 @@ body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var
 
         <!-- Fingerspelling -->
         <div class="tp active" id="prac-fs">
+          <div class="card cp" style="margin-bottom:12px">
+            <div class="sec" style="margin-bottom:8px">🎥 Video Drills</div>
+            <a href="https://youtube.com/playlist?list=PLURHALB7xGb9gEB_hT-LIiegwg50BQQFC" target="_blank" class="res-link"><div class="res-icon">🤟</div><div><div style="font-weight:500">Receptive Fingerspelling Practice</div><div style="font-size:10px;color:var(--ink3)">YouTube playlist — 149 videos</div></div></a>
+            <a href="https://www.youtube.com/billvicars" target="_blank" class="res-link"><div class="res-icon">📚</div><div><div style="font-weight:500">Lifeprint — Advanced Lessons (Level 4+)</div><div style="font-size:10px;color:var(--ink3)">Bill Vicars' official channel — look for the Level 4 playlist</div></div></a>
+          </div>
           <div class="g2">
             <div>
               <div class="fs-card">
@@ -2692,6 +2785,7 @@ let DB = {
   tasks: [],
   taskLogs: [],
   taskReschedules: [],
+  smartGoals: [],
   flashcardSession: null,
   lastImportBatch: null
 };
@@ -3086,6 +3180,7 @@ function initApp() {
   renderWeekView();
   renderDayView();
   renderTasksPage();
+  renderSmartGoalsPage();
   loadSettings();
   loadSyncUI();
   updateBadge();
@@ -3108,6 +3203,7 @@ const pageMeta = {
   'vocab':      ['Vocabulary','Dictionary & study'],
   'schedule':   ['Schedule','Students, classes & events'],
   'tasks':      ['Prep & Admin Tasks','Recurring tasks & completion log'],
+  'smart-goals':['SMART Goals','Daily goals per class & rollup stats'],
   'prep':       ['Prep Materials','Files, links & notes'],
   'practice':   ['Practice','Drills & resources'],
   'eipa':       ['EIPA Scores','Assessment tracking & tool comparison'],
@@ -3155,6 +3251,9 @@ function setTopbarActions(pg) {
   if (pg === 'tasks') {
     btn('📋 Copy Completed', ()=>openTaskExportModal(), 'btn sm');
     btn('+ Task', ()=>{ clearTaskForm(); populateTaskLinkSelectors(); openModal('modal-add-task'); }, 'btn pri sm');
+  }
+  if (pg === 'smart-goals') {
+    btn('+ Set Goal', ()=>openSmartGoalModal('', todayStr()), 'btn pri sm');
   }
   if (pg === 'eipa') {
     btn('Export PDF', ()=>toast('Use browser Print → Save as PDF','gold'), 'btn gold sm');
@@ -6815,6 +6914,7 @@ function renderSchedule() {
   renderNoSchool();
   populateTaskLinkSelectors();
   renderTasksPage();
+  renderSmartGoalsPage();
 }
 
 function renderTodaySchedule() {
@@ -9238,6 +9338,249 @@ function insertGuidedPrompts() {
   toast('Inserted into Notes');
 }
 
+// ── SMART GOALS (per class, per day) ────────────────────────────────────────
+function classesScheduledOn(dateStr) {
+  const dn = dayNameFor(dateStr);
+  return (DB.classes||[]).filter(c=>{
+    const days = (c.schedule&&c.schedule.length) ? c.schedule.map(s=>s.day) : (c.days||[]);
+    return days.includes(dn);
+  });
+}
+function getSmartGoal(classId, dateStr) {
+  return (DB.smartGoals||[]).find(g=>g.classId===classId && g.date===dateStr);
+}
+function populateSmartGoalClassSelect() {
+  const el = document.getElementById('sg-class');
+  if (!el) return;
+  const cur = el.value;
+  el.innerHTML = '<option value="">— Select a class —</option>' + sortedClasses().map(c=>`<option value="${c.id}">${esc(classLabel(c))}</option>`).join('');
+  if (cur) el.value = cur;
+}
+function populateSmartGoalFilters() {
+  const el = document.getElementById('sg-history-filter');
+  if (el) {
+    const cur = el.value;
+    el.innerHTML = '<option value="">All Classes</option>' + sortedClasses().map(c=>`<option value="${c.id}">${esc(classLabel(c))}</option>`).join('');
+    if (cur) el.value = cur;
+  }
+  populateSmartGoalClassSelect();
+}
+
+// ── CRUD ──
+function openSmartGoalModal(classId, dateStr) {
+  populateSmartGoalClassSelect();
+  const existing = classId && dateStr ? getSmartGoal(classId, dateStr) : null;
+  document.getElementById('sg-id').value = existing ? existing.id : '';
+  document.getElementById('sg-class').value = classId || '';
+  document.getElementById('sg-date').value = dateStr || todayStr();
+  document.getElementById('sg-goal').value = existing ? existing.goal : '';
+  document.getElementById('sg-measure').value = existing ? existing.measure : '';
+  document.getElementById('smart-goal-modal-title').textContent = existing ? 'Edit SMART Goal' : 'Set SMART Goal';
+  openModal('modal-add-smart-goal');
+}
+function editSmartGoalById(id) {
+  const g = (DB.smartGoals||[]).find(x=>x.id===id); if (!g) return;
+  openSmartGoalModal(g.classId, g.date);
+}
+function saveSmartGoal() {
+  const classId = document.getElementById('sg-class').value;
+  const date = document.getElementById('sg-date').value;
+  const goal = document.getElementById('sg-goal').value.trim();
+  const measure = document.getElementById('sg-measure').value.trim();
+  if (!classId) { toast('Pick a class','warn'); return; }
+  if (!date) { toast('Pick a date','warn'); return; }
+  if (!goal) { toast('Goal text required','warn'); return; }
+  const idField = document.getElementById('sg-id').value;
+  // One goal per class per day: editing an existing id, or landing on a
+  // class+date that already has a goal, updates that record instead of
+  // creating a duplicate.
+  let existing = idField ? DB.smartGoals.find(g=>g.id===idField) : getSmartGoal(classId, date);
+  if (existing) {
+    existing.classId = classId; existing.date = date; existing.goal = goal; existing.measure = measure;
+  } else {
+    DB.smartGoals.push({ id: uid(), classId, date, goal, measure, result: null, resultNotes:'', createdAt: Date.now(), measuredAt: null });
+  }
+  save(); closeModal('modal-add-smart-goal'); renderSmartGoalsPage();
+  toast('Goal saved');
+}
+function deleteSmartGoal(id) {
+  confirmAction('Delete this SMART goal?', () => {
+    DB.smartGoals = (DB.smartGoals||[]).filter(g=>g.id!==id);
+    save(); renderSmartGoalsPage(); toast('Deleted');
+  });
+}
+
+// ── Measure at day's end ──
+function openMeasureGoalModal(id) {
+  const g = (DB.smartGoals||[]).find(x=>x.id===id); if (!g) return;
+  document.getElementById('sgm-id').value = g.id;
+  document.getElementById('sgm-goal-label').textContent = g.goal;
+  document.getElementById('sgm-result').value = g.result || '';
+  document.getElementById('sgm-notes').value = g.resultNotes || '';
+  openModal('modal-measure-goal');
+}
+function saveGoalMeasurement() {
+  const id = document.getElementById('sgm-id').value;
+  const g = (DB.smartGoals||[]).find(x=>x.id===id);
+  if (!g) { closeModal('modal-measure-goal'); return; }
+  const result = document.getElementById('sgm-result').value;
+  if (!result) { toast('Pick a result','warn'); return; }
+  g.result = result;
+  g.resultNotes = document.getElementById('sgm-notes').value.trim();
+  g.measuredAt = Date.now();
+  save(); closeModal('modal-measure-goal'); renderSmartGoalsPage();
+  toast('Result saved');
+}
+
+// ── Stats rollups (Week / Month / Year / All Time) ──
+let smartStatsRange = 'week';
+function smartGoalsRangeBounds(range) {
+  const now = new Date();
+  if (range==='week') {
+    const start = getWeekStart(0);
+    const end = new Date(start); end.setDate(start.getDate()+6);
+    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+  }
+  if (range==='month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth()+1, 0);
+    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+  }
+  if (range==='year') {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now.getFullYear(), 11, 31);
+    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+  }
+  return { start: null, end: null };
+}
+function setSmartStatsRange(range) {
+  smartStatsRange = range;
+  renderSmartGoalStats();
+}
+function smartGoalsInRange(start, end) {
+  return (DB.smartGoals||[]).filter(g => (!start||g.date>=start) && (!end||g.date<=end));
+}
+function computeSmartGoalStats(goals) {
+  const total = goals.length;
+  const met = goals.filter(g=>g.result==='met').length;
+  const partial = goals.filter(g=>g.result==='partial').length;
+  const notMet = goals.filter(g=>g.result==='not-met').length;
+  const unmeasured = goals.filter(g=>!g.result).length;
+  const measured = met+partial+notMet;
+  const pct = measured ? Math.round((met/measured)*100) : 0;
+  return {total, met, partial, notMet, unmeasured, pct};
+}
+function renderSmartGoalStats() {
+  const el = document.getElementById('sg-stats-grid');
+  const byClassEl = document.getElementById('sg-stats-byclass');
+  if (!el) return;
+  document.querySelectorAll('.sg-range-btn').forEach(b=>{
+    const active = b.dataset.range===smartStatsRange;
+    b.classList.toggle('pri', active);
+    b.classList.toggle('gh', !active);
+  });
+  const {start,end} = smartGoalsRangeBounds(smartStatsRange);
+  const goals = smartGoalsInRange(start,end);
+  const s = computeSmartGoalStats(goals);
+  el.innerHTML = `
+    <div class="stat"><div class="sv">${s.total}</div><div class="sl">Goals Set</div></div>
+    <div class="stat"><div class="sv">${s.met}</div><div class="sl">Met</div></div>
+    <div class="stat"><div class="sv">${s.pct}%</div><div class="sl">Success Rate</div><div class="sd">of measured goals</div></div>
+    <div class="stat"><div class="sv">${s.unmeasured}</div><div class="sl">Unmeasured</div></div>
+  `;
+  const byClass = {};
+  goals.forEach(g=>{ (byClass[g.classId] = byClass[g.classId]||[]).push(g); });
+  const rows = Object.keys(byClass).map(cid=>{
+    const c = DB.classes.find(x=>x.id===cid);
+    const cs = computeSmartGoalStats(byClass[cid]);
+    return `<div class="sched-class" style="margin-bottom:6px">
+      <div class="sched-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="sched-name">${c?esc(classLabel(c)):'(deleted class)'}</div>
+          <div class="sched-detail">${cs.total} set · ${cs.met} met · ${cs.pct}% success</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  byClassEl.innerHTML = rows.length ? rows.join('') : '<div class="tbl-empty">No goals in this range.</div>';
+}
+
+// ── Rendering ──
+function renderSmartGoalsPage() {
+  if (!document.getElementById('page-smart-goals')) return;
+  renderTodaysSmartGoals();
+  renderSmartGoalStats();
+  populateSmartGoalFilters();
+  renderSmartGoalHistory();
+}
+function renderTodaysSmartGoals() {
+  const el = document.getElementById('today-smart-goals-list');
+  if (!el) return;
+  const dateStr = todayStr();
+  const classes = classesScheduledOn(dateStr);
+  if (!classes.length) { el.innerHTML = '<div class="tbl-empty">No classes scheduled today.</div>'; return; }
+  const resultBadgeMap = {'met':'✅ Met','partial':'🟡 Partial','not-met':'❌ Not Met'};
+  el.innerHTML = classes.map(c=>{
+    const g = getSmartGoal(c.id, dateStr);
+    if (!g) {
+      return `<div class="sched-class" style="margin-bottom:6px">
+        <div class="sched-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <div class="sched-name">${esc(classLabel(c))}</div>
+            <button class="btn pri sm" style="font-size:10px;padding:2px 7px" onclick="openSmartGoalModal('${c.id}','${dateStr}')">+ Set Goal</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    const badge = g.result ? resultBadgeMap[g.result] : '';
+    return `<div class="sched-class" style="margin-bottom:6px">
+      <div class="sched-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div>
+            <div class="sched-name">${esc(classLabel(c))}${badge?' '+badge:''}</div>
+            <div class="sched-detail">${esc(g.goal)}${g.measure?' · Measure: '+esc(g.measure):''}</div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn ${g.result?'gh':'pri'} sm" style="font-size:10px;padding:2px 7px" onclick="openMeasureGoalModal('${g.id}')">${g.result?'Edit Result':'📏 Mark Result'}</button>
+            <button class="btn gh sm" style="font-size:10px;padding:2px 7px" onclick="editSmartGoalById('${g.id}')">Edit</button>
+            <button class="btn warn sm" style="font-size:10px;padding:2px 7px" onclick="deleteSmartGoal('${g.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderSmartGoalHistory() {
+  const el = document.getElementById('sg-history-list');
+  if (!el) return;
+  const fClass = document.getElementById('sg-history-filter')?.value || '';
+  let goals = [...(DB.smartGoals||[])];
+  if (fClass) goals = goals.filter(g=>g.classId===fClass);
+  goals.sort((a,b)=>b.date.localeCompare(a.date));
+  goals = goals.slice(0,50);
+  if (!goals.length) { el.innerHTML = '<div class="tbl-empty">No SMART goals logged yet.</div>'; return; }
+  const resultBadgeMap = {'met':'✅ Met','partial':'🟡 Partial','not-met':'❌ Not Met'};
+  el.innerHTML = goals.map(g=>{
+    const c = DB.classes.find(x=>x.id===g.classId);
+    const badge = g.result ? resultBadgeMap[g.result] : '⏳ Unmeasured';
+    return `<div class="sched-class" style="margin-bottom:6px">
+      <div class="sched-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
+          <div>
+            <div class="sched-name">${g.date} — ${c?esc(classLabel(c)):'(deleted class)'} ${badge}</div>
+            <div class="sched-detail">${esc(g.goal)}${g.resultNotes?' · '+esc(g.resultNotes):''}</div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn gh sm" style="font-size:10px;padding:2px 7px" onclick="openMeasureGoalModal('${g.id}')">📏</button>
+            <button class="btn gh sm" style="font-size:10px;padding:2px 7px" onclick="editSmartGoalById('${g.id}')">Edit</button>
+            <button class="btn warn sm" style="font-size:10px;padding:2px 7px" onclick="deleteSmartGoal('${g.id}')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function esc(s){
   if(!s) return '';
@@ -9261,6 +9604,7 @@ if(!DB.videoLibrary) DB.videoLibrary=[];
 if(!DB.tasks) DB.tasks=[];
 if(!DB.taskLogs) DB.taskLogs=[];
 if(!DB.taskReschedules) DB.taskReschedules=[];
+if(!DB.smartGoals) DB.smartGoals=[];
 
 // Populate student selectors before init
 ['global-student','mc-student','mp-student','iep-filter-student'].forEach(id=>{
